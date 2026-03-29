@@ -1301,14 +1301,16 @@ local cmdBarData = {
     inputBox = nil
 }
 
--- Global command processor reference for cmdbar
+-- Global command processor reference
 local commandProcessor = nil
 
 local function toggleCmdBar()
     if cmdBarData.gui then
         cmdBarData.gui.Enabled = not cmdBarData.gui.Enabled
         cmdBarData.visible = cmdBarData.gui.Enabled
+        
         if cmdBarData.visible and cmdBarData.inputBox then
+            task.wait() -- Small delay for better UX
             cmdBarData.inputBox:CaptureFocus()
         end
         return
@@ -1322,34 +1324,48 @@ local function toggleCmdBar()
     
     local main = Instance.new("Frame")
     main.Name = "Main"
-    main.Size = UDim2.new(0, 600, 0, 50)
-    main.Position = UDim2.new(0.5, -300, 0.1, 0)
+    main.Size = UDim2.new(0, 620, 0, 55)
+    main.Position = UDim2.new(0.5, -310, 0.08, 0)  -- Slightly higher and wider
     main.BackgroundColor3 = currentTheme.glass
     main.BorderSizePixel = 0
+    main.Active = true
+    main.Draggable = true
     main.Parent = gui
     applyGlassEffect(main, globalConfig.uiTransparency, 0.4)
     
+    -- Title hint
+    local titleHint = Instance.new("TextLabel", main)
+    titleHint.Size = UDim2.new(0, 120, 1, 0)
+    titleHint.Position = UDim2.new(0, 10, 0, 0)
+    titleHint.BackgroundTransparency = 1
+    titleHint.Text = "Command Bar"
+    titleHint.Font = Enum.Font.GothamBlack
+    titleHint.TextSize = 18
+    titleHint.TextColor3 = currentTheme.accent
+    titleHint.TextXAlignment = Enum.TextXAlignment.Left
+    
     local input = Instance.new("TextBox")
     input.Name = "Input"
-    input.Size = UDim2.new(1, -20, 1, -10)
-    input.Position = UDim2.new(0, 10, 0, 5)
+    input.Size = UDim2.new(1, -140, 1, -12)
+    input.Position = UDim2.new(0, 130, 0, 6)
     input.BackgroundTransparency = 1
-    input.PlaceholderText = "Type command and press ENTER..."
+    input.PlaceholderText = "Type command here... (e.g. !aimbot)"
     input.Font = Enum.Font.GothamBold
     input.TextSize = 20
     input.TextColor3 = globalConfig.textColor
-    input.TextTransparency = 0 -- SOLID
-    input.TextStrokeTransparency = 0.5
+    input.TextTransparency = 0
+    input.TextStrokeTransparency = 0.6
     input.TextStrokeColor3 = Color3.new(0,0,0)
     input.ClearTextOnFocus = false
     input.Parent = main
     
     cmdBarData.inputBox = input
     
+    -- Dropdown suggestions
     local dropdown = Instance.new("Frame")
     dropdown.Name = "Dropdown"
-    dropdown.Size = UDim2.new(1, 0, 0, 200)
-    dropdown.Position = UDim2.new(0, 0, 1, 5)
+    dropdown.Size = UDim2.new(1, 0, 0, 220)
+    dropdown.Position = UDim2.new(0, 0, 1, 8)
     dropdown.BackgroundColor3 = currentTheme.list
     dropdown.BorderSizePixel = 0
     dropdown.Visible = false
@@ -1358,14 +1374,14 @@ local function toggleCmdBar()
     applyGlassEffect(dropdown, globalConfig.uiTransparency + 0.1, 0.5)
     
     local dropdownScroll = Instance.new("ScrollingFrame", dropdown)
-    dropdownScroll.Size = UDim2.new(1, -10, 1, -10)
-    dropdownScroll.Position = UDim2.new(0, 5, 0, 5)
+    dropdownScroll.Size = UDim2.new(1, -12, 1, -12)
+    dropdownScroll.Position = UDim2.new(0, 6, 0, 6)
     dropdownScroll.BackgroundTransparency = 1
-    dropdownScroll.ScrollBarThickness = 6
+    dropdownScroll.ScrollBarThickness = 5
     dropdownScroll.ScrollBarImageColor3 = currentTheme.accent
     
     local dropdownList = Instance.new("UIListLayout", dropdownScroll)
-    dropdownList.Padding = UDim.new(0, 2)
+    dropdownList.Padding = UDim.new(0, 3)
     
     local allCommands = {
         "!aimbot", "!bring", "!clicktp", "!cmdbar", "!console", "!dance", "!destroyscript", 
@@ -1381,9 +1397,7 @@ local function toggleCmdBar()
     
     local function updateDropdown(text)
         for _, child in ipairs(dropdownScroll:GetChildren()) do
-            if child:IsA("TextButton") then
-                child:Destroy()
-            end
+            if child:IsA("TextButton") then child:Destroy() end
         end
         
         if text == "" or text == "!" then
@@ -1402,16 +1416,14 @@ local function toggleCmdBar()
             dropdown.Visible = true
             for _, match in ipairs(matches) do
                 local btn = Instance.new("TextButton")
-                btn.Size = UDim2.new(1, 0, 0, 30)
+                btn.Size = UDim2.new(1, 0, 0, 32)
                 btn.BackgroundColor3 = currentTheme.btn
-                btn.BackgroundTransparency = 0.5
-                btn.Text = match
+                btn.BackgroundTransparency = 0.4
+                btn.Text = "  " .. match
                 btn.Font = Enum.Font.Gotham
-                btn.TextSize = 16
+                btn.TextSize = 17
                 btn.TextColor3 = globalConfig.textColor
-                btn.TextTransparency = 0 -- SOLID
-                btn.TextStrokeTransparency = 0.5
-                btn.TextStrokeColor3 = Color3.new(0,0,0)
+                btn.TextXAlignment = Enum.TextXAlignment.Left
                 btn.Parent = dropdownScroll
                 
                 btn.MouseButton1Click:Connect(function()
@@ -1421,15 +1433,10 @@ local function toggleCmdBar()
                     input:CaptureFocus()
                 end)
                 
-                btn.MouseEnter:Connect(function()
-                    btn.BackgroundColor3 = currentTheme.accent
-                end)
-                
-                btn.MouseLeave:Connect(function()
-                    btn.BackgroundColor3 = currentTheme.btn
-                end)
+                btn.MouseEnter:Connect(function() btn.BackgroundColor3 = currentTheme.accent end)
+                btn.MouseLeave:Connect(function() btn.BackgroundColor3 = currentTheme.btn end)
             end
-            dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * 32)
+            dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * 35)
         else
             dropdown.Visible = false
         end
@@ -1439,12 +1446,15 @@ local function toggleCmdBar()
         updateDropdown(input.Text)
     end)
     
-    -- FIXED: Command execution on Enter
     local function executeCommand()
-        local cmdText = input.Text
+        local cmdText = input.Text:match("^%s*(.-)%s*$") -- trim whitespace
         if cmdText and cmdText ~= "" then
-            notify("▶️ Executing: " .. cmdText, Color3.fromRGB(200, 200, 255))
-            processCmd(cmdText)
+            notify("▶️ Executing: " .. cmdText, Color3.fromRGB(180, 220, 255))
+            if processCmd then
+                processCmd(cmdText)
+            else
+                warn("processCmd function not found!")
+            end
             input.Text = ""
             dropdown.Visible = false
         end
@@ -1456,21 +1466,23 @@ local function toggleCmdBar()
         end
     end)
     
-    -- Backup: Also check for Return key
-    UserInputService.InputBegan:Connect(function(key, gameProcessed)
-        if not gameProcessed and key.KeyCode == Enum.KeyCode.Return and cmdBarData.visible and input:IsFocused() then
+    -- Enter key support even if not focused
+    UserInputService.InputBegan:Connect(function(inp, gp)
+        if not gp and inp.KeyCode == Enum.KeyCode.Return and cmdBarData.visible and cmdBarData.inputBox:IsFocused() then
             executeCommand()
         end
     end)
     
-    UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local pos = UserInputService:GetMouseLocation()
-            local absPos = main.AbsolutePosition
-            local absSize = main.AbsoluteSize
+    -- Click outside to close dropdown
+    UserInputService.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 and cmdBarData.gui then
+            local mousePos = UserInputService:GetMouseLocation()
+            local mainPos = main.AbsolutePosition
+            local mainSize = main.AbsoluteSize
+            local dropdownArea = dropdown.AbsoluteSize.Y + 50
             
-            if pos.X < absPos.X or pos.X > absPos.X + absSize.X or
-               pos.Y < absPos.Y or pos.Y > absPos.Y + absSize.Y + 200 then
+            if (mousePos.X < mainPos.X or mousePos.X > mainPos.X + mainSize.X) or
+               (mousePos.Y < mainPos.Y or mousePos.Y > mainPos.Y + mainSize.Y + dropdownArea) then
                 dropdown.Visible = false
             end
         end
@@ -1478,506 +1490,851 @@ local function toggleCmdBar()
     
     cmdBarData.gui = gui
     cmdBarData.visible = true
-    input:CaptureFocus()
     
-    notify("✅ Command bar opened - Type and press ENTER", currentTheme.accent)
+    -- Auto focus
+    task.spawn(function()
+        task.wait(0.1)
+        input:CaptureFocus()
+    end)
+    
+    notify("✅ Command Bar Auto-Opened • Press INSERT to toggle", currentTheme.accent)
 end
+
+-- ==================== AUTO SHOW + HOTKEY ====================
+
+-- Auto show when script executes
+task.spawn(function()
+    task.wait(0.6)  -- Small delay to let other UI load
+    toggleCmdBar()
+end)
+
+-- Hotkey to toggle (INSERT key - very common for cheats)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        toggleCmdBar()
+    end
+end)
+
+-- Optional: You can change the hotkey here if you want
+-- Example: F2 key → Enum.KeyCode.F2
 
 -- =============================================================
 -- AIMBOT SYSTEM
 -- =============================================================
 local aimbotData = {
     enabled = false,
-    fovEnabled = false,
-    fovSize = 150,
     smoothness = 0.5,
     smoothnessEnabled = true,
     teamCheck = false,
     wallCheck = false,
-    target = nil,
-    rightClickHeld = false,
+    targetTeam = nil,
+    aimPart = "HumanoidRootPart",
+    predictionEnabled = false,
+    predictionAmount = 0.15,
+    espEnabled = false,
+
+    -- Advanced ESP - ALL START DISABLED
+    espBoxEnabled = false,
+    espSkeletonEnabled = false,
+    espTracersEnabled = false,
+    espChamsEnabled = false,
+    espHealthTextEnabled = false,
+    espFilledBox = false,
+    espBoxStyle = "Full",
+    espMaxDistance = 1000, -- Max distance for ESP to work
+
     panel = nil,
-    fovCircle = nil,
+    teamsList = nil,
     connection = nil,
     inputBeganConn = nil,
     inputEndedConn = nil,
-    renderConn = nil
+    espConnection = nil,
+    espDrawings = {},
+    espHighlights = {},
+    minimized = false,
+    mainFrame = nil,
+    rightClickHeld = false
+}
+
+-- Skeleton joint connections for ESP
+local SKELETON_JOINTS = {
+    {"Head", "UpperTorso"},
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"},
+    {"LeftUpperArm", "LeftLowerArm"},
+    {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"},
+    {"RightUpperArm", "RightLowerArm"},
+    {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"},
+    {"LeftUpperLeg", "LeftLowerLeg"},
+    {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"},
+    {"RightUpperLeg", "RightLowerLeg"},
+    {"RightLowerLeg", "RightFoot"}
 }
 
 local function createAimbotPanel()
-    -- Clean up existing
-    if aimbotData.panel then
-        aimbotData.panel:Destroy()
-        aimbotData.panel = nil
+    -- Full cleanup
+    if aimbotData.panel then aimbotData.panel:Destroy() end
+    if aimbotData.espConnection then aimbotData.espConnection:Disconnect() end
+    for _, drawings in pairs(aimbotData.espDrawings) do
+        for _, obj in pairs(drawings) do if obj then obj:Remove() end end
     end
-    if aimbotData.fovCircle then
-        aimbotData.fovCircle:Destroy()
-        aimbotData.fovCircle = nil
-    end
-    if aimbotData.connection then
-        aimbotData.connection:Disconnect()
-        aimbotData.connection = nil
-    end
-    if aimbotData.inputBeganConn then
-        aimbotData.inputBeganConn:Disconnect()
-        aimbotData.inputBeganConn = nil
-    end
-    if aimbotData.inputEndedConn then
-        aimbotData.inputEndedConn:Disconnect()
-        aimbotData.inputEndedConn = nil
-    end
-    if aimbotData.renderConn then
-        aimbotData.renderConn:Disconnect()
-        aimbotData.renderConn = nil
-    end
-    
+    for _, hl in pairs(aimbotData.espHighlights) do if hl then hl:Destroy() end end
+    aimbotData.espDrawings = {}
+    aimbotData.espHighlights = {}
+
     aimbotData.enabled = false
-    aimbotData.fovEnabled = false
-    
+    aimbotData.targetTeam = nil
+    aimbotData.espEnabled = false
+    aimbotData.minimized = false
+    aimbotData.rightClickHeld = false
+
     local panel = Instance.new("ScreenGui")
     panel.Name = "AimbotPanel"
     panel.ResetOnSpawn = false
     panel.DisplayOrder = 999999
     panel.Parent = client.PlayerGui
-    
-    -- FOV Circle - Centered on cursor
-    local fovCircle = Instance.new("Frame")
-    fovCircle.Name = "FOVCircle"
-    fovCircle.Size = UDim2.new(0, aimbotData.fovSize * 2, 0, aimbotData.fovSize * 2)
-    fovCircle.BackgroundTransparency = 1
-    fovCircle.BorderSizePixel = 0
-    fovCircle.Visible = false
-    fovCircle.Parent = panel
-    
-    local circleCorner = Instance.new("UICorner")
-    circleCorner.CornerRadius = UDim.new(1, 0)
-    circleCorner.Parent = fovCircle
-    
-    local circleStroke = Instance.new("UIStroke")
-    circleStroke.Color = currentTheme.accent
-    circleStroke.Thickness = 2
-    circleStroke.Parent = fovCircle
-    
-    aimbotData.fovCircle = fovCircle
-    
-    -- Update FOV circle position to center on mouse
-    aimbotData.renderConn = RunService.RenderStepped:Connect(function()
-        if aimbotData.fovCircle and aimbotData.fovEnabled then
-            local mousePos = UserInputService:GetMouseLocation()
-            local size = aimbotData.fovSize * 2
-            -- Center the circle on the mouse cursor
-            aimbotData.fovCircle.Position = UDim2.new(0, mousePos.X - aimbotData.fovSize, 0, mousePos.Y - aimbotData.fovSize)
-            aimbotData.fovCircle.Size = UDim2.new(0, size, 0, size)
-        end
-    end)
-    
+
+    -- Main UI
     local main = Instance.new("Frame")
     main.Name = "Main"
-    main.Size = UDim2.new(0, 340, 0, 520)
-    main.Position = UDim2.new(0, 430, 0.5, -260)
+    main.Size = UDim2.new(0, 480, 0, 650)
+    main.Position = UDim2.new(0, 430, 0.5, -325)
     main.BackgroundColor3 = currentTheme.glass
     main.Active = true
     main.Draggable = true
     main.Parent = panel
     applyGlassEffect(main, globalConfig.uiTransparency, 0.4)
-    
-    local title = Instance.new("TextLabel", main)
-    title.Size = UDim2.new(1, 0, 0, 50)
+    aimbotData.mainFrame = main
+
+    -- Title bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 65)
+    titleBar.BackgroundColor3 = currentTheme.glass
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = main
+    applyGlassEffect(titleBar, globalConfig.uiTransparency, 0.4)
+
+    local title = Instance.new("TextLabel", titleBar)
+    title.Size = UDim2.new(1, -100, 1, 0)
+    title.Position = UDim2.new(0, 20, 0, 0)
     title.BackgroundTransparency = 1
-    title.Text = "AIMBOT CONTROL"
+    title.Text = "ADVANCED AIMBOT + ESP"
     title.Font = Enum.Font.GothamBlack
     title.TextSize = 26
     title.TextColor3 = currentTheme.accent
-    title.TextTransparency = 0 -- SOLID
-    title.TextStrokeTransparency = 0.5
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextStrokeTransparency = 0.3
     title.TextStrokeColor3 = Color3.new(0,0,0)
-    
-    local toggleBtn = Instance.new("TextButton", main)
-    toggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    toggleBtn.Position = UDim2.new(0.05, 0, 0, 55)
-    toggleBtn.BackgroundColor3 = currentTheme.btn
-    toggleBtn.Text = "Toggle Aimbot: OFF"
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 18
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    toggleBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(toggleBtn, 0.2, 0.5)
-    
-    local fovBtn = Instance.new("TextButton", main)
-    fovBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    fovBtn.Position = UDim2.new(0.05, 0, 0, 105)
-    fovBtn.BackgroundColor3 = currentTheme.btn
-    fovBtn.Text = "Toggle FOV Circle: OFF"
-    fovBtn.Font = Enum.Font.GothamBold
-    fovBtn.TextSize = 18
-    fovBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    fovBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(fovBtn, 0.2, 0.5)
-    
-    local fovLabel = Instance.new("TextLabel", main)
-    fovLabel.Size = UDim2.new(0.9, 0, 0, 30)
-    fovLabel.Position = UDim2.new(0.05, 0, 0, 155)
-    fovLabel.BackgroundTransparency = 1
-    fovLabel.Text = "FOV Size: 150"
-    fovLabel.Font = Enum.Font.GothamBold
-    fovLabel.TextSize = 16
-    fovLabel.TextColor3 = globalConfig.textColor
-    fovLabel.TextTransparency = 0 -- SOLID
-    fovLabel.TextStrokeTransparency = 0.5
-    fovLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    
-    local fovSlider = Instance.new("Frame", main)
-    fovSlider.Size = UDim2.new(0.9, 0, 0, 12)
-    fovSlider.Position = UDim2.new(0.05, 0, 0, 185)
-    fovSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-    applyGlassEffect(fovSlider, 0.3, 0.7)
-    
-    local fovFill = Instance.new("Frame", fovSlider)
-    fovFill.Size = UDim2.new(0.33, 0, 1, 0)
-    fovFill.BackgroundColor3 = currentTheme.accent
-    fovFill.BorderSizePixel = 0
-    Instance.new("UICorner", fovFill).CornerRadius = UDim.new(0, 6)
-    
-    local fovDrag = Instance.new("TextButton", fovSlider)
-    fovDrag.Size = UDim2.new(0, 20, 0, 20)
-    fovDrag.Position = UDim2.new(0.33, -10, 0.5, -10)
-    fovDrag.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    fovDrag.Text = ""
-    Instance.new("UICorner", fovDrag).CornerRadius = UDim.new(1, 0)
-    
-    local smoothToggleBtn = Instance.new("TextButton", main)
-    smoothToggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    smoothToggleBtn.Position = UDim2.new(0.05, 0, 0, 205)
-    smoothToggleBtn.BackgroundColor3 = currentTheme.btn
-    smoothToggleBtn.Text = "Smoothness: ON"
-    smoothToggleBtn.Font = Enum.Font.GothamBold
-    smoothToggleBtn.TextSize = 18
-    smoothToggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-    smoothToggleBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(smoothToggleBtn, 0.2, 0.5)
-    
-    local smoothLabel = Instance.new("TextLabel", main)
-    smoothLabel.Size = UDim2.new(0.9, 0, 0, 30)
-    smoothLabel.Position = UDim2.new(0.05, 0, 0, 255)
-    smoothLabel.BackgroundTransparency = 1
-    smoothLabel.Text = "Smoothness Amount: 0.5"
-    smoothLabel.Font = Enum.Font.GothamBold
-    smoothLabel.TextSize = 16
-    smoothLabel.TextColor3 = globalConfig.textColor
-    smoothLabel.TextTransparency = 0 -- SOLID
-    smoothLabel.TextStrokeTransparency = 0.5
-    smoothLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    
-    local smoothSlider = Instance.new("Frame", main)
-    smoothSlider.Size = UDim2.new(0.9, 0, 0, 12)
-    smoothSlider.Position = UDim2.new(0.05, 0, 0, 285)
-    smoothSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-    applyGlassEffect(smoothSlider, 0.3, 0.7)
-    
-    local smoothFill = Instance.new("Frame", smoothSlider)
-    smoothFill.Size = UDim2.new(0.44, 0, 1, 0)
-    smoothFill.BackgroundColor3 = currentTheme.accent
-    smoothFill.BorderSizePixel = 0
-    Instance.new("UICorner", smoothFill).CornerRadius = UDim.new(0, 6)
-    
-    local smoothDrag = Instance.new("TextButton", smoothSlider)
-    smoothDrag.Size = UDim2.new(0, 20, 0, 20)
-    smoothDrag.Position = UDim2.new(0.44, -10, 0.5, -10)
-    smoothDrag.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    smoothDrag.Text = ""
-    Instance.new("UICorner", smoothDrag).CornerRadius = UDim.new(1, 0)
-    
-    local teamBtn = Instance.new("TextButton", main)
-    teamBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    teamBtn.Position = UDim2.new(0.05, 0, 0, 305)
-    teamBtn.BackgroundColor3 = currentTheme.btn
-    teamBtn.Text = "Team Check: OFF"
-    teamBtn.Font = Enum.Font.GothamBold
-    teamBtn.TextSize = 18
-    teamBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    teamBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(teamBtn, 0.2, 0.5)
-    
-    local wallBtn = Instance.new("TextButton", main)
-    wallBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    wallBtn.Position = UDim2.new(0.05, 0, 0, 355)
-    wallBtn.BackgroundColor3 = currentTheme.btn
-    wallBtn.Text = "Wall Check: OFF"
-    wallBtn.Font = Enum.Font.GothamBold
-    wallBtn.TextSize = 18
-    wallBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    wallBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(wallBtn, 0.2, 0.5)
-    
-    local closeBtn = Instance.new("TextButton", main)
-    closeBtn.Size = UDim2.new(0, 35, 0, 35)
-    closeBtn.Position = UDim2.new(1, -45, 0, 8)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+
+    -- Minimize and Close Buttons
+    local minimizeBtn = Instance.new("TextButton", titleBar)
+    minimizeBtn.Size = UDim2.new(0, 38, 0, 38)
+    minimizeBtn.Position = UDim2.new(1, -85, 0.5, -19)
+    minimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 60)
+    minimizeBtn.Text = "-"
+    minimizeBtn.Font = Enum.Font.GothamBlack
+    minimizeBtn.TextSize = 30
+    minimizeBtn.TextColor3 = Color3.new(1,1,1)
+    applyGlassEffect(minimizeBtn, 0.2, 0.4)
+
+    local closeBtn = Instance.new("TextButton", titleBar)
+    closeBtn.Size = UDim2.new(0, 38, 0, 38)
+    closeBtn.Position = UDim2.new(1, -42, 0.5, -19)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
     closeBtn.Text = "X"
     closeBtn.Font = Enum.Font.GothamBlack
-    closeBtn.TextSize = 20
+    closeBtn.TextSize = 26
     closeBtn.TextColor3 = Color3.new(1,1,1)
-    closeBtn.TextTransparency = 0 -- SOLID
     applyGlassEffect(closeBtn, 0.2, 0.4)
-    
-    local statusLabel = Instance.new("TextLabel", main)
-    statusLabel.Size = UDim2.new(0.9, 0, 0, 60)
-    statusLabel.Position = UDim2.new(0.05, 0, 0, 410)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "Hold Right Click to Lock"
-    statusLabel.Font = Enum.Font.GothamBold
-    statusLabel.TextSize = 18
-    statusLabel.TextColor3 = currentTheme.accent
-    statusLabel.TextTransparency = 0 -- SOLID
-    statusLabel.TextStrokeTransparency = 0.5
-    statusLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    statusLabel.TextWrapped = true
-    
-    local function updateAimbot()
-        if aimbotData.enabled then
-            toggleBtn.Text = "Toggle Aimbot: ON"
-            toggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+
+    -- Content ScrollingFrame
+    local contentScroll = Instance.new("ScrollingFrame")
+    contentScroll.Name = "Content"
+    contentScroll.Size = UDim2.new(1, -20, 1, -75)
+    contentScroll.Position = UDim2.new(0, 10, 0, 70)
+    contentScroll.BackgroundTransparency = 1
+    contentScroll.BorderSizePixel = 0
+    contentScroll.ScrollBarThickness = 6
+    contentScroll.ScrollBarImageColor3 = currentTheme.accent
+    contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    contentScroll.Parent = main
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0, 8)
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    listLayout.Parent = contentScroll
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 20)
+    padding.Parent = contentScroll
+
+    minimizeBtn.MouseButton1Click:Connect(function()
+        aimbotData.minimized = not aimbotData.minimized
+        if aimbotData.minimized then
+            main.Size = UDim2.new(0, 480, 0, 65)
+            contentScroll.Visible = false
+            minimizeBtn.Text = "+"
         else
-            toggleBtn.Text = "Toggle Aimbot: OFF"
-            toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+            main.Size = UDim2.new(0, 480, 0, 650)
+            contentScroll.Visible = true
+            minimizeBtn.Text = "-"
         end
-    end
-    
-    local function updateFOV()
-        if aimbotData.fovEnabled then
-            fovBtn.Text = "Toggle FOV Circle: ON"
-            fovBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-            if aimbotData.fovCircle then
-                aimbotData.fovCircle.Visible = true
-            end
-        else
-            fovBtn.Text = "Toggle FOV Circle: OFF"
-            fovBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-            if aimbotData.fovCircle then
-                aimbotData.fovCircle.Visible = false
-            end
-        end
-    end
-    
-    local function updateSmoothnessToggle()
-        if aimbotData.smoothnessEnabled then
-            smoothToggleBtn.Text = "Smoothness: ON"
-            smoothToggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            smoothToggleBtn.Text = "Smoothness: OFF"
-            smoothToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    end
-    
-    local function updateTeamCheck()
-        if aimbotData.teamCheck then
-            teamBtn.Text = "Team Check: ON"
-            teamBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            teamBtn.Text = "Team Check: OFF"
-            teamBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    end
-    
-    local function updateWallCheck()
-        if aimbotData.wallCheck then
-            wallBtn.Text = "Wall Check: ON"
-            wallBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            wallBtn.Text = "Wall Check: OFF"
-            wallBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    end
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        aimbotData.enabled = not aimbotData.enabled
-        updateAimbot()
     end)
-    
-    fovBtn.MouseButton1Click:Connect(function()
-        aimbotData.fovEnabled = not aimbotData.fovEnabled
-        updateFOV()
-    end)
-    
-    smoothToggleBtn.MouseButton1Click:Connect(function()
-        aimbotData.smoothnessEnabled = not aimbotData.smoothnessEnabled
-        updateSmoothnessToggle()
-    end)
-    
-    teamBtn.MouseButton1Click:Connect(function()
-        aimbotData.teamCheck = not aimbotData.teamCheck
-        updateTeamCheck()
-    end)
-    
-    wallBtn.MouseButton1Click:Connect(function()
-        aimbotData.wallCheck = not aimbotData.wallCheck
-        updateWallCheck()
-    end)
-    
-    local function setupSlider(slider, fill, drag, label, dataKey, min, max, isInt, prefixText)
-        local dragging = false
-        
-        drag.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-            end
-        end)
-        
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
-            end
-        end)
-        
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                local pos = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-                fill.Size = UDim2.new(pos, 0, 1, 0)
-                drag.Position = UDim2.new(pos, -10, 0.5, -10)
-                
-                local value = min + (pos * (max - min))
-                if isInt then
-                    value = math.floor(value)
-                else
-                    value = math.round(value * 10) / 10
-                end
-                
-                aimbotData[dataKey] = value
-                label.Text = prefixText .. ": " .. value
-                
-                if dataKey == "fovSize" and aimbotData.fovCircle then
-                    local size = value * 2
-                    aimbotData.fovCircle.Size = UDim2.new(0, size, 0, size)
-                end
-            end
-        end)
-    end
-    
-    setupSlider(fovSlider, fovFill, fovDrag, fovLabel, "fovSize", 50, 400, true, "FOV Size")
-    setupSlider(smoothSlider, smoothFill, smoothDrag, smoothLabel, "smoothness", 0.1, 1, false, "Smoothness Amount")
-    
+
     closeBtn.MouseButton1Click:Connect(function()
         aimbotData.enabled = false
-        aimbotData.fovEnabled = false
-        aimbotData.rightClickHeld = false
-        
-        if aimbotData.connection then
-            aimbotData.connection:Disconnect()
-            aimbotData.connection = nil
+        aimbotData.espEnabled = false
+        if aimbotData.connection then aimbotData.connection:Disconnect() end
+        if aimbotData.espConnection then aimbotData.espConnection:Disconnect() end
+        if aimbotData.inputBeganConn then aimbotData.inputBeganConn:Disconnect() end
+        if aimbotData.inputEndedConn then aimbotData.inputEndedConn:Disconnect() end
+
+        for _, drawings in pairs(aimbotData.espDrawings) do
+            for _, obj in pairs(drawings) do if obj then obj:Remove() end end
         end
-        if aimbotData.inputBeganConn then
-            aimbotData.inputBeganConn:Disconnect()
-            aimbotData.inputBeganConn = nil
-        end
-        if aimbotData.inputEndedConn then
-            aimbotData.inputEndedConn:Disconnect()
-            aimbotData.inputEndedConn = nil
-        end
-        if aimbotData.renderConn then
-            aimbotData.renderConn:Disconnect()
-            aimbotData.renderConn = nil
-        end
-        
+        for _, hl in pairs(aimbotData.espHighlights) do if hl then hl:Destroy() end end
+
         panel:Destroy()
         aimbotData.panel = nil
-        aimbotData.fovCircle = nil
-        
-        notify("✅ Aimbot panel closed", Color3.fromRGB(255, 160, 60))
+        notify("Aimbot + ESP fully closed. Use !aimbot to reopen.", Color3.fromRGB(255, 160, 60))
     end)
+
+    -- Headers
+    local function createHeader(text)
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(0.95, 0, 0, 36)
+        container.BackgroundColor3 = currentTheme.accent
+        container.BorderSizePixel = 0
+        container.Parent = contentScroll
+        
+        local corner = Instance.new("UICorner", container)
+        corner.CornerRadius = UDim.new(0, 6)
+        
+        local label = Instance.new("TextLabel", container)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.Font = Enum.Font.GothamBlack
+        label.TextSize = 16
+        label.TextColor3 = Color3.new(0, 0, 0)
+        label.TextStrokeTransparency = 0.8
+        
+        local stroke = Instance.new("UIStroke", container)
+        stroke.Color = Color3.new(1, 1, 1)
+        stroke.Transparency = 0.7
+        stroke.Thickness = 1
+        
+        return container
+    end
+
+    -- Helper for consistent button sizing
+    local function createButtonContainer()
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.95, 0, 0, 42)
+        btn.BackgroundColor3 = currentTheme.btn
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 17
+        btn.AutoButtonColor = true
+        applyGlassEffect(btn, 0.2, 0.5)
+        return btn
+    end
+
+    -- Team Selection
+    createHeader("AIMBOT TARGETING")
+
+    local teamsContainer = Instance.new("Frame")
+    teamsContainer.Size = UDim2.new(0.95, 0, 0, 110)
+    teamsContainer.BackgroundColor3 = Color3.fromRGB(30,30,40)
+    teamsContainer.BorderSizePixel = 0
+    applyGlassEffect(teamsContainer, 0.4, 0.6)
+    teamsContainer.Parent = contentScroll
+
+    local teamsScroll = Instance.new("ScrollingFrame", teamsContainer)
+    teamsScroll.Size = UDim2.new(1, -10, 1, -10)
+    teamsScroll.Position = UDim2.new(0, 5, 0, 5)
+    teamsScroll.BackgroundTransparency = 1
+    teamsScroll.BorderSizePixel = 0
+    teamsScroll.ScrollBarThickness = 4
+
+    local teamsListLayout = Instance.new("UIListLayout", teamsScroll)
+    teamsListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    teamsListLayout.Padding = UDim.new(0, 4)
+
+    aimbotData.teamsList = teamsScroll
+
+    local function refreshTeamsList()
+        for _, child in pairs(teamsScroll:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+
+        local allBtn = Instance.new("TextButton")
+        allBtn.Size = UDim2.new(1, -10, 0, 30)
+        allBtn.BackgroundColor3 = (aimbotData.targetTeam == nil) and currentTheme.accent or currentTheme.btn
+        allBtn.Text = "All Teams"
+        allBtn.Font = Enum.Font.GothamBold
+        allBtn.TextSize = 15
+        allBtn.TextColor3 = (aimbotData.targetTeam == nil) and Color3.new(0,0,0) or globalConfig.textColor
+        allBtn.Parent = teamsScroll
+        allBtn.MouseButton1Click:Connect(function()
+            aimbotData.targetTeam = nil
+            refreshTeamsList()
+        end)
+
+        local seen = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr.Team and not seen[plr.Team] then
+                seen[plr.Team] = true
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -10, 0, 30)
+                btn.BackgroundColor3 = (aimbotData.targetTeam == plr.Team) and currentTheme.accent or currentTheme.btn
+                btn.Text = plr.Team.Name
+                btn.Font = Enum.Font.GothamBold
+                btn.TextSize = 15
+                btn.TextColor3 = (aimbotData.targetTeam == plr.Team) and Color3.new(0,0,0) or globalConfig.textColor
+                btn.Parent = teamsScroll
+                btn.MouseButton1Click:Connect(function()
+                    aimbotData.targetTeam = plr.Team
+                    refreshTeamsList()
+                end)
+            end
+        end
+        teamsScroll.CanvasSize = UDim2.new(0, 0, 0, teamsListLayout.AbsoluteContentSize.Y)
+    end
+    refreshTeamsList()
+
+    -- Main Toggles
+    createHeader("AIMBOT SETTINGS")
+
+    local espToggleBtn = nil
     
+    local function createToggle(name, key, callback)
+        local btn = createButtonContainer()
+        btn.Text = name .. ": " .. (aimbotData[key] and "ON" or "OFF")
+        btn.TextColor3 = aimbotData[key] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        btn.TextStrokeTransparency = 0.3
+        btn.TextStrokeColor3 = Color3.new(0,0,0)
+        btn.Parent = contentScroll
+
+        btn.MouseButton1Click:Connect(function()
+            aimbotData[key] = not aimbotData[key]
+            btn.Text = name .. ": " .. (aimbotData[key] and "ON" or "OFF")
+            btn.TextColor3 = aimbotData[key] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+            
+            if callback then
+                callback(aimbotData[key])
+            end
+        end)
+        
+        return btn
+    end
+
+    createToggle("Aimbot Enabled", "enabled")
+    createToggle("Smoothness", "smoothnessEnabled")
+    createToggle("Wall Check", "wallCheck")
+    createToggle("Prediction", "predictionEnabled")
+
+    -- Aim Part Button
+    local aimPartBtn = createButtonContainer()
+    aimPartBtn.Text = "Aim Part: " .. (aimbotData.aimPart == "Head" and "HEAD" or "TORSO")
+    aimPartBtn.TextColor3 = currentTheme.accent
+    aimPartBtn.Parent = contentScroll
+    aimPartBtn.MouseButton1Click:Connect(function()
+        aimbotData.aimPart = aimbotData.aimPart == "Head" and "HumanoidRootPart" or "Head"
+        aimPartBtn.Text = "Aim Part: " .. (aimbotData.aimPart == "Head" and "HEAD" or "TORSO")
+    end)
+
+    -- Sliders
+    createHeader("FINE TUNING")
+
+    local function createSlider(labelText, dataKey, minVal, maxVal, isInt)
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(0.95, 0, 0, 55)
+        container.BackgroundTransparency = 1
+        container.Parent = contentScroll
+
+        local label = Instance.new("TextLabel", container)
+        label.Size = UDim2.new(1, 0, 0, 22)
+        label.BackgroundTransparency = 1
+        label.Text = labelText .. ": " .. aimbotData[dataKey]
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 15
+        label.TextColor3 = globalConfig.textColor
+
+        local sliderFrame = Instance.new("Frame", container)
+        sliderFrame.Size = UDim2.new(1, 0, 0, 10)
+        sliderFrame.Position = UDim2.new(0, 0, 0, 28)
+        sliderFrame.BackgroundColor3 = Color3.fromRGB(40,40,50)
+        Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 5)
+
+        local fill = Instance.new("Frame", sliderFrame)
+        fill.BackgroundColor3 = currentTheme.accent
+        fill.BorderSizePixel = 0
+        Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 5)
+
+        local drag = Instance.new("TextButton", sliderFrame)
+        drag.Size = UDim2.new(0, 18, 0, 18)
+        drag.BackgroundColor3 = Color3.new(1,1,1)
+        Instance.new("UICorner", drag).CornerRadius = UDim.new(1, 0)
+        drag.Text = ""
+
+        local dragging = false
+        drag.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
+        UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+
+        UserInputService.InputChanged:Connect(function(i)
+            if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+                local percent = math.clamp((i.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+                fill.Size = UDim2.new(percent, 0, 1, 0)
+                drag.Position = UDim2.new(percent, -9, 0.5, -9)
+
+                local value = minVal + percent * (maxVal - minVal)
+                if isInt then value = math.floor(value) else value = math.round(value * 100) / 100 end
+
+                aimbotData[dataKey] = value
+                label.Text = labelText .. ": " .. value
+            end
+        end)
+
+        local initP = (aimbotData[dataKey] - minVal) / (maxVal - minVal)
+        fill.Size = UDim2.new(initP, 0, 1, 0)
+        drag.Position = UDim2.new(initP, -9, 0.5, -9)
+    end
+
+    createSlider("Smoothness", "smoothness", 0.1, 1, false)
+    createSlider("Prediction Strength", "predictionAmount", 0, 0.5, false)
+
+    -- ESP Section
+    createHeader("ESP SETTINGS")
+
+    -- ESP Master Toggle
+    espToggleBtn = createToggle("Toggle ESP", "espEnabled", function(enabled)
+        if enabled then
+            startESP()
+            notify("ESP Enabled - Select features below", Color3.fromRGB(100, 255, 100))
+        else
+            -- Immediately hide all ESP elements
+            for plr, drawings in pairs(aimbotData.espDrawings) do
+                if drawings.box then drawings.box.Visible = false end
+                if drawings.nameText then drawings.nameText.Visible = false end
+                if drawings.healthText then drawings.healthText.Visible = false end
+                if drawings.tracer then drawings.tracer.Visible = false end
+                if drawings.skeleton then
+                    for _, line in pairs(drawings.skeleton) do
+                        if line then line.Visible = false end
+                    end
+                end
+            end
+            
+            for _, hl in pairs(aimbotData.espHighlights) do
+                if hl then hl.Enabled = false end
+            end
+            
+            aimbotData.espEnabled = false
+            
+            task.delay(0.1, function()
+                for _, drawings in pairs(aimbotData.espDrawings) do
+                    for name, obj in pairs(drawings) do 
+                        if typeof(obj) == "table" then
+                            for _, line in pairs(obj) do if line then line:Remove() end end
+                        elseif obj then 
+                            obj:Remove() 
+                        end 
+                    end
+                end
+                for _, hl in pairs(aimbotData.espHighlights) do
+                    if hl then hl:Destroy() end
+                end
+                aimbotData.espDrawings = {}
+                aimbotData.espHighlights = {}
+            end)
+            
+            notify("ESP Disabled", Color3.fromRGB(255, 100, 100))
+        end
+    end)
+
+    -- All ESP feature toggles - start OFF by default
+    createToggle("Box ESP", "espBoxEnabled")
+    createToggle("Skeleton", "espSkeletonEnabled")
+    createToggle("Tracers", "espTracersEnabled")
+    createToggle("Chams (Wallhack)", "espChamsEnabled")
+    createToggle("Health Text", "espHealthTextEnabled")
+
+    local styleBtn = createButtonContainer()
+    styleBtn.Text = "Box Style: " .. aimbotData.espBoxStyle
+    styleBtn.TextColor3 = currentTheme.accent
+    styleBtn.Parent = contentScroll
+    styleBtn.MouseButton1Click:Connect(function()
+        aimbotData.espBoxStyle = aimbotData.espBoxStyle == "Full" and "Corner" or "Full"
+        styleBtn.Text = "Box Style: " .. aimbotData.espBoxStyle
+    end)
+
+    createToggle("Filled Box", "espFilledBox")
+
     aimbotData.panel = panel
-    
-    -- FIXED: Better target validation with team check
+
+    -- Aimbot Logic
     local function isValidTarget(plr)
-        if not plr or plr == client then return false end
-        if not plr.Character then return false end
-        if not plr.Character:FindFirstChild("HumanoidRootPart") then return false end
-        if not plr.Character:FindFirstChild("Humanoid") then return false end
-        if plr.Character.Humanoid.Health <= 0 then return false end
-        
-        -- FIXED: Team Check - Skip teammates
-        if aimbotData.teamCheck then
-            if client.Team and plr.Team and client.Team == plr.Team then
-                return false
-            end
+        if not plr or plr == client or not plr.Character then return false end
+        local char = plr.Character
+        local hum = char:FindFirstChild("Humanoid")
+        if not hum or hum.Health <= 0 then return false end
+
+        if aimbotData.targetTeam then
+            if not plr.Team or plr.Team ~= aimbotData.targetTeam then return false end
+        elseif aimbotData.teamCheck and client.Team and plr.Team and client.Team == plr.Team then
+            return false
         end
-        
+
         if aimbotData.wallCheck then
-            local targetPos = plr.Character.HumanoidRootPart.Position
-            local cameraPos = workspace.CurrentCamera.CFrame.Position
-            local direction = (targetPos - cameraPos).Unit
-            local distance = (targetPos - cameraPos).Magnitude
-            
-            local raycastParams = RaycastParams.new()
-            raycastParams.FilterDescendantsInstances = {client.Character, plr.Character}
-            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-            
-            local result = Workspace:Raycast(cameraPos, direction * distance, raycastParams)
-            if result then
-                return false
-            end
+            local cam = workspace.CurrentCamera
+            local root = char:FindFirstChild(aimbotData.aimPart) or char:FindFirstChild("HumanoidRootPart")
+            if not root then return false end
+            local origin = cam.CFrame.Position
+            local dir = root.Position - origin
+            local params = RaycastParams.new()
+            params.FilterDescendantsInstances = {client.Character or Instance.new("Folder")}
+            params.FilterType = Enum.RaycastFilterType.Blacklist
+            local result = workspace:Raycast(origin, dir, params)
+            if result and not char:IsAncestorOf(result.Instance) then return false end
         end
-        
         return true
     end
-    
+
+    local function getPredictedPosition(rootPart)
+        local pos = rootPart.Position
+        if aimbotData.predictionEnabled and rootPart.AssemblyLinearVelocity then
+            local vel = rootPart.AssemblyLinearVelocity
+            local dist = (pos - workspace.CurrentCamera.CFrame.Position).Magnitude
+            pos = pos + vel * (dist / 220) * aimbotData.predictionAmount
+        end
+        return pos
+    end
+
     local function getClosestPlayer()
-        local closest = nil
-        local closestDist = aimbotData.fovEnabled and aimbotData.fovSize or math.huge
+        local closest, closestDist = nil, math.huge
         local mousePos = UserInputService:GetMouseLocation()
-        
+        local cam = workspace.CurrentCamera
+
         for _, plr in ipairs(Players:GetPlayers()) do
             if isValidTarget(plr) then
-                local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closest = plr
+                local root = plr.Character:FindFirstChild(aimbotData.aimPart) or plr.Character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local predicted = getPredictedPosition(root)
+                    local screenPos, onScreen = cam:WorldToViewportPoint(predicted)
+                    if onScreen then
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closest = plr
+                        end
                     end
                 end
             end
         end
-        
         return closest
     end
-    
-    -- FIXED: Aimbot loop that works even after death
+
     aimbotData.connection = RunService.RenderStepped:Connect(function()
-        if aimbotData.enabled and aimbotData.rightClickHeld then
-            local target = getClosestPlayer()
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                local pos = workspace.CurrentCamera:WorldToViewportPoint(target.Character.HumanoidRootPart.Position)
-                local mousePos = UserInputService:GetMouseLocation()
-                local targetPos = Vector2.new(pos.X, pos.Y)
-                
-                local moveVec
-                if aimbotData.smoothnessEnabled then
-                    moveVec = mousePos:Lerp(targetPos, 1 - aimbotData.smoothness)
-                else
-                    moveVec = targetPos
-                end
-                
-                if mousemoverel then
-                    mousemoverel(moveVec.X - mousePos.X, moveVec.Y - mousePos.Y)
-                end
-            end
+        if not (aimbotData.enabled and aimbotData.rightClickHeld) then return end
+
+        local target = getClosestPlayer()
+        if not target or not target.Character then return end
+
+        local root = target.Character:FindFirstChild(aimbotData.aimPart) or target.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local predictedPos = getPredictedPosition(root)
+        local screenPos = workspace.CurrentCamera:WorldToViewportPoint(predictedPos)
+        local mousePos = UserInputService:GetMouseLocation()
+        local targetScreen = Vector2.new(screenPos.X, screenPos.Y)
+
+        local moveVec = aimbotData.smoothnessEnabled 
+            and mousePos:Lerp(targetScreen, 1 - aimbotData.smoothness) 
+            or targetScreen
+
+        if mousemoverel then
+            mousemoverel(moveVec.X - mousePos.X, moveVec.Y - mousePos.Y)
         end
     end)
-    
+
     aimbotData.inputBeganConn = UserInputService.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton2 then
             aimbotData.rightClickHeld = true
         end
     end)
-    
+
     aimbotData.inputEndedConn = UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton2 then
             aimbotData.rightClickHeld = false
         end
     end)
-end
 
+    -- FIXED ESP System - Optimized for distance and performance
+    function startESP()
+        if aimbotData.espConnection then return end
+
+        -- Use Heartbeat instead of RenderStepped for better performance [^11^]
+        aimbotData.espConnection = RunService.Heartbeat:Connect(function()
+            if not aimbotData.espEnabled then 
+                -- Hide all drawings immediately
+                for _, drawings in pairs(aimbotData.espDrawings) do
+                    if drawings.box then drawings.box.Visible = false end
+                    if drawings.nameText then drawings.nameText.Visible = false end
+                    if drawings.healthText then drawings.healthText.Visible = false end
+                    if drawings.tracer then drawings.tracer.Visible = false end
+                    if drawings.skeleton then
+                        for _, line in pairs(drawings.skeleton) do
+                            if line then line.Visible = false end
+                        end
+                    end
+                end
+                for _, hl in pairs(aimbotData.espHighlights) do
+                    if hl then hl.Enabled = false end
+                end
+                return 
+            end
+
+            local cam = workspace.CurrentCamera
+            local localPlayer = client
+            local localRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+            
+            if not localRoot then return end -- Don't run if local player has no character
+
+            local localPos = localRoot.Position
+
+            -- Clean up disconnected players first
+            for plr, drawings in pairs(aimbotData.espDrawings) do
+                if not plr.Parent then
+                    for name, obj in pairs(drawings) do 
+                        if typeof(obj) == "table" then
+                            for _, line in pairs(obj) do if line then line:Remove() end end
+                        elseif obj then 
+                            obj:Remove() 
+                        end 
+                    end
+                    aimbotData.espDrawings[plr] = nil
+                end
+            end
+
+            -- Process players with distance check
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr == localPlayer then continue end
+
+                local char = plr.Character
+                -- CRITICAL FIX: Hide ESP if player is too far or has no character
+                if not char then 
+                    if aimbotData.espDrawings[plr] then
+                        for _, obj in pairs(aimbotData.espDrawings[plr]) do 
+                            if typeof(obj) == "table" then
+                                for _, line in pairs(obj) do if line then line.Visible = false end end
+                            elseif obj then 
+                                obj.Visible = false
+                            end 
+                        end
+                    end
+                    continue 
+                end
+
+                local root = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChild("Humanoid")
+                local head = char:FindFirstChild("Head")
+                
+                -- CRITICAL FIX: Distance check - don't render if too far
+                if not root or not hum or hum.Health <= 0 then
+                    if aimbotData.espDrawings[plr] then
+                        for _, obj in pairs(aimbotData.espDrawings[plr]) do 
+                            if typeof(obj) == "table" then
+                                for _, line in pairs(obj) do if line then line.Visible = false end end
+                            elseif obj then 
+                                obj.Visible = false
+                            end 
+                        end
+                    end
+                    if aimbotData.espHighlights[plr] then
+                        aimbotData.espHighlights[plr].Enabled = false
+                    end
+                    continue
+                end
+
+                -- Distance check - max 1000 studs
+                local distance = (root.Position - localPos).Magnitude
+                if distance > aimbotData.espMaxDistance then
+                    -- Hide ESP for far away players instead of keeping them visible
+                    if aimbotData.espDrawings[plr] then
+                        for _, obj in pairs(aimbotData.espDrawings[plr]) do 
+                            if typeof(obj) == "table" then
+                                for _, line in pairs(obj) do if line then line.Visible = false end end
+                            elseif obj then 
+                                obj.Visible = false
+                            end 
+                        end
+                    end
+                    if aimbotData.espHighlights[plr] then
+                        aimbotData.espHighlights[plr].Enabled = false
+                    end
+                    continue
+                end
+
+                local teamColor = plr.Team and plr.Team.TeamColor.Color or Color3.fromRGB(255,255,255)
+                
+                local torsoCenter = root.Position
+                local headPos = head and head.Position or (root.Position + Vector3.new(0, 2.5, 0))
+                local legPos = root.Position - Vector3.new(0, 3, 0)
+                
+                local screenPos, onScreen = cam:WorldToViewportPoint(torsoCenter)
+                
+                -- Initialize drawings if needed
+                if not aimbotData.espDrawings[plr] then
+                    aimbotData.espDrawings[plr] = {
+                        box = Drawing.new("Square"),
+                        nameText = Drawing.new("Text"),
+                        healthText = Drawing.new("Text"),
+                        tracer = Drawing.new("Line"),
+                        skeleton = {}
+                    }
+                    
+                    for i = 1, #SKELETON_JOINTS do
+                        local line = Drawing.new("Line")
+                        line.Thickness = 1.5
+                        line.Transparency = 0.8
+                        aimbotData.espDrawings[plr].skeleton[i] = line
+                    end
+                    
+                    local d = aimbotData.espDrawings[plr]
+                    d.box.Thickness = 2
+                    d.box.Filled = aimbotData.espFilledBox
+                    d.nameText.Size = 16
+                    d.nameText.Center = true
+                    d.nameText.Outline = true
+                    d.healthText.Size = 15
+                    d.healthText.Center = true
+                    d.healthText.Outline = true
+                    d.tracer.Thickness = 1.5
+                    d.tracer.Transparency = 0.7
+                end
+
+                local d = aimbotData.espDrawings[plr]
+                local healthPercent = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+
+                -- Hide if off screen
+                if not onScreen then
+                    d.box.Visible = false
+                    d.nameText.Visible = false
+                    d.healthText.Visible = false
+                    d.tracer.Visible = false
+                    for _, line in pairs(d.skeleton) do line.Visible = false end
+                    if aimbotData.espHighlights[plr] then
+                        aimbotData.espHighlights[plr].Enabled = false
+                    end
+                    continue
+                end
+
+                -- Box ESP
+                if aimbotData.espBoxEnabled then
+                    local headScreen, headVisible = cam:WorldToViewportPoint(headPos)
+                    local legScreen, legVisible = cam:WorldToViewportPoint(legPos)
+                    
+                    if headVisible and legVisible then
+                        local height = math.abs(headScreen.Y - legScreen.Y) * 1.1
+                        local width = height * 0.55
+
+                        d.box.Visible = true
+                        d.box.Color = teamColor
+                        d.box.Filled = aimbotData.espFilledBox
+                        d.box.Size = Vector2.new(width, height)
+                        d.box.Position = Vector2.new(screenPos.X - width/2, screenPos.Y - height/2)
+                    else
+                        d.box.Visible = false
+                    end
+                else
+                    d.box.Visible = false
+                end
+
+                -- Skeleton ESP
+                if aimbotData.espSkeletonEnabled then
+                    for i, joint in ipairs(SKELETON_JOINTS) do
+                        local part1 = char:FindFirstChild(joint[1])
+                        local part2 = char:FindFirstChild(joint[2])
+                        local line = d.skeleton[i]
+                        
+                        if part1 and part2 then
+                            local pos1, vis1 = cam:WorldToViewportPoint(part1.Position)
+                            local pos2, vis2 = cam:WorldToViewportPoint(part2.Position)
+                            
+                            if vis1 and vis2 then
+                                line.Visible = true
+                                line.Color = teamColor
+                                line.From = Vector2.new(pos1.X, pos1.Y)
+                                line.To = Vector2.new(pos2.X, pos2.Y)
+                            else
+                                line.Visible = false
+                            end
+                        else
+                            line.Visible = false
+                        end
+                    end
+                else
+                    for _, line in pairs(d.skeleton) do line.Visible = false end
+                end
+
+                -- Name
+                d.nameText.Visible = true
+                d.nameText.Text = "@" .. plr.Name
+                d.nameText.Color = teamColor
+                local boxHeight = aimbotData.espBoxEnabled and d.box.Size.Y or 60
+                d.nameText.Position = Vector2.new(screenPos.X, screenPos.Y - boxHeight/2 - 20)
+
+                -- Health Text
+                if aimbotData.espHealthTextEnabled then
+                    d.healthText.Visible = true
+                    d.healthText.Text = math.floor(hum.Health) .. " HP"
+                    d.healthText.Color = healthPercent > 0.6 and Color3.fromRGB(80,255,80) or (healthPercent > 0.3 and Color3.fromRGB(255,220,60) or Color3.fromRGB(255,70,70))
+                    d.healthText.Position = Vector2.new(screenPos.X, screenPos.Y - boxHeight/2 - 5)
+                else
+                    d.healthText.Visible = false
+                end
+
+                -- Tracers
+                if aimbotData.espTracersEnabled then
+                    d.tracer.Visible = true
+                    d.tracer.Color = teamColor
+                    d.tracer.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+                    d.tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+                else
+                    d.tracer.Visible = false
+                end
+
+                -- Chams
+                if aimbotData.espChamsEnabled then
+                    if not aimbotData.espHighlights[plr] then
+                        local hl = Instance.new("Highlight")
+                        hl.Adornee = char
+                        hl.FillColor = teamColor
+                        hl.OutlineColor = Color3.new(1,1,1)
+                        hl.FillTransparency = 0.75
+                        hl.OutlineTransparency = 0.2
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Parent = panel
+                        aimbotData.espHighlights[plr] = hl
+                    else
+                        aimbotData.espHighlights[plr].Enabled = true
+                        aimbotData.espHighlights[plr].FillColor = teamColor
+                    end
+                elseif aimbotData.espHighlights[plr] then
+                    aimbotData.espHighlights[plr].Enabled = false
+                end
+            end
+        end)
+    end
+
+    
+end
 -- =============================================================
 -- UNLOCK MOUSE SYSTEM
 -- =============================================================
