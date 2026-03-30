@@ -231,10 +231,7 @@ local function setupButtonSounds()
 end
 
 -- =============================================================
--- NOTIFICATIONS - STACKING SYSTEM
--- =============================================================
--- =============================================================
--- IMPROVED NOTIFICATION SYSTEM
+--  NOTIFICATION SYSTEM
 -- =============================================================
 local notifGui = Instance.new("ScreenGui")
 notifGui.Name = "LunarNotifs"
@@ -252,7 +249,7 @@ local function notify(text, col)
     -- Create notification frame
     local f = Instance.new("Frame")
     f.Size = UDim2.new(0, 340, 0, 76)
-    f.Position = UDim2.new(1, 80, 1, -100) -- Start further off-screen
+    f.Position = UDim2.new(1, 100, 1, -100)
     f.BackgroundColor3 = currentTheme.glass
     f.BorderSizePixel = 0
     f.BackgroundTransparency = 1
@@ -276,28 +273,18 @@ local function notify(text, col)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = f
 
-    -- Appear sound
-    local appearSound = Instance.new("Sound")
-    appearSound.SoundId = "rbxassetid://1234567890"  -- same as your open sound
-    appearSound.Volume = 0.5
-    appearSound.Parent = SoundService
-    appearSound:Play()
-    Debris:AddItem(appearSound, 3)
+    -- Add to stack (newest on top)
+    table.insert(activeNotifications, f)
 
-    -- Add to stack
-    table.insert(activeNotifications, 1, f)
-
-    -- === ENTRANCE ANIMATION ===
-    -- Start small + transparent + off screen
+    -- Entrance Animation
     f.Size = UDim2.new(0, 280, 0, 60)
-    f.Position = UDim2.new(1, 100, 1, -80)
+    f.Position = UDim2.new(1, 120, 1, -80)
     f.BackgroundTransparency = 1
 
     task.spawn(function()
-        -- Pop in with scale + slide
         TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 340, 0, 76),
-            Position = UDim2.new(1, -360, 1, -90 - ((#activeNotifications-1) * (notifHeight + notifSpacing))),
+            Position = UDim2.new(1, -360, 1, -90 - ((#activeNotifications - 1) * (notifHeight + notifSpacing))),
             BackgroundTransparency = globalConfig.uiTransparency
         }):Play()
 
@@ -306,11 +293,11 @@ local function notify(text, col)
         }):Play()
     end)
 
-    -- Reposition all existing notifications smoothly
+    -- Reposition all existing notifications
     for i, notif in ipairs(activeNotifications) do
-        if notif ~= f then
-            local targetY = -90 - ((i-1) * (notifHeight + notifSpacing))
-            TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        if notif ~= f and notif.Parent then
+            local targetY = -90 - ((i - 1) * (notifHeight + notifSpacing))
+            TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                 Position = UDim2.new(1, -360, 1, targetY)
             }):Play()
         end
@@ -320,7 +307,7 @@ local function notify(text, col)
     task.delay(5, function()
         if not f.Parent then return end
 
-        -- Find and remove from table
+        -- Remove from active list
         for i, notif in ipairs(activeNotifications) do
             if notif == f then
                 table.remove(activeNotifications, i)
@@ -330,7 +317,7 @@ local function notify(text, col)
 
         -- Exit animation
         TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, 100, 1, f.Position.Y.Offset),
+            Position = UDim2.new(1, 120, 1, f.Position.Y.Offset),
             BackgroundTransparency = 1
         }):Play()
 
@@ -339,29 +326,33 @@ local function notify(text, col)
         }):Play()
 
         -- Reposition remaining notifications
-        task.delay(0.1, function()
+        task.delay(0.15, function()
             for i, notif in ipairs(activeNotifications) do
-                local targetY = -90 - ((i-1) * (notifHeight + notifSpacing))
-                TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                    Position = UDim2.new(1, -360, 1, targetY)
-                }):Play()
+                if notif.Parent then
+                    local targetY = -90 - ((i - 1) * (notifHeight + notifSpacing))
+                    TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                        Position = UDim2.new(1, -360, 1, targetY)
+                    }):Play()
+                end
             end
         end)
 
-        task.delay(0.6, function()
+        task.delay(0.7, function()
             if f.Parent then f:Destroy() end
         end)
     end)
 
-    -- Remove oldest if too many
+    -- Limit to 5 notifications max
     if #activeNotifications > 5 then
-        local old = table.remove(activeNotifications)
-        if old then
+        local old = table.remove(activeNotifications, 1)
+        if old and old.Parent then
             TweenService:Create(old, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(1, 100, 1, old.Position.Y.Offset),
+                Position = UDim2.new(1, 120, 1, old.Position.Y.Offset),
                 BackgroundTransparency = 1
             }):Play()
-            task.delay(0.4, function() old:Destroy() end)
+            task.delay(0.4, function()
+                if old.Parent then old:Destroy() end
+            end)
         end
     end
 end
@@ -436,7 +427,7 @@ local function startFly(plr, spd)
         end
     end)
     
-    notify("✅ Flying at speed " .. spd .. " - Use WASD, Space, Shift", currentTheme.accent)
+    notify("Flying at speed " .. spd .. " - Use WASD, Space, Shift", currentTheme.accent)
 end
 
 local function fly(plr, spd)
@@ -475,7 +466,7 @@ local function unfly(plr)
     end
     
     flyData[plr] = nil
-    notify("✅ Fly stopped", Color3.fromRGB(255, 160, 60))
+    notify("Fly stopped", Color3.fromRGB(255, 160, 60))
 end
 
 -- =============================================================
@@ -660,7 +651,7 @@ local function createSpeedPanel()
     end)
     
     speedPanelData.panel = panel
-    notify("✅ Speed panel opened", currentTheme.accent)
+    notify("Speed panel opened", currentTheme.accent)
 end
 
 -- =============================================================
@@ -808,7 +799,7 @@ local function unview()
     viewData.originalCameraSubject = nil
     viewData.originalCameraType = nil
     
-    notify("✅ Stopped spectating — back to normal", Color3.fromRGB(255, 160, 60))
+    notify("Stopped spectating — back to normal", Color3.fromRGB(255, 160, 60))
 end
 
 -- Auto-stop if target disappears/dies/leaves
@@ -1044,7 +1035,7 @@ local function createJoinLogsPanel()
     end)
     
     joinLogsData.panel = panel
-    notify("✅ Join logs panel opened", Color3.fromRGB(100, 255, 100))
+    notify("Join logs panel opened", Color3.fromRGB(100, 255, 100))
 end
 
 -- =============================================================
@@ -2461,7 +2452,7 @@ local function toggleMouseUnlock()
     mouseUnlockData.enabled = not mouseUnlockData.enabled
     
     if mouseUnlockData.enabled then
-        notify("🔓 Mouse unlock enabled! Press F to toggle lock/unlock", Color3.fromRGB(100, 255, 100))
+        notify("Mouse unlock enabled! Press F to toggle lock/unlock", Color3.fromRGB(100, 255, 100))
         
         mouseUnlockData.connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if input.KeyCode == Enum.KeyCode.F and not gameProcessed then
@@ -2630,7 +2621,7 @@ local function toggleLogs()
         logsScroll.CanvasSize = UDim2.new(0,0,0,0)
     end)
     
-    notify("✅ Logs panel opened", Color3.fromRGB(180,180,255))
+    notify("Logs panel opened", Color3.fromRGB(180,180,255))
 end
 
 TextChatService.MessageReceived:Connect(function(msg)
@@ -2748,7 +2739,7 @@ local function toggleStopwatch()
     end)
     
     stopwatchData.label = timeLabel
-    notify("✅ Stopwatch panel opened", Color3.fromRGB(200, 200, 255))
+    notify("Stopwatch panel opened", Color3.fromRGB(200, 200, 255))
 end
 
 -- =============================================================
@@ -2765,7 +2756,7 @@ local function removeWaypoint()
         if last.conn then last.conn:Disconnect() end
         if last.part then last.part:Destroy() end
         table.remove(waypoints, #waypoints)
-        notify("✅ Removed waypoint #" .. (#waypoints + 1), Color3.fromRGB(255, 160, 60))
+        notify("Removed waypoint #" .. (#waypoints + 1), Color3.fromRGB(255, 160, 60))
     end
 end
 
@@ -2825,7 +2816,7 @@ local function setspeed(plr, num)
     local hum = getHum(plr)
     if hum then
         hum.WalkSpeed = tonumber(num) or 16
-        notify("✅ WalkSpeed set to " .. hum.WalkSpeed, currentTheme.accent)
+        notify("WalkSpeed set to " .. hum.WalkSpeed, currentTheme.accent)
     end
 end
 ------------------------------------------------
@@ -2839,7 +2830,7 @@ local function resetspeed(plr)
     local hum = getHum(plr)
     if hum then
         hum.WalkSpeed = 16
-        notify("✅ WalkSpeed reset to 16", Color3.fromRGB(180, 180, 255))
+        notify("WalkSpeed reset to 16", Color3.fromRGB(180, 180, 255))
     end
 end
 ------------------------------------------------
@@ -2863,7 +2854,7 @@ local function noclip(plr)
             end
         end
     end)
-    notify("✅ Noclip enabled", Color3.fromRGB(100, 255, 120))
+    notify("Noclip enabled", Color3.fromRGB(100, 255, 120))
 end
 ------------------------------------------------
 -- advanced unnoclip
@@ -2884,7 +2875,7 @@ local function unnoclip(plr)
             end
         end
     end
-    notify("✅ Noclip disabled", Color3.fromRGB(255, 120, 100))
+    notify("⚠️Noclip disabled", Color3.fromRGB(255, 120, 100))
 end
 ------------------------------------------------
 -- advanced heal
@@ -2893,9 +2884,9 @@ local function heal(plr)
     local hum = getHum(plr)
     if hum then
         hum.Health = hum.MaxHealth
-        notify("✅ Healed " .. plr.Name, Color3.fromRGB(100, 255, 100))
+        notify("⚠️DOES NOT WORK⚠️ " .. plr.Name, Color3.fromRGB(100, 255, 100))
     else
-        notify("❌ Cannot heal - no humanoid found", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
     end
 end
 ------------------------------------------------
@@ -2904,7 +2895,7 @@ end
 local function kill(plr)
     local char = plr and plr.Character
     if not char then 
-        notify("❌ Cannot kill - no character", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
         return 
     end
     pcall(function()
@@ -2912,7 +2903,7 @@ local function kill(plr)
         if hum then hum.Health = 0 end
         char:BreakJoints()
     end)
-    notify("💀 Killed " .. plr.Name, Color3.fromRGB(255, 80, 80))
+    notify("Only works in FTAP ⚠️DOES NOT WORK⚠️" .. plr.Name, Color3.fromRGB(255, 80, 80))
 end
 ------------------------------------------------
 -- advanced tp
@@ -2929,7 +2920,7 @@ local function tp(p1, p2)
     local h1, h2 = getHRP(p1), getHRP(p2)
     if h1 and h2 then
         h1.CFrame = h2.CFrame * CFrame.new(0, 3, 0)
-        notify("✅ Teleported to " .. p2.Name, currentTheme.accent)
+        notify("Teleported to " .. p2.Name, currentTheme.accent)
     else
         notify("❌ Teleport failed - missing character parts", Color3.fromRGB(255, 100, 100))
     end
@@ -2961,7 +2952,7 @@ local function jump(plr, pow)
     local hum = getHum(plr)
     if hum then
         hum.JumpPower = tonumber(pow) or 50
-        notify("✅ Jump power set to " .. hum.JumpPower, Color3.fromRGB(200, 200, 100))
+        notify("Jump power set to " .. hum.JumpPower, Color3.fromRGB(200, 200, 100))
     end
 end
 ------------------------------------------------
@@ -2975,7 +2966,7 @@ local function sit(plr)
     local hum = getHum(plr)
     if hum then 
         hum.Sit = true 
-        notify("✅ Sitting", Color3.fromRGB(200, 150, 255))
+        notify("Sitting", Color3.fromRGB(200, 150, 255))
     end
 end
 ------------------------------------------------
@@ -2992,7 +2983,7 @@ local function lay(plr)
         task.wait(0.1)
         local hrp = getHRP(plr)
         if hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(90), 0, 0) end
-        notify("✅ Laying down", Color3.fromRGB(200, 150, 255))
+        notify("Laying down", Color3.fromRGB(200, 150, 255))
     end
 end
 ------------------------------------------------
@@ -3011,7 +3002,7 @@ local function freeze(plr)
     frozen[plr] = {ws = hum.WalkSpeed, jp = hum.JumpPower}
     hum.WalkSpeed = 0
     hum.JumpPower = 0
-    notify("❄️ Frozen", Color3.fromRGB(100, 100, 255))
+    notify("Frozen", Color3.fromRGB(100, 100, 255))
 end
 ------------------------------------------------
 -- advanced Unfreeze
@@ -3027,9 +3018,9 @@ local function unfreeze(plr)
         hum.WalkSpeed = data.ws
         hum.JumpPower = data.jp
         frozen[plr] = nil
-        notify("✅ Unfrozen", Color3.fromRGB(200, 100, 200))
+        notify("Unfrozen", Color3.fromRGB(200, 100, 200))
     else
-        notify("⚠️ Not frozen", Color3.fromRGB(255, 200, 100))
+        notify("⚠️Not frozen", Color3.fromRGB(255, 200, 100))
     end
 end
 ------------------------------------------------
@@ -3037,11 +3028,11 @@ end
 ------------------------------------------------
 local function god(plr)
     if plr ~= client then
-        notify("❌ God mode only works on yourself", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
         return
     end
     if gods[plr] then 
-        notify("⚠️ Already in god mode", Color3.fromRGB(255, 200, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 200, 100))
         return 
     end
     local hum = getHum(plr)
@@ -3049,7 +3040,7 @@ local function god(plr)
         gods[plr] = hum.HealthChanged:Connect(function()
             hum.Health = hum.MaxHealth
         end)
-        notify("👑 God mode enabled", Color3.fromRGB(255, 215, 0))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 215, 0))
     end
 end
 ------------------------------------------------
@@ -3057,15 +3048,15 @@ end
 ------------------------------------------------
 local function ungod(plr)
     if plr ~= client then
-        notify("❌ Ungod only works on yourself", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
         return
     end
     if gods[plr] then
         gods[plr]:Disconnect()
         gods[plr] = nil
-        notify("✅ God mode disabled", Color3.fromRGB(255, 140, 0))
+        notify("God mode disabled", Color3.fromRGB(255, 140, 0))
     else
-        notify("⚠️ Not in god mode", Color3.fromRGB(255, 200, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 200, 100))
     end
 end
 ------------------------------------------------
@@ -3089,7 +3080,7 @@ local function invisP(plr)
         end
     end
     invis[plr] = true
-    notify("👻 Invisible", Color3.fromRGB(180, 100, 255))
+    notify("Invisible", Color3.fromRGB(180, 100, 255))
 end
 ------------------------------------------------
 -- advanced Visible
@@ -3112,7 +3103,7 @@ local function visP(plr)
         end
     end
     invis[plr] = nil
-    notify("✅ Visible", Color3.fromRGB(100, 180, 255))
+    notify("Visible", Color3.fromRGB(100, 180, 255))
 end
 ------------------------------------------------
 -- advanced Fling
@@ -3129,7 +3120,7 @@ local function fling(plr)
         v.Velocity = Vector3.new(math.random(-200,200)*100, 200*100, math.random(-200,200)*100)
         v.Parent = hrp
         task.delay(0.3, function() if v then v:Destroy() end end)
-        notify("💨 Flung!", Color3.fromRGB(255, 100, 180))
+        notify("Flung", Color3.fromRGB(255, 100, 180))
     end
 end
 ------------------------------------------------
@@ -3162,7 +3153,7 @@ local function clickTP()
     if clickTPconn then
         clickTPconn:Disconnect()
         clickTPconn = nil
-        notify("✅ Click TP disabled", Color3.fromRGB(255, 120, 100))
+        notify("⚠️Click TP disabled", Color3.fromRGB(255, 120, 100))
     else
         clickTPconn = Mouse.Button1Down:Connect(function()
             if Mouse.Target then
@@ -3172,7 +3163,7 @@ local function clickTP()
                 end
             end
         end)
-        notify("✅ Click TP enabled - click anywhere to teleport", Color3.fromRGB(100, 255, 120))
+        notify("Click TP enabled - click anywhere to teleport", Color3.fromRGB(100, 255, 120))
     end
 end
 ------------------------------------------------
@@ -3182,7 +3173,7 @@ local function setFov(val)
     local num = tonumber(val)
     if num and num >= 1 and num <= 120 then
         workspace.CurrentCamera.FieldOfView = num
-        notify("✅ FOV set to " .. num, currentTheme.accent)
+        notify("FOV set to " .. num, currentTheme.accent)
     else
         notify("❌ Invalid FOV (1-120)", Color3.fromRGB(255, 100, 100))
     end
@@ -3221,7 +3212,7 @@ local function ragdoll(plr)
         end
     end
     ragdolls[plr] = joints
-    notify("🦴 Ragdolled", Color3.fromRGB(200, 100, 100))
+    notify("Ragdolled", Color3.fromRGB(200, 100, 100))
 end
 ------------------------------------------------
 -- advanced unragdoll
@@ -3243,17 +3234,17 @@ local function unragdoll(plr)
         hum.PlatformStand = false
     end
     ragdolls[plr] = nil
-    notify("✅ Unragdolled", Color3.fromRGB(100, 200, 100))
+    notify("Unragdolled", Color3.fromRGB(100, 200, 100))
 end
 ------------------------------------------------
 -- advanced console
 ------------------------------------------------
 local function console()
     StarterGui:SetCore("DevConsoleVisible", true)
-    notify("✅ Console opened", Color3.fromRGB(180, 180, 255))
+    notify("Console opened", Color3.fromRGB(180, 180, 255))
 end
 ------------------------------------------------
--- advanced disable fall damage
+-- disable fall damage
 ------------------------------------------------
 local function disableFallDamage()
     local conn = client.CharacterAdded:Connect(function(char)
@@ -3262,10 +3253,10 @@ local function disableFallDamage()
             hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
         end
     end)
-    notify("✅ Fall damage disabled", Color3.fromRGB(100, 255, 180))
+    notify("⚠️THIS DOES NOT WORK⚠️", Color3.fromRGB(100, 255, 180))
 end
 ------------------------------------------------
--- advanced enable inventory
+-- enable inventory
 ------------------------------------------------
 local function enableCore(name)
     local enum
@@ -3280,22 +3271,51 @@ local function enableCore(name)
     notify("✅ " .. name:gsub("^%l", string.upper) .. (not current and " enabled" or " disabled"), Color3.fromRGB(180, 180, 255))
 end
 ------------------------------------------------
--- advanced Dance
+-- Dance
 ------------------------------------------------
-local function dance(plr)
+local function dance(plr, number)
     if plr ~= client then
         notify("❌ Dance only works on yourself", Color3.fromRGB(255, 100, 100))
         return
     end
+
     local hum = getHum(plr)
-    if hum then
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://507771019"
-        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-        local track = animator:LoadAnimation(anim)
-        track:Play()
-        notify("💃 Dancing!", Color3.fromRGB(255, 100, 255))
+    if not hum then
+        notify("❌ No humanoid found", Color3.fromRGB(255, 100, 100))
+        return
     end
+
+    -- Default to random dance if no number is given
+    if not number then
+        number = math.random(1, 3)
+    else
+        number = tonumber(number) or 1
+        number = math.clamp(number, 1, 3)  -- Only 1, 2, or 3 are valid
+    end
+
+    -- Roblox default dance animation IDs
+    local danceIds = {
+        [1] = "rbxassetid://507771019",   -- Dance 1 (the one you had)
+        [2] = "rbxassetid://507776043",   -- Dance 2
+        [3] = "rbxassetid://507777268"    -- Dance 3
+    }
+
+    local anim = Instance.new("Animation")
+    anim.AnimationId = danceIds[number]
+
+    local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+    
+    -- Stop any existing dance animation first (prevents stacking)
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        if track.Animation.AnimationId:find("50777") then  -- stops previous dances
+            track:Stop()
+        end
+    end
+
+    local track = animator:LoadAnimation(anim)
+    track:Play()
+
+    notify("Dancing " .. number, Color3.fromRGB(255, 100, 255))
 end
 ------------------------------------------------
 -- advanced trip
@@ -3309,7 +3329,7 @@ local function trip(plr)
     if hum then
         hum.Sit = true
         hum.Jump = true
-        notify("🤕 Tripped!", Color3.fromRGB(255, 180, 100))
+        notify("Tripped", Color3.fromRGB(255, 180, 100))
     end
 end
 
@@ -3392,7 +3412,7 @@ local function explode(plr)
         head.Velocity = Vector3.new(math.random(-50,50), 100, math.random(-50,50))
     end
     
-    notify("💥 Exploded! Limbs detached & scattered", Color3.fromRGB(255, 60, 60))
+    notify("Exploded! Limbs detached & scattered", Color3.fromRGB(255, 60, 60))
 end
 ------------------------------------------------
 -- advanced tiny mode
@@ -3438,20 +3458,20 @@ local function rainbow(plr)
         end
     end)
     rainbowData[plr] = conn
-    notify("🌈 Rainbow ON", Color3.fromRGB(255, 100, 255))
+    notify("Rainbow ON", Color3.fromRGB(255, 100, 255))
 end
 ------------------------------------------------
 -- advanced unrainbow
 ------------------------------------------------
 local function unrainbow(plr)
     if plr ~= client then
-        notify("❌ Unrainbow only works on yourself", Color3.fromRGB(255, 100, 100))
+        notify("Unrainbow only works on yourself", Color3.fromRGB(255, 100, 100))
         return
     end
     if rainbowData[plr] then
         rainbowData[plr]:Disconnect()
         rainbowData[plr] = nil
-        notify("✅ Rainbow OFF", Color3.fromRGB(200, 100, 200))
+        notify("Rainbow OFF", Color3.fromRGB(200, 100, 200))
     else
         notify("⚠️ Not in rainbow mode", Color3.fromRGB(255, 200, 100))
     end
@@ -3465,7 +3485,7 @@ local function fire(plr)
         local f = Instance.new("Fire", hrp)
         f.Size = 10
         f.Heat = 25
-        notify("🔥 On fire!", Color3.fromRGB(255, 100, 0))
+        notify("On fire", Color3.fromRGB(255, 100, 0))
     else
         notify("⚠️ Already on fire or no character", Color3.fromRGB(255, 200, 100))
     end
@@ -3479,9 +3499,9 @@ local function unfire(plr)
         local f = hrp:FindFirstChild("Fire")
         if f then 
             f:Destroy() 
-            notify("✅ Fire off", Color3.fromRGB(200, 100, 0))
+            notify("Fire off", Color3.fromRGB(200, 100, 0))
         else
-            notify("⚠️ Not on fire", Color3.fromRGB(255, 200, 100))
+            notify("Not on fire", Color3.fromRGB(255, 200, 100))
         end
     end
 end
@@ -3532,12 +3552,12 @@ local function thirdp()
         workspace.CurrentCamera.CameraSubject = humanoid
     end
     
-    notify("✅ Third person enabled (forced zoom out + visibility fix)", currentTheme.accent)
+    notify("Third person enabled (forced zoom out + visibility fix)", currentTheme.accent)
 end
 
 local function firstp()
     client.CameraMode = Enum.CameraMode.LockFirstPerson
-    notify("✅ First person enabled", currentTheme.accent)
+    notify("First person enabled", currentTheme.accent)
 end
 ------------------------------------------------
 -- advanced Waypoint
@@ -3581,7 +3601,7 @@ local function waypoint()
         distLabel.Text = math.floor(dist) .. " studs"
     end)
     table.insert(waypoints, {part = wp, conn = conn})
-    notify("📍 Waypoint #" .. num .. " added", currentTheme.accent)
+    notify("Waypoint #" .. num .. " added", currentTheme.accent)
 end
 
 ------------------------------------------------
@@ -3761,7 +3781,7 @@ function enableTracers()
         end)
     )
 
-    notify("✅ Tracers enabled", currentTheme.accent)
+    notify("Tracers enabled", currentTheme.accent)
 end
 
 ----------------------------------------------------
@@ -4166,7 +4186,7 @@ for i, cmdStr in ipairs(cmds) do
     btn.MouseButton1Click:Connect(function()
         if setclipboard then
             setclipboard(cmdStr)
-            notify("✅ Copied: " .. cmdStr, Color3.fromRGB(100, 255, 100))
+            notify("Copied: " .. cmdStr, Color3.fromRGB(100, 255, 100))
         end
     end)
 end
@@ -4235,7 +4255,7 @@ applyGlassEffect(prefixInput, 0.25, 0.5)
 prefixInput.FocusLost:Connect(function(enter)
     if enter then
         prefix = prefixInput.Text ~= "" and prefixInput.Text or "!"
-        notify("✅ Prefix changed to: " .. prefix, currentTheme.accent)
+        notify("Prefix changed to: " .. prefix, currentTheme.accent)
     end
 end)
 
@@ -4481,7 +4501,7 @@ for name, th in pairs(themes) do
             end
         end
         
-        notify("✅ Theme changed to " .. name, th.accent)
+        notify("Theme changed to " .. name, th.accent)
     end)
 end
 
@@ -4520,9 +4540,9 @@ applyGlassEffect(discordBtn, 0.15, 0.4)
 discordBtn.MouseButton1Click:Connect(function()
     if setclipboard then
         setclipboard("https://discord.gg/5GeQAXYYcW")
-        notify("✅ Discord link copied to clipboard!", Color3.fromRGB(88,101,242))
+        notify("Discord link copied to clipboard!", Color3.fromRGB(88,101,242))
     else
-        notify("❌ Clipboard not supported in this executor", Color3.fromRGB(255,100,100))
+        notify("Clipboard not supported in this executor", Color3.fromRGB(255,100,100))
     end
 end)
 
