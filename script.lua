@@ -141,13 +141,14 @@ local themes = {
     }
 }
 local currentTheme = themes.Default
-
 -- =============================================================
 -- SOUND EFFECTS
 -- =============================================================
+local currentHoverSound = nil
+
 local function playOpen()
     local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://124233495227925"
+    s.SoundId = "rbxassetid://132696933316985"
     s.Volume = 0.45
     s.Parent = SoundService
     s:Play()
@@ -156,15 +157,84 @@ end
 
 local function playClose()
     local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://9119707219"
+    s.SoundId = "rbxassetid://132696933316985"
     s.Volume = 0.4
     s.Parent = SoundService
     s:Play()
     Debris:AddItem(s, 3)
 end
 
+local function playHover()
+    -- Stop any previous hover sound to prevent overlap
+    if currentHoverSound and currentHoverSound.IsPlaying then
+        currentHoverSound:Stop()
+    end
+    
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://107677435338382"
+    s.Volume = 0.25
+    s.Parent = SoundService
+    s:Play()
+    Debris:AddItem(s, 2)
+    
+    currentHoverSound = s
+end
+
+local function playClick()
+    -- Stop hover sound immediately when clicking
+    if currentHoverSound and currentHoverSound.IsPlaying then
+        currentHoverSound:Stop()
+    end
+    
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://97643101798871"
+    s.Volume = 0.35
+    s.Parent = SoundService
+    s:Play()
+    Debris:AddItem(s, 2)
+end
+
+-- =============================================================
+-- AUTO APPLY SOUNDS TO ALL BUTTONS
+-- =============================================================
+local function applySoundsToAllButtons(parent)
+    for _, obj in ipairs(parent:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            
+            -- Hover sound
+            obj.MouseEnter:Connect(function()
+                playHover()
+            end)
+            
+            -- Click sound + cancel hover
+            obj.MouseButton1Click:Connect(function()
+                playClick()
+            end)
+        end
+    end
+end
+
+-- Setup sounds for main GUI and future panels
+local function setupButtonSounds()
+    if lunarGui then
+        task.wait(0.5)
+        applySoundsToAllButtons(lunarGui)
+    end
+    
+    -- Auto-apply to any new panels
+    client.PlayerGui.ChildAdded:Connect(function(child)
+        if child:IsA("ScreenGui") then
+            task.wait(0.3)
+            applySoundsToAllButtons(child)
+        end
+    end)
+end
+
 -- =============================================================
 -- NOTIFICATIONS - STACKING SYSTEM
+-- =============================================================
+-- =============================================================
+-- IMPROVED NOTIFICATION SYSTEM
 -- =============================================================
 local notifGui = Instance.new("ScreenGui")
 notifGui.Name = "LunarNotifs"
@@ -173,57 +243,83 @@ notifGui.DisplayOrder = 999999
 notifGui.Parent = client.PlayerGui
 
 local activeNotifications = {}
-local notifHeight = 80
-local notifSpacing = 10
+local notifHeight = 82
+local notifSpacing = 12
 
 local function notify(text, col)
-    col = col or Color3.fromRGB(100, 200, 255)
-    
+    col = col or currentTheme.accent or Color3.fromRGB(100, 200, 255)
+
     -- Create notification frame
     local f = Instance.new("Frame")
-    f.Size = UDim2.new(0, 320, 0, 70)
-    f.Position = UDim2.new(1, 50, 1, -100) -- Start off-screen
+    f.Size = UDim2.new(0, 340, 0, 76)
+    f.Position = UDim2.new(1, 80, 1, -100) -- Start further off-screen
     f.BackgroundColor3 = currentTheme.glass
     f.BorderSizePixel = 0
+    f.BackgroundTransparency = 1
     f.Parent = notifGui
-    
-    -- Apply glass effect
-    applyGlassEffect(f, globalConfig.uiTransparency, 0.4)
-    
-    -- SOLID TEXT - NO TRANSPARENCY
-    local lbl = Instance.new("TextLabel", f)
-    lbl.Size = UDim2.new(1, -20, 1, -20)
-    lbl.Position = UDim2.new(0, 10, 0, 10)
+
+    applyGlassEffect(f, globalConfig.uiTransparency, 0.35)
+
+    -- Text Label
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -24, 1, -20)
+    lbl.Position = UDim2.new(0, 12, 0, 10)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 18
+    lbl.TextSize = 17
     lbl.TextColor3 = globalConfig.textColor
-    lbl.TextTransparency = 0 -- SOLID
-    lbl.TextStrokeTransparency = 0.5 -- Outline for readability
+    lbl.TextTransparency = 1
+    lbl.TextStrokeTransparency = 0.6
     lbl.TextStrokeColor3 = Color3.new(0,0,0)
     lbl.TextWrapped = true
-    
-    -- Add to active notifications
-    table.insert(activeNotifications, 1, f) -- Add to front
-    
-    -- Reposition all notifications
-    for i, notif in ipairs(activeNotifications) do
-        local targetY = -90 - ((i-1) * (notifHeight + notifSpacing))
-        TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2.new(1, -340, 1, targetY)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = f
+
+    -- Appear sound
+    local appearSound = Instance.new("Sound")
+    appearSound.SoundId = "rbxassetid://1234567890"  -- same as your open sound
+    appearSound.Volume = 0.5
+    appearSound.Parent = SoundService
+    appearSound:Play()
+    Debris:AddItem(appearSound, 3)
+
+    -- Add to stack
+    table.insert(activeNotifications, 1, f)
+
+    -- === ENTRANCE ANIMATION ===
+    -- Start small + transparent + off screen
+    f.Size = UDim2.new(0, 280, 0, 60)
+    f.Position = UDim2.new(1, 100, 1, -80)
+    f.BackgroundTransparency = 1
+
+    task.spawn(function()
+        -- Pop in with scale + slide
+        TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 340, 0, 76),
+            Position = UDim2.new(1, -360, 1, -90 - ((#activeNotifications-1) * (notifHeight + notifSpacing))),
+            BackgroundTransparency = globalConfig.uiTransparency
         }):Play()
+
+        TweenService:Create(lbl, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            TextTransparency = 0
+        }):Play()
+    end)
+
+    -- Reposition all existing notifications smoothly
+    for i, notif in ipairs(activeNotifications) do
+        if notif ~= f then
+            local targetY = -90 - ((i-1) * (notifHeight + notifSpacing))
+            TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                Position = UDim2.new(1, -360, 1, targetY)
+            }):Play()
+        end
     end
-    
-    -- Remove old notifications if too many
-    if #activeNotifications > 5 then
-        local old = table.remove(activeNotifications)
-        TweenService:Create(old, TweenInfo.new(0.3), {Position = UDim2.new(1, 50, 1, old.Position.Y.Offset)}):Play()
-        task.delay(0.4, function() old:Destroy() end)
-    end
-    
-    -- Auto remove after delay
+
+    -- Auto remove after 5 seconds
     task.delay(5, function()
+        if not f.Parent then return end
+
         -- Find and remove from table
         for i, notif in ipairs(activeNotifications) do
             if notif == f then
@@ -231,26 +327,44 @@ local function notify(text, col)
                 break
             end
         end
-        
-        -- Slide out
-        TweenService:Create(f, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-            Position = UDim2.new(1, 50, 1, f.Position.Y.Offset)
+
+        -- Exit animation
+        TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 100, 1, f.Position.Y.Offset),
+            BackgroundTransparency = 1
         }):Play()
-        
-        -- Reposition remaining
+
+        TweenService:Create(lbl, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
+            TextTransparency = 1
+        }):Play()
+
+        -- Reposition remaining notifications
         task.delay(0.1, function()
             for i, notif in ipairs(activeNotifications) do
                 local targetY = -90 - ((i-1) * (notifHeight + notifSpacing))
-                TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
-                    Position = UDim2.new(1, -340, 1, targetY)
+                TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(1, -360, 1, targetY)
                 }):Play()
             end
         end)
-        
-        task.delay(0.6, function() f:Destroy() end)
-    end)
-end
 
+        task.delay(0.6, function()
+            if f.Parent then f:Destroy() end
+        end)
+    end)
+
+    -- Remove oldest if too many
+    if #activeNotifications > 5 then
+        local old = table.remove(activeNotifications)
+        if old then
+            TweenService:Create(old, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+                Position = UDim2.new(1, 100, 1, old.Position.Y.Offset),
+                BackgroundTransparency = 1
+            }):Play()
+            task.delay(0.4, function() old:Destroy() end)
+        end
+    end
+end
 -- =============================================================
 -- FIXED FLY SYSTEM
 -- =============================================================
@@ -4438,7 +4552,10 @@ end)
 -- =============================================================
 lunarGui.Enabled = true
 playOpen()
-notify("✅ Lunar Admin loaded • RightShift to toggle", Color3.fromRGB(120,220,255))
+notify("Lunar Admin loaded • Enjoy :3", Color3.fromRGB(120,220,255))
+
+-- After lunarGui.Enabled = true and before the notify
+setupButtonSounds()
 
 task.spawn(function()
     task.wait(0.8)
