@@ -172,7 +172,7 @@ local function playHover()
     
     local s = Instance.new("Sound")
     s.SoundId = "rbxassetid://107677435338382"
-    s.Volume = 0.25
+    s.Volume = 1
     s.Parent = SoundService
     s:Play()
     Debris:AddItem(s, 2)
@@ -188,7 +188,7 @@ local function playClick()
     
     local s = Instance.new("Sound")
     s.SoundId = "rbxassetid://97643101798871"
-    s.Volume = 0.35
+    s.Volume = 1
     s.Parent = SoundService
     s:Play()
     Debris:AddItem(s, 2)
