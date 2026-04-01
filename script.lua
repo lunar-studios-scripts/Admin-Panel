@@ -187,7 +187,7 @@ local function playClick()
     end
     
     local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://97643101798871"
+    s.SoundId = "rbxassetid://109439703653606"
     s.Volume = 1
     s.Parent = SoundService
     s:Play()
@@ -231,7 +231,7 @@ local function setupButtonSounds()
 end
 
 -- =============================================================
---  NOTIFICATION SYSTEM
+-- IMPROVED NOTIFICATION SYSTEM + NON-OVERLAPPING SOUND
 -- =============================================================
 local notifGui = Instance.new("ScreenGui")
 notifGui.Name = "LunarNotifs"
@@ -243,9 +243,27 @@ local activeNotifications = {}
 local notifHeight = 82
 local notifSpacing = 12
 
+local currentNotifSound = nil   -- Tracks the currently playing notification sound
+
+local function playNotifSound()
+    -- Stop any previous notification sound
+    if currentNotifSound and currentNotifSound.IsPlaying then
+        currentNotifSound:Stop()
+    end
+    
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://97643101798871"
+    s.Volume = 0.55
+    s.Parent = SoundService
+    s:Play()
+    
+    currentNotifSound = s
+    Debris:AddItem(s, 4)
+end
+
 local function notify(text, col)
     col = col or currentTheme.accent or Color3.fromRGB(100, 200, 255)
-
+   
     -- Create notification frame
     local f = Instance.new("Frame")
     f.Size = UDim2.new(0, 340, 0, 76)
@@ -273,7 +291,10 @@ local function notify(text, col)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = f
 
-    -- Add to stack (newest on top)
+    -- ==================== PLAY NOTIFICATION SOUND ====================
+    playNotifSound()
+
+    -- Add to stack
     table.insert(activeNotifications, f)
 
     -- Entrance Animation
@@ -293,7 +314,7 @@ local function notify(text, col)
         }):Play()
     end)
 
-    -- Reposition all existing notifications
+    -- Reposition existing notifications
     for i, notif in ipairs(activeNotifications) do
         if notif ~= f and notif.Parent then
             local targetY = -90 - ((i - 1) * (notifHeight + notifSpacing))
@@ -307,7 +328,6 @@ local function notify(text, col)
     task.delay(5, function()
         if not f.Parent then return end
 
-        -- Remove from active list
         for i, notif in ipairs(activeNotifications) do
             if notif == f then
                 table.remove(activeNotifications, i)
@@ -325,7 +345,6 @@ local function notify(text, col)
             TextTransparency = 1
         }):Play()
 
-        -- Reposition remaining notifications
         task.delay(0.15, function()
             for i, notif in ipairs(activeNotifications) do
                 if notif.Parent then
@@ -342,7 +361,7 @@ local function notify(text, col)
         end)
     end)
 
-    -- Limit to 5 notifications max
+    -- Limit to 5 notifications
     if #activeNotifications > 5 then
         local old = table.remove(activeNotifications, 1)
         if old and old.Parent then
