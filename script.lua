@@ -148,7 +148,7 @@ local currentHoverSound = nil
 
 local function playOpen()
     local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://132696933316985"
+    s.SoundId = "rbxassetid://126864503471832"
     s.Volume = 0.45
     s.Parent = SoundService
     s:Play()
@@ -157,7 +157,7 @@ end
 
 local function playClose()
     local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://132696933316985"
+    s.SoundId = "rbxassetid://4566"
     s.Volume = 0.4
     s.Parent = SoundService
     s:Play()
