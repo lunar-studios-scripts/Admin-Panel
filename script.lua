@@ -32,7 +32,7 @@ end
 client.Chatted:Connect(processCmd)
 
 -- =============================================================
--- LUNAR HUB WATERMARK (Right-Aligned next to Mic)
+-- Lunar Hub watermakr yea
 -- =============================================================
 task.spawn(function()
     if client.PlayerGui:FindFirstChild("LunarWatermark") then
@@ -3455,8 +3455,9 @@ local function visP(plr)
     notify("Visible", Color3.fromRGB(100, 180, 255))
 end
 ------------------------------------------------
--- advanced Fling
+-- advanced Fling/clicktp
 ------------------------------------------------
+
 local TouchFling = {
     enabled = false,
     flingAll = false,
@@ -3465,6 +3466,8 @@ local TouchFling = {
     oneTimeTP = false,
     selectedPlayer = nil,
     movel = 0.1,
+    clickTPKey = Enum.KeyCode.E, -- Default key
+    isSelectingKey = false,
     gui = nil,
     mainFrame = nil,
     toggles = {},
@@ -3482,6 +3485,14 @@ function TouchFling:UpdateToggle(name, displayName)
         else
             btn.TextColor3 = state and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
         end
+    end
+end
+
+function TouchFling:UpdateKeybindButton()
+    if self.toggles.keybindBtn then
+        local keyName = self.clickTPKey and self.clickTPKey.Name or "None"
+        self.toggles.keybindBtn.Text = "Click TP Key: " .. keyName
+        self.toggles.keybindBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
     end
 end
 
@@ -3523,6 +3534,40 @@ function TouchFling:ToggleMinimize()
     end
 end
 
+function TouchFling:StartKeySelection()
+    if self.isSelectingKey then return end
+    self.isSelectingKey = true
+    
+    if self.toggles.keybindBtn then
+        self.toggles.keybindBtn.Text = "Press any key..."
+        self.toggles.keybindBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
+    end
+    
+    -- One-time connection for next input
+    local connection
+    connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        -- Accept keyboard keys and mouse buttons
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            self.clickTPKey = input.KeyCode
+            connection:Disconnect()
+            self.isSelectingKey = false
+            self:UpdateKeybindButton()
+        elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+            self.clickTPKey = "MouseButton1"
+            connection:Disconnect()
+            self.isSelectingKey = false
+            self:UpdateKeybindButton()
+        elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+            self.clickTPKey = "MouseButton2"
+            connection:Disconnect()
+            self.isSelectingKey = false
+            self:UpdateKeybindButton()
+        end
+    end)
+end
+
 function TouchFling:CreateGUI()
     if self.gui then 
         self.gui.Enabled = true
@@ -3541,7 +3586,7 @@ function TouchFling:CreateGUI()
     MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
     MainFrame.BorderSizePixel = 0
     MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
-    MainFrame.Size = UDim2.new(0, 300, 0, 500)
+    MainFrame.Size = UDim2.new(0, 300, 0, 540) -- Increased height for keybind button
     MainFrame.Active = true
     MainFrame.Draggable = true
     MainFrame.ClipsDescendants = true
@@ -3643,61 +3688,76 @@ function TouchFling:CreateGUI()
         return btn
     end
     
-        self.toggles.enabled = makeToggle(0.10, "Touch Fling", "TouchFling")
-    self.toggles.flingAll = makeToggle(0.20, "Fling All (wip)", "FlingAll")
-    self.toggles.lockFling = makeToggle(0.30, "Lock Fling", "LockFling")
-    self.toggles.clickTP = makeToggle(0.40, "Click TP", "ClickTP")
-    self.toggles.oneTimeTP = makeToggle(0.50, "One-Time TP", "OneTimeTP")
-    -- Removed: hidePlayerList toggle
+    self.toggles.enabled = makeToggle(0.09, "Touch Fling", "TouchFling")
+    self.toggles.flingAll = makeToggle(0.18, "Fling All (wip)", "FlingAll")
+    self.toggles.lockFling = makeToggle(0.27, "Lock Fling", "LockFling")
+    self.toggles.clickTP = makeToggle(0.36, "Click TP", "ClickTP")
+    self.toggles.oneTimeTP = makeToggle(0.45, "One-Time TP", "OneTimeTP")
     
-    -- Touch Fling Toggle
+    -- Keybind Selector Button (NEW)
+    self.toggles.keybindBtn = Instance.new("TextButton")
+    self.toggles.keybindBtn.Name = "KeybindBtn"
+    self.toggles.keybindBtn.Parent = MainFrame
+    self.toggles.keybindBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+    self.toggles.keybindBtn.Position = UDim2.new(0.1, 0, 0.54, 0)
+    self.toggles.keybindBtn.Size = UDim2.new(0.8, 0, 0, 38)
+    self.toggles.keybindBtn.Font = Enum.Font.GothamSemibold
+    self.toggles.keybindBtn.Text = "Click TP Key: E"
+    self.toggles.keybindBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
+    self.toggles.keybindBtn.TextSize = 13
+    local kbCorner = Instance.new("UICorner")
+    kbCorner.CornerRadius = UDim.new(0, 10)
+    kbCorner.Parent = self.toggles.keybindBtn
+    
+    -- Toggle Click Handlers
     self.toggles.enabled.MouseButton1Click:Connect(function()
         self.enabled = not self.enabled
         self:UpdateToggle("enabled", "Touch Fling")
     end)
     
-    -- Fling All Toggle
     self.toggles.flingAll.MouseButton1Click:Connect(function()
         self.flingAll = not self.flingAll
         self:UpdateToggle("flingAll", "Fling All (wip)")
     end)
     
-    -- Lock Fling Toggle
     self.toggles.lockFling.MouseButton1Click:Connect(function()
         self.lockFling = not self.lockFling
         self:UpdateToggle("lockFling", "Lock Fling")
     end)
     
-    -- Click TP Toggle
     self.toggles.clickTP.MouseButton1Click:Connect(function()
         self.clickTP = not self.clickTP
         self:UpdateToggle("clickTP", "Click TP")
     end)
     
-    -- One-Time TP Toggle
     self.toggles.oneTimeTP.MouseButton1Click:Connect(function()
         self.oneTimeTP = not self.oneTimeTP
         self:UpdateToggle("oneTimeTP", "One-Time TP")
     end)
     
-    -- Player List Label (moved up to position 0.60)
+    -- Keybind Button Handler
+    self.toggles.keybindBtn.MouseButton1Click:Connect(function()
+        self:StartKeySelection()
+    end)
+    
+    -- Player List Label (moved down)
     local ListLabel = Instance.new("TextLabel")
     ListLabel.Name = "ListLabel"
     ListLabel.Parent = MainFrame
     ListLabel.BackgroundTransparency = 1
-    ListLabel.Position = UDim2.new(0.1, 0, 0.60, 0)  -- Changed from 0.70 to 0.60
+    ListLabel.Position = UDim2.new(0.1, 0, 0.64, 0)
     ListLabel.Size = UDim2.new(0.8, 0, 0, 20)
     ListLabel.Font = Enum.Font.GothamSemibold
     ListLabel.Text = "Select Player"
     ListLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
     ListLabel.TextSize = 14
     
-    -- Player Scroll (moved up to position 0.65)
+    -- Player Scroll (moved down)
     local Scroll = Instance.new("ScrollingFrame")
     Scroll.Name = "PlayerScroll"
     Scroll.Parent = MainFrame
-    Scroll.Position = UDim2.new(0.1, 0, 0.65, 0)  -- Changed from 0.75 to 0.65
-    Scroll.Size = UDim2.new(0.8, 0, 0, 140)  -- Increased height from 110 to 140
+    Scroll.Position = UDim2.new(0.1, 0, 0.69, 0)
+    Scroll.Size = UDim2.new(0.8, 0, 0, 120)
     Scroll.BackgroundTransparency = 0.7
     Scroll.ScrollBarThickness = 4
     local sc = Instance.new("UICorner")
@@ -3712,7 +3772,7 @@ function TouchFling:CreateGUI()
     Watermark.Name = "Watermark"
     Watermark.Parent = MainFrame
     Watermark.BackgroundTransparency = 1
-    Watermark.Position = UDim2.new(0.05, 0, 0.92, 0)
+    Watermark.Position = UDim2.new(0.05, 0, 0.94, 0)
     Watermark.Size = UDim2.new(0.9, 0, 0, 18)
     Watermark.Font = Enum.Font.Gotham
     Watermark.Text = "https://discord.gg/5GeQAXYYcW"
@@ -3758,15 +3818,31 @@ function TouchFling:CreateGUI()
     refreshList()
 end
 
--- Click TP
-Mouse.Button1Down:Connect(function()
-    if TouchFling.clickTP and Mouse.Target then
+-- Click TP with Keybind (NEW SYSTEM)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if not TouchFling.clickTP then return end
+    
+    local keyMatched = false
+    
+    if TouchFling.clickTPKey == "MouseButton1" and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        keyMatched = true
+    elseif TouchFling.clickTPKey == "MouseButton2" and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        keyMatched = true
+    elseif input.KeyCode == TouchFling.clickTPKey then
+        keyMatched = true
+    end
+    
+    if keyMatched and Mouse.Target then
         local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
         if myRoot then
             myRoot.CFrame = Mouse.Hit + Vector3.new(0, 3, 0)
         end
     end
 end)
+
+-- Remove old Mouse.Button1Down connection for clickTP
+-- (The new UserInputService connection above handles it)
 
 -- Main Loop
 RunService.Heartbeat:Connect(function()
@@ -5516,24 +5592,54 @@ end
 ----------------- SAY GREETINGS IN CHAT --------------------------------------
 ------------------------------------------------------------------------------
 
--- ts was created by @xlunarxzzrbxx 
+-- ts was created by @xlunarxzzrbxx
+-- Time-Based Greeting System or smt
 local Players = game:GetService("Players")
 local TextChatService = game:GetService("TextChatService")
 
 local player = Players.LocalPlayer
 
--- fires instantly when chat is loaded (really fast kids)
+-- Get player's local hour (0-23) using their system time
+local function getLocalHour()
+    local currentTime = os.date("*t") 
+    return currentTime.hour
+end
+
+
+local function getTimeBasedGreeting()
+    local hour = getLocalHour()
+    local username = player.Name
+    
+    -- 12:00 AM (0) to 10:59 AM (10) = Good Morning
+    if hour >= 0 and hour < 11 then
+        return "Good Morning, " .. username
+    
+    -- 11:00 AM (11) to 4:59 PM (16) = Good Afternoon  
+    elseif hour >= 11 and hour < 17 then
+        return "Good Afternoon, " .. username
+    
+    -- 5:00 PM (17) to 9:59 PM (21) = Good Evening
+    elseif hour >= 17 and hour < 22 then
+        return "Good Evening, " .. username
+    
+    -- 10:00 PM (22) to 11:59 PM (23) = Goodnight
+    else
+        return "Goodnight, " .. username
+    end
+end
+
 TextChatService.TextChannels.ChildAdded:Connect(function(channel)
     if channel.Name == "RBXGeneral" then
-        channel:SendAsync("Greetings, " .. player.Name)
+        task.wait(0.1)
+        channel:SendAsync(getTimeBasedGreeting())
     end
 end)
 
--- also try immediately in case its already loaded
 task.spawn(function()
+    task.wait(0.5)
     local channel = TextChatService:FindFirstChild("TextChannels", true):FindFirstChild("RBXGeneral")
     if channel then
-        channel:SendAsync("Greetings, " .. player.Name)
+        channel:SendAsync(getTimeBasedGreeting())
     end
 end)
 ------------------------------------------------------------------------------
