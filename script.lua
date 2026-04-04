@@ -4836,6 +4836,30 @@ if player.Character then
 end
 
 ------------------------------------------------------------------------------
+----------------- SAY GREETINGS IN CHAT --------------------------------------
+------------------------------------------------------------------------------
+
+-- ts was created by @xlunarxzzrbxx 
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+
+local player = Players.LocalPlayer
+
+-- fires instantly when chat is loaded (really fast kids)
+TextChatService.TextChannels.ChildAdded:Connect(function(channel)
+    if channel.Name == "RBXGeneral" then
+        channel:SendAsync("Greetings, " .. player.Name)
+    end
+end)
+
+-- also try immediately in case its already loaded
+task.spawn(function()
+    local channel = TextChatService:FindFirstChild("TextChannels", true):FindFirstChild("RBXGeneral")
+    if channel then
+        channel:SendAsync("Greetings, " .. player.Name)
+    end
+end)
+------------------------------------------------------------------------------
 ----------------- END OF IT LOL ----------------------------------------------
 ------------------------------------------------------------------------------
 
