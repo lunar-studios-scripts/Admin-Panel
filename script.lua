@@ -1006,18 +1006,12 @@ end
 -- =============================================================
 -- VIEW SYSTEM
 -- =============================================================
--- IMPROVED SPECTATE: Full free-look like you're playing as them (mouse look, zoom, etc.)
--- No locked angle, no floor glitch on exit
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-
--- Keep your existing notify(), themes, etc.
--- local notify = ...
--- local currentTheme, globalConfig, applyGlassEffect, client = ...
 
 local viewData = {
     enabled = false,
@@ -1050,11 +1044,11 @@ local function freezeLocalCharacter(freeze)
         hum.JumpPower     = viewData.originalJumpPower
         hum.PlatformStand = viewData.originalPlatformStand
         
-        -- Tiny delay + force clean state to fix floor glue / falling glitch
+        
         task.delay(0.03, function()
             if hum and hum.Parent then
                 hum:ChangeState(Enum.HumanoidStateType.Running)
-                -- Optional extra: hum:ChangeState(Enum.HumanoidStateType.GettingUp) if ragdolled
+              
             end
         end)
     end
@@ -1086,19 +1080,15 @@ local function view(targetPlayer)
     -- Freeze your own character
     freezeLocalCharacter(true)
     
-    -- TRANSFER CAMERA CONTROL → feels like you're them
     Camera.CameraSubject = targetHum
-    Camera.CameraType    = Enum.CameraType.Custom   -- This allows full mouse look / zoom
-    
-    -- Optional: start in third person if you want consistent view
-    -- targetHum.CameraOffset = Vector3.new(0, 2, 0)  -- tweak if needed
+    Camera.CameraType    = Enum.CameraType.Custom   
     
     -- Top label
     local viewGui = Instance.new("ScreenGui")
     viewGui.Name = "SpectateGui"
     viewGui.ResetOnSpawn = false
     viewGui.DisplayOrder = 999999
-    viewGui.Parent = client.PlayerGui  -- or LocalPlayer.PlayerGui
+    viewGui.Parent = client.PlayerGui 
     
     local label = Instance.new("TextLabel")
     label.Size           = UDim2.new(0, 360, 0, 40)
