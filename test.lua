@@ -141,13 +141,14 @@ local themes = {
     }
 }
 local currentTheme = themes.Default
-
 -- =============================================================
 -- SOUND EFFECTS
 -- =============================================================
+local currentHoverSound = nil
+
 local function playOpen()
     local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://1847661826"
+    s.SoundId = "rbxassetid://126864503471832"
     s.Volume = 0.45
     s.Parent = SoundService
     s:Play()
@@ -156,15 +157,81 @@ end
 
 local function playClose()
     local s = Instance.new("Sound")
-    s.SoundId = "rbxassetid://9119707219"
+    s.SoundId = "rbxassetid://4566"
     s.Volume = 0.4
     s.Parent = SoundService
     s:Play()
     Debris:AddItem(s, 3)
 end
 
+local function playHover()
+    -- Stop any previous hover sound to prevent overlap
+    if currentHoverSound and currentHoverSound.IsPlaying then
+        currentHoverSound:Stop()
+    end
+    
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://107677435338382"
+    s.Volume = 1
+    s.Parent = SoundService
+    s:Play()
+    Debris:AddItem(s, 2)
+    
+    currentHoverSound = s
+end
+
+local function playClick()
+    -- Stop hover sound immediately when clicking
+    if currentHoverSound and currentHoverSound.IsPlaying then
+        currentHoverSound:Stop()
+    end
+    
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://109439703653606"
+    s.Volume = 1
+    s.Parent = SoundService
+    s:Play()
+    Debris:AddItem(s, 2)
+end
+
 -- =============================================================
--- NOTIFICATIONS - STACKING SYSTEM
+-- AUTO APPLY SOUNDS TO ALL BUTTONS
+-- =============================================================
+local function applySoundsToAllButtons(parent)
+    for _, obj in ipairs(parent:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            
+            -- Hover sound
+            obj.MouseEnter:Connect(function()
+                playHover()
+            end)
+            
+            -- Click sound + cancel hover
+            obj.MouseButton1Click:Connect(function()
+                playClick()
+            end)
+        end
+    end
+end
+
+-- Setup sounds for main GUI and future panels
+local function setupButtonSounds()
+    if lunarGui then
+        task.wait(0.5)
+        applySoundsToAllButtons(lunarGui)
+    end
+    
+    -- Auto-apply to any new panels
+    client.PlayerGui.ChildAdded:Connect(function(child)
+        if child:IsA("ScreenGui") then
+            task.wait(0.3)
+            applySoundsToAllButtons(child)
+        end
+    end)
+end
+
+-- =============================================================
+-- IMPROVED NOTIFICATION SYSTEM + NON-OVERLAPPING SOUND
 -- =============================================================
 local notifGui = Instance.new("ScreenGui")
 notifGui.Name = "LunarNotifs"
@@ -173,84 +240,141 @@ notifGui.DisplayOrder = 999999
 notifGui.Parent = client.PlayerGui
 
 local activeNotifications = {}
-local notifHeight = 80
-local notifSpacing = 10
+local notifHeight = 82
+local notifSpacing = 12
+
+local currentNotifSound = nil   -- Tracks the currently playing notification sound
+
+local function playNotifSound()
+    -- Stop any previous notification sound
+    if currentNotifSound and currentNotifSound.IsPlaying then
+        currentNotifSound:Stop()
+    end
+    
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://97643101798871"
+    s.Volume = 0.55
+    s.Parent = SoundService
+    s:Play()
+    
+    currentNotifSound = s
+    Debris:AddItem(s, 4)
+end
 
 local function notify(text, col)
-    col = col or Color3.fromRGB(100, 200, 255)
-    
+    col = col or currentTheme.accent or Color3.fromRGB(100, 200, 255)
+   
     -- Create notification frame
     local f = Instance.new("Frame")
-    f.Size = UDim2.new(0, 320, 0, 70)
-    f.Position = UDim2.new(1, 50, 1, -100) -- Start off-screen
+    f.Size = UDim2.new(0, 340, 0, 76)
+    f.Position = UDim2.new(1, 100, 1, -100)
     f.BackgroundColor3 = currentTheme.glass
     f.BorderSizePixel = 0
+    f.BackgroundTransparency = 1
     f.Parent = notifGui
-    
-    -- Apply glass effect
-    applyGlassEffect(f, globalConfig.uiTransparency, 0.4)
-    
-    -- SOLID TEXT - NO TRANSPARENCY
-    local lbl = Instance.new("TextLabel", f)
-    lbl.Size = UDim2.new(1, -20, 1, -20)
-    lbl.Position = UDim2.new(0, 10, 0, 10)
+
+    applyGlassEffect(f, globalConfig.uiTransparency, 0.35)
+
+    -- Text Label
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -24, 1, -20)
+    lbl.Position = UDim2.new(0, 12, 0, 10)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 18
+    lbl.TextSize = 17
     lbl.TextColor3 = globalConfig.textColor
-    lbl.TextTransparency = 0 -- SOLID
-    lbl.TextStrokeTransparency = 0.5 -- Outline for readability
+    lbl.TextTransparency = 1
+    lbl.TextStrokeTransparency = 0.6
     lbl.TextStrokeColor3 = Color3.new(0,0,0)
     lbl.TextWrapped = true
-    
-    -- Add to active notifications
-    table.insert(activeNotifications, 1, f) -- Add to front
-    
-    -- Reposition all notifications
-    for i, notif in ipairs(activeNotifications) do
-        local targetY = -90 - ((i-1) * (notifHeight + notifSpacing))
-        TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2.new(1, -340, 1, targetY)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = f
+
+    -- ==================== PLAY NOTIFICATION SOUND ====================
+    playNotifSound()
+
+    -- Add to stack
+    table.insert(activeNotifications, f)
+
+    -- Entrance Animation
+    f.Size = UDim2.new(0, 280, 0, 60)
+    f.Position = UDim2.new(1, 120, 1, -80)
+    f.BackgroundTransparency = 1
+
+    task.spawn(function()
+        TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 340, 0, 76),
+            Position = UDim2.new(1, -360, 1, -90 - ((#activeNotifications - 1) * (notifHeight + notifSpacing))),
+            BackgroundTransparency = globalConfig.uiTransparency
         }):Play()
+
+        TweenService:Create(lbl, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            TextTransparency = 0
+        }):Play()
+    end)
+
+    -- Reposition existing notifications
+    for i, notif in ipairs(activeNotifications) do
+        if notif ~= f and notif.Parent then
+            local targetY = -90 - ((i - 1) * (notifHeight + notifSpacing))
+            TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                Position = UDim2.new(1, -360, 1, targetY)
+            }):Play()
+        end
     end
-    
-    -- Remove old notifications if too many
-    if #activeNotifications > 5 then
-        local old = table.remove(activeNotifications)
-        TweenService:Create(old, TweenInfo.new(0.3), {Position = UDim2.new(1, 50, 1, old.Position.Y.Offset)}):Play()
-        task.delay(0.4, function() old:Destroy() end)
-    end
-    
-    -- Auto remove after delay
+
+    -- Auto remove after 5 seconds
     task.delay(5, function()
-        -- Find and remove from table
+        if not f.Parent then return end
+
         for i, notif in ipairs(activeNotifications) do
             if notif == f then
                 table.remove(activeNotifications, i)
                 break
             end
         end
-        
-        -- Slide out
-        TweenService:Create(f, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-            Position = UDim2.new(1, 50, 1, f.Position.Y.Offset)
+
+        -- Exit animation
+        TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 120, 1, f.Position.Y.Offset),
+            BackgroundTransparency = 1
         }):Play()
-        
-        -- Reposition remaining
-        task.delay(0.1, function()
+
+        TweenService:Create(lbl, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
+            TextTransparency = 1
+        }):Play()
+
+        task.delay(0.15, function()
             for i, notif in ipairs(activeNotifications) do
-                local targetY = -90 - ((i-1) * (notifHeight + notifSpacing))
-                TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
-                    Position = UDim2.new(1, -340, 1, targetY)
-                }):Play()
+                if notif.Parent then
+                    local targetY = -90 - ((i - 1) * (notifHeight + notifSpacing))
+                    TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                        Position = UDim2.new(1, -360, 1, targetY)
+                    }):Play()
+                end
             end
         end)
-        
-        task.delay(0.6, function() f:Destroy() end)
-    end)
-end
 
+        task.delay(0.7, function()
+            if f.Parent then f:Destroy() end
+        end)
+    end)
+
+    -- Limit to 5 notifications
+    if #activeNotifications > 5 then
+        local old = table.remove(activeNotifications, 1)
+        if old and old.Parent then
+            TweenService:Create(old, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+                Position = UDim2.new(1, 120, 1, old.Position.Y.Offset),
+                BackgroundTransparency = 1
+            }):Play()
+            task.delay(0.4, function()
+                if old.Parent then old:Destroy() end
+            end)
+        end
+    end
+end
 -- =============================================================
 -- FIXED FLY SYSTEM
 -- =============================================================
@@ -322,7 +446,7 @@ local function startFly(plr, spd)
         end
     end)
     
-    notify("✅ Flying at speed " .. spd .. " - Use WASD, Space, Shift", currentTheme.accent)
+    notify("Flying at speed " .. spd .. " - Use WASD, Space, Shift", currentTheme.accent)
 end
 
 local function fly(plr, spd)
@@ -361,7 +485,7 @@ local function unfly(plr)
     end
     
     flyData[plr] = nil
-    notify("✅ Fly stopped", Color3.fromRGB(255, 160, 60))
+    notify("Fly stopped", Color3.fromRGB(255, 160, 60))
 end
 
 -- =============================================================
@@ -546,80 +670,127 @@ local function createSpeedPanel()
     end)
     
     speedPanelData.panel = panel
-    notify("✅ Speed panel opened", currentTheme.accent)
+    notify("Speed panel opened", currentTheme.accent)
 end
 
 -- =============================================================
 -- VIEW SYSTEM
 -- =============================================================
+-- IMPROVED SPECTATE: Full free-look like you're playing as them (mouse look, zoom, etc.)
+-- No locked angle, no floor glitch on exit
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Keep your existing notify(), themes, etc.
+-- local notify = ...
+-- local currentTheme, globalConfig, applyGlassEffect, client = ...
+
 local viewData = {
     enabled = false,
     target = nil,
-    originalCFrame = nil,
+    originalCameraSubject = nil,
     originalCameraType = nil,
-    viewLabel = nil
+    originalWalkSpeed = 16,
+    originalJumpPower = 50,
+    originalPlatformStand = false,
+    viewGui = nil,
 }
 
-local function view(plr)
+local function freezeLocalCharacter(freeze)
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    
+    if freeze then
+        viewData.originalWalkSpeed     = hum.WalkSpeed
+        viewData.originalJumpPower     = hum.JumpPower
+        viewData.originalPlatformStand = hum.PlatformStand
+        
+        hum.WalkSpeed     = 0
+        hum.JumpPower     = 0
+        hum.PlatformStand = true  -- Prevents falling/sliding while frozen
+    else
+        hum.WalkSpeed     = viewData.originalWalkSpeed
+        hum.JumpPower     = viewData.originalJumpPower
+        hum.PlatformStand = viewData.originalPlatformStand
+        
+        -- Tiny delay + force clean state to fix floor glue / falling glitch
+        task.delay(0.03, function()
+            if hum and hum.Parent then
+                hum:ChangeState(Enum.HumanoidStateType.Running)
+                -- Optional extra: hum:ChangeState(Enum.HumanoidStateType.GettingUp) if ragdolled
+            end
+        end)
+    end
+end
+
+local function view(targetPlayer)
     if viewData.enabled then
         notify("⚠️ Already viewing someone! Use !unview first", Color3.fromRGB(255, 100, 100))
         return
     end
     
-    if not plr or not plr.Character then
+    if not targetPlayer or not targetPlayer.Character then
         notify("❌ Player not found or has no character", Color3.fromRGB(255, 100, 100))
         return
     end
     
-    local targetHRP = plr.Character:FindFirstChild("HumanoidRootPart")
-    if not targetHRP then
-        notify("❌ Target has no HumanoidRootPart", Color3.fromRGB(255, 100, 100))
+    local targetHum = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not targetHum or targetHum.Health <= 0 then
+        notify("❌ Target is dead or has no Humanoid", Color3.fromRGB(255, 100, 100))
         return
     end
     
-    viewData.enabled = true
-    viewData.target = plr
-    viewData.originalCFrame = workspace.CurrentCamera.CFrame
-    viewData.originalCameraType = workspace.CurrentCamera.CameraType
+    -- Store originals
+    viewData.enabled          = true
+    viewData.target           = targetPlayer
+    viewData.originalCameraSubject = Camera.CameraSubject
+    viewData.originalCameraType    = Camera.CameraType
     
+    -- Freeze your own character
+    freezeLocalCharacter(true)
+    
+    -- TRANSFER CAMERA CONTROL → feels like you're them
+    Camera.CameraSubject = targetHum
+    Camera.CameraType    = Enum.CameraType.Custom   -- This allows full mouse look / zoom
+    
+    -- Optional: start in third person if you want consistent view
+    -- targetHum.CameraOffset = Vector3.new(0, 2, 0)  -- tweak if needed
+    
+    -- Top label
     local viewGui = Instance.new("ScreenGui")
-    viewGui.Name = "ViewGui"
+    viewGui.Name = "SpectateGui"
     viewGui.ResetOnSpawn = false
     viewGui.DisplayOrder = 999999
-    viewGui.Parent = client.PlayerGui
+    viewGui.Parent = client.PlayerGui  -- or LocalPlayer.PlayerGui
     
-    local viewLabel = Instance.new("TextLabel")
-    viewLabel.Size = UDim2.new(0, 300, 0, 40)
-    viewLabel.Position = UDim2.new(0.5, -150, 0, 20)
-    viewLabel.BackgroundColor3 = currentTheme.glass
-    viewLabel.Text = "Viewing: " .. plr.Name .. " (@" .. plr.DisplayName .. ")"
-    viewLabel.Font = Enum.Font.GothamBold
-    viewLabel.TextSize = 18
-    viewLabel.TextColor3 = globalConfig.textColor
-    viewLabel.TextTransparency = 0 -- SOLID
-    viewLabel.TextStrokeTransparency = 0.5
-    viewLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    applyGlassEffect(viewLabel, globalConfig.uiTransparency, 0.4)
-    viewLabel.Parent = viewGui
+    local label = Instance.new("TextLabel")
+    label.Size           = UDim2.new(0, 360, 0, 40)
+    label.Position       = UDim2.new(0.5, -180, 0, 10)
+    label.BackgroundTransparency = globalConfig.uiTransparency or 0.45
+    label.BackgroundColor3 = currentTheme.glass or Color3.fromRGB(20, 20, 40)
+    label.Text           = "👁️  Spectating: " .. targetPlayer.Name .. "  (@" .. targetPlayer.DisplayName .. ")  — Use mouse to look around"
+    label.Font           = Enum.Font.GothamBold
+    label.TextSize       = 18
+    label.TextColor3     = globalConfig.textColor or Color3.fromRGB(230, 230, 255)
+    label.TextStrokeTransparency = 0.7
+    label.TextStrokeColor3 = Color3.new(0,0,0)
+    label.BorderSizePixel = 0
+    label.Parent = viewGui
     
-    viewData.viewLabel = viewGui
+    if applyGlassEffect then
+        applyGlassEffect(label, globalConfig.uiTransparency or 0.45, 0.35)
+    end
     
-    workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+    viewData.viewGui = viewGui
     
-    viewData.freezeConn = RunService.RenderStepped:Connect(function()
-        if not viewData.enabled or not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
-            return
-        end
-        
-        local targetPos = plr.Character.HumanoidRootPart.Position
-        local currentCamCF = workspace.CurrentCamera.CFrame
-        
-        local offset = currentCamCF.Position - targetPos
-        workspace.CurrentCamera.CFrame = CFrame.new(targetPos + offset) * CFrame.Angles(0, 0, 0)
-        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetPos)
-    end)
-    
-    notify("👁️ Now viewing " .. plr.Name .. " (Free look enabled)", Color3.fromRGB(100, 255, 100))
+    notify("👁️ Now viewing " .. targetPlayer.Name .. " — full free look like you're them", Color3.fromRGB(100, 255, 100))
 end
 
 local function unview()
@@ -630,27 +801,40 @@ local function unview()
     
     viewData.enabled = false
     
-    if viewData.freezeConn then
-        viewData.freezeConn:Disconnect()
-        viewData.freezeConn = nil
-    end
+    -- Restore camera **before** unfreezing (prevents glitches)
+    Camera.CameraSubject = viewData.originalCameraSubject or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid"))
+    Camera.CameraType    = viewData.originalCameraType or Enum.CameraType.Custom
     
-    if viewData.viewLabel then
-        viewData.viewLabel:Destroy()
-        viewData.viewLabel = nil
-    end
+    -- Unfreeze
+    freezeLocalCharacter(false)
     
-    workspace.CurrentCamera.CameraType = viewData.originalCameraType or Enum.CameraType.Custom
-    if viewData.originalCFrame then
-        workspace.CurrentCamera.CFrame = viewData.originalCFrame
+    -- Clean up GUI
+    if viewData.viewGui then
+        viewData.viewGui:Destroy()
+        viewData.viewGui = nil
     end
     
     viewData.target = nil
-    viewData.originalCFrame = nil
+    viewData.originalCameraSubject = nil
     viewData.originalCameraType = nil
     
-    notify("✅ View stopped", Color3.fromRGB(255, 160, 60))
+    notify("Stopped spectating — back to normal", Color3.fromRGB(255, 160, 60))
 end
+
+-- Auto-stop if target disappears/dies/leaves
+Players.PlayerRemoving:Connect(function(plr)
+    if viewData.target == plr and viewData.enabled then
+        unview()
+    end
+end)
+
+LocalPlayer.CharacterRemoving:Connect(function()
+    if viewData.enabled then
+        unview()
+    end
+end)
+
+print("Spectate system ready: full free camera control like playing as them + glitch fix")
 
 -- =============================================================
 -- JOIN LOGS PANEL
@@ -870,364 +1054,325 @@ local function createJoinLogsPanel()
     end)
     
     joinLogsData.panel = panel
-    notify("✅ Join logs panel opened", Color3.fromRGB(100, 255, 100))
+    notify("Join logs panel opened", Color3.fromRGB(100, 255, 100))
 end
 
 -- =============================================================
--- ENHANCED ESP SYSTEM
+-- ENHANCED ESP 
 -- =============================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local client = Players.LocalPlayer
+
+---------------------------------------------------------------------
+-- DATA
+---------------------------------------------------------------------
 local espData = {
     enabled = false,
     playerESP = {},
-    teamColors = true,
-    showNames = true,
-    showDistance = true,
-    connections = {}
+    connections = {},
+    distanceConn = nil
 }
 
-local function createESP(plr)
-    if plr == client or espData.playerESP[plr] then return end
-    
-    local espFolder = Instance.new("Folder")
-    espFolder.Name = plr.Name .. "_ESP"
-    espFolder.Parent = client.PlayerGui
-    
-    local espElements = {
-        folder = espFolder,
-        highlights = {},
-        nametags = {},
-        connections = {}
-    }
-    
-    local function setupCharacter(char)
-        if not char then return end
-        
-        local highlightColor = Color3.new(1, 0, 0)
-        if espData.teamColors and plr.Team then
-            highlightColor = plr.Team.TeamColor.Color
-        end
-        
-        local highlight = Instance.new("Highlight")
-        highlight.Adornee = char
-        highlight.FillColor = highlightColor
-        highlight.FillTransparency = 0.7
-        highlight.OutlineColor = Color3.new(1, 1, 1)
-        highlight.OutlineTransparency = 0
-        highlight.Parent = espFolder
-        table.insert(espElements.highlights, highlight)
-        
-        if espData.showNames then
-            local head = char:WaitForChild("Head", 5)
-            if head then
-                local billboard = Instance.new("BillboardGui")
-                billboard.Adornee = head
-                billboard.Size = UDim2.new(0, 200, 0, 60)
-                billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-                billboard.AlwaysOnTop = true
-                billboard.Parent = espFolder
-                
-                local nameLabel = Instance.new("TextLabel", billboard)
-                nameLabel.Size = UDim2.new(1, 0, 0.4, 0)
-                nameLabel.BackgroundTransparency = 1
-                nameLabel.Text = plr.Name
-                nameLabel.Font = Enum.Font.GothamBold
-                nameLabel.TextSize = 16
-                nameLabel.TextColor3 = highlightColor
-                nameLabel.TextTransparency = 0 -- SOLID
-                nameLabel.TextStrokeTransparency = 0
-                nameLabel.TextStrokeColor3 = Color3.new(0,0,0)
-                
-                local displayLabel = Instance.new("TextLabel", billboard)
-                displayLabel.Size = UDim2.new(1, 0, 0.3, 0)
-                displayLabel.Position = UDim2.new(0, 0, 0.35, 0)
-                displayLabel.BackgroundTransparency = 1
-                displayLabel.Text = "@" .. plr.DisplayName
-                displayLabel.Font = Enum.Font.Gotham
-                displayLabel.TextSize = 14
-                displayLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-                displayLabel.TextTransparency = 0 -- SOLID
-                displayLabel.TextStrokeTransparency = 0
-                displayLabel.TextStrokeColor3 = Color3.new(0,0,0)
-                
-                if espData.showDistance then
-                    local distLabel = Instance.new("TextLabel", billboard)
-                    distLabel.Size = UDim2.new(1, 0, 0.3, 0)
-                    distLabel.Position = UDim2.new(0, 0, 0.65, 0)
-                    distLabel.BackgroundTransparency = 1
-                    distLabel.Text = "0 studs"
-                    distLabel.Font = Enum.Font.Gotham
-                    distLabel.TextSize = 12
-                    distLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    distLabel.TextTransparency = 0 -- SOLID
-                    distLabel.TextStrokeTransparency = 0
-                    distLabel.TextStrokeColor3 = Color3.new(0,0,0)
-                    
-                    table.insert(espElements.nametags, {label = distLabel, player = plr})
-                end
-                
-                table.insert(espElements.nametags, billboard)
-            end
-        end
-    end
-    
-    if plr.Character then
-        setupCharacter(plr.Character)
-    end
-    
-    local charConn = plr.CharacterAdded:Connect(setupCharacter)
-    table.insert(espElements.connections, charConn)
-    
-    espData.playerESP[plr] = espElements
+---------------------------------------------------------------------
+-- SAFE HRP GETTER (prevents breaking when you die)
+---------------------------------------------------------------------
+local function getMyHRP()
+    local char = client.Character
+    if not char then return nil end
+    return char:FindFirstChild("HumanoidRootPart")
 end
 
-local function removeESP(plr)
+---------------------------------------------------------------------
+-- CLEAR PLAYER ESP
+---------------------------------------------------------------------
+local function clearPlayerESP(plr)
     local data = espData.playerESP[plr]
     if not data then return end
-    
-    for _, conn in ipairs(data.connections) do
+
+    for _,conn in ipairs(data.connections) do
         conn:Disconnect()
     end
-    data.folder:Destroy()
+
+    for _,obj in ipairs(data.objects) do
+        if obj and obj.Parent then
+            obj:Destroy()
+        end
+    end
+
     espData.playerESP[plr] = nil
 end
 
-local function enableESPAll()
-    if espData.enabled then return end
-    espData.enabled = true
-    
-    local distConn = RunService.Heartbeat:Connect(function()
-        for _, data in pairs(espData.playerESP) do
-            for _, tagData in ipairs(data.nametags) do
-                if typeof(tagData) == "table" and tagData.label and tagData.player then
-                    local p = tagData.player
-                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") and hrp then
-                        local dist = math.floor((p.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
-                        tagData.label.Text = dist .. " studs"
-                    end
-                end
-            end
-        end
-    end)
-    table.insert(espData.connections, distConn)
-    
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= client then
-            createESP(p)
+---------------------------------------------------------------------
+-- ATTACH ESP TO CHARACTER
+---------------------------------------------------------------------
+local function attachESP(plr, char)
+
+    if not espData.enabled then return end
+    if plr == client then return end
+
+    local data = espData.playerESP[plr]
+    if not data then return end
+
+    -- clear old objects (important for respawn)
+    for _,obj in ipairs(data.objects) do
+        if obj and obj.Parent then
+            obj:Destroy()
         end
     end
-    
-    local newPlayerConn = Players.PlayerAdded:Connect(function(p)
-        if espData.enabled then
-            createESP(p)
-        end
-    end)
-    table.insert(espData.connections, newPlayerConn)
-    
-    local removeConn = Players.PlayerRemoving:Connect(function(p)
-        removeESP(p)
-    end)
-    table.insert(espData.connections, removeConn)
-    
-    notify("✅ ESP All enabled (Team colors, Names, Distance)", Color3.fromRGB(100, 255, 100))
+    data.objects = {}
+    data.distLabel = nil
+
+    local head = char:WaitForChild("Head",10)
+    local hrp = char:WaitForChild("HumanoidRootPart",10)
+    if not head or not hrp then return end
+
+    ----------------------------------------------------
+    -- HIGHLIGHT
+    ----------------------------------------------------
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = char
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0
+    highlight.OutlineColor = Color3.new(1,1,1)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+    if plr.Team then
+        highlight.FillColor = plr.Team.TeamColor.Color
+    else
+        highlight.FillColor = Color3.new(1,0,0)
+    end
+
+    highlight.Parent = workspace
+    table.insert(data.objects, highlight)
+
+    ----------------------------------------------------
+    -- BILLBOARD
+    ----------------------------------------------------
+    local billboard = Instance.new("BillboardGui")
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0,200,0,60)
+    billboard.StudsOffset = Vector3.new(0,2.5,0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = client.PlayerGui
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1,0,0.5,0)
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 16
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.TextStrokeColor3 = Color3.new(0,0,0)
+    nameLabel.Text = plr.Name
+    nameLabel.TextColor3 = highlight.FillColor
+    nameLabel.Parent = billboard
+
+    local distLabel = Instance.new("TextLabel")
+    distLabel.BackgroundTransparency = 1
+    distLabel.Position = UDim2.new(0,0,0.55,0)
+    distLabel.Size = UDim2.new(1,0,0.45,0)
+    distLabel.Font = Enum.Font.Gotham
+    distLabel.TextSize = 13
+    distLabel.TextStrokeTransparency = 0
+    distLabel.TextStrokeColor3 = Color3.new(0,0,0)
+    distLabel.TextColor3 = Color3.new(1,1,1)
+    distLabel.Text = "0 studs"
+    distLabel.Parent = billboard
+
+    table.insert(data.objects, billboard)
+    data.distLabel = distLabel
 end
 
-local function disableESPAll()
+---------------------------------------------------------------------
+-- CREATE PLAYER ESP
+---------------------------------------------------------------------
+local function createPlayerESP(plr)
+    if plr == client then return end
+    if espData.playerESP[plr] then return end
+
+    local data = {
+        connections = {},
+        objects = {},
+        distLabel = nil
+    }
+
+    espData.playerESP[plr] = data
+
+    if plr.Character then
+        attachESP(plr, plr.Character)
+    end
+
+    -- Reattach every respawn
+    local respawnConn = plr.CharacterAdded:Connect(function(char)
+        task.wait(0.2)
+        attachESP(plr, char)
+    end)
+
+    table.insert(data.connections, respawnConn)
+end
+
+---------------------------------------------------------------------
+-- ENABLE ALL
+---------------------------------------------------------------------
+function enableESPAll()
+
+    if espData.enabled then return end
+    espData.enabled = true
+
+    -- Distance updater (never errors)
+    espData.distanceConn = RunService.RenderStepped:Connect(function()
+
+        local myHRP = getMyHRP()
+        if not myHRP then return end
+
+        for plr,data in pairs(espData.playerESP) do
+            if data.distLabel and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local targetHRP = plr.Character.HumanoidRootPart
+                local dist = (targetHRP.Position - myHRP.Position).Magnitude
+                data.distLabel.Text = math.floor(dist).." studs"
+            end
+        end
+
+    end)
+
+    -- Apply to current players
+    for _,plr in ipairs(Players:GetPlayers()) do
+        createPlayerESP(plr)
+    end
+
+    -- Auto apply to new players
+    table.insert(espData.connections,
+        Players.PlayerAdded:Connect(function(plr)
+            if espData.enabled then
+                createPlayerESP(plr)
+            end
+        end)
+    )
+
+    -- Remove when they leave
+    table.insert(espData.connections,
+        Players.PlayerRemoving:Connect(clearPlayerESP)
+    )
+end
+
+---------------------------------------------------------------------
+-- DISABLE ALL
+---------------------------------------------------------------------
+function disableESPAll()
+
     if not espData.enabled then return end
     espData.enabled = false
-    
-    for _, conn in ipairs(espData.connections) do
+
+    if espData.distanceConn then
+        espData.distanceConn:Disconnect()
+        espData.distanceConn = nil
+    end
+
+    for _,conn in ipairs(espData.connections) do
         conn:Disconnect()
     end
     espData.connections = {}
-    
-    for plr, _ in pairs(espData.playerESP) do
-        removeESP(plr)
+
+    for plr,_ in pairs(espData.playerESP) do
+        clearPlayerESP(plr)
     end
-    
-    notify("❌ ESP All disabled", Color3.fromRGB(255, 100, 100))
 end
-
--- =============================================================
--- FREECAM SYSTEM
--- =============================================================
-local freecamData = {
-    enabled = false,
-    connection = nil,
-    inputBeganConn = nil,
-    inputEndedConn = nil,
-    mouseConn = nil,
-    camera = nil,
-    rotation = Vector2.new(0, 0)
-}
-
-local function enableFreecam()
-    if freecamData.enabled then return end
-    freecamData.enabled = true
-    
-    local cam = workspace.CurrentCamera
-    freecamData.camera = cam
-    
-    local originalType = cam.CameraType
-    local originalCFrame = cam.CFrame
-    
-    cam.CameraType = Enum.CameraType.Scriptable
-    
-    if hrp then
-        cam.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 5, 10), hrp.Position)
-    end
-    
-    local speed = 50
-    local keys = {}
-    local mouseDelta = Vector2.new(0, 0)
-    
-    freecamData.inputBeganConn = UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            keys[input.KeyCode] = true
-        end
-    end)
-    
-    freecamData.inputEndedConn = UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            keys[input.KeyCode] = false
-        end
-    end)
-    
-    freecamData.mouseConn = UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            mouseDelta = input.Delta
-        end
-    end)
-    
-    freecamData.connection = RunService.RenderStepped:Connect(function(dt)
-        if mouseDelta.Magnitude > 0 then
-            local sensitivity = 0.3
-            freecamData.rotation = freecamData.rotation + Vector2.new(mouseDelta.X, mouseDelta.Y) * sensitivity
-            mouseDelta = Vector2.new(0, 0)
-        end
-        
-        freecamData.rotation = Vector2.new(
-            freecamData.rotation.X % 360,
-            math.clamp(freecamData.rotation.Y, -80, 80)
-        )
-        
-        local rotCF = CFrame.Angles(0, math.rad(-freecamData.rotation.X), 0) * 
-                      CFrame.Angles(math.rad(-freecamData.rotation.Y), 0, 0)
-        
-        local moveDir = Vector3.new(
-            (keys[Enum.KeyCode.D] and 1 or 0) - (keys[Enum.KeyCode.A] and 1 or 0),
-            (keys[Enum.KeyCode.E] and 1 or 0) - (keys[Enum.KeyCode.Q] and 1 or 0),
-            (keys[Enum.KeyCode.S] and 1 or 0) - (keys[Enum.KeyCode.W] and 1 or 0)
-        )
-        
-        local currentPos = cam.CFrame.Position
-        if moveDir.Magnitude > 0 then
-            local moveCF = CFrame.new(currentPos) * rotCF
-            local worldDir = (moveCF.LookVector * -moveDir.Z) + 
-                           (moveCF.RightVector * moveDir.X) + 
-                           (Vector3.new(0, 1, 0) * moveDir.Y)
-            currentPos = currentPos + worldDir.Unit * speed * dt
-        end
-        
-        cam.CFrame = CFrame.new(currentPos) * rotCF
-    end)
-    
-    notify("✅ Freecam enabled (Mouse to look, WASD to move, Q/E up/down)", Color3.fromRGB(100, 200, 255))
-end
-
-local function disableFreecam()
-    if not freecamData.enabled then return end
-    freecamData.enabled = false
-    
-    if freecamData.connection then
-        freecamData.connection:Disconnect()
-        freecamData.connection = nil
-    end
-    if freecamData.inputBeganConn then
-        freecamData.inputBeganConn:Disconnect()
-        freecamData.inputBeganConn = nil
-    end
-    if freecamData.inputEndedConn then
-        freecamData.inputEndedConn:Disconnect()
-        freecamData.inputEndedConn = nil
-    end
-    if freecamData.mouseConn then
-        freecamData.mouseConn:Disconnect()
-        freecamData.mouseConn = nil
-    end
-    
-    workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-    notify("✅ Freecam disabled", Color3.fromRGB(255, 160, 60))
-end
-
 -- =============================================================
 -- SPIN SYSTEM
 -- =============================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
 local spinData = {}
 
-local function spin(plr, speed)
-    if plr ~= client then
-        notify("❌ Spin only works on yourself", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    local hrp = getHRP(plr)
-    if not hrp or spinData[plr] then return end
-    
-    speed = tonumber(speed) or 20
-    
-    local attachment = Instance.new("Attachment")
-    attachment.Parent = hrp
-    
-    local angularVel = Instance.new("AngularVelocity")
-    angularVel.Attachment0 = attachment
-    angularVel.MaxTorque = math.huge
-    angularVel.AngularVelocity = Vector3.new(0, speed, 0)
-    angularVel.Parent = hrp
-    
-    local bodyPos = Instance.new("BodyPosition")
-    bodyPos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyPos.Position = hrp.Position
-    bodyPos.Parent = hrp
-    
-    spinData[plr] = {
-        angularVel = angularVel,
-        attachment = attachment,
-        bodyPos = bodyPos,
-        connection = nil
-    }
-    
-    spinData[plr].connection = RunService.Heartbeat:Connect(function()
-        if bodyPos and hrp then
-            bodyPos.Position = Vector3.new(hrp.Position.X, bodyPos.Position.Y, hrp.Position.Z)
-        end
-    end)
-    
-    notify("🌀 Spinning at " .. speed .. " speed", currentTheme.accent)
+function spin(plr, speed)
+
+	speed = tonumber(speed) or 20
+	speed = math.clamp(speed, 1, 10000)
+
+	local char = plr.Character
+	if not char then return end
+
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hrp or not hum then return end
+
+	-- Stop old spin
+	if spinData[plr] then
+		unspin(plr)
+	end
+
+	hum.AutoRotate = false
+
+	-- Attachment (YOU ALREADY HAD THIS)
+	local attachment = Instance.new("Attachment")
+	attachment.Name = "SpinAttachment"
+	attachment.Parent = hrp
+
+	-- REAL SPIN MOTOR (replaces AlignOrientation only)
+	local angular = Instance.new("AngularVelocity")
+	angular.Name = "SpinVelocity"
+	angular.Attachment0 = attachment
+	angular.RelativeTo = Enum.ActuatorRelativeTo.Attachment0
+	angular.MaxTorque = math.huge
+
+	-- the actual speed you type
+	angular.AngularVelocity = Vector3.new(0, speed, 0)
+
+	angular.Parent = hrp
+
+	spinData[plr] = {
+		attachment = attachment,
+		angular = angular,
+		connection = nil
+	}
+
+	-- keep server ownership so Roblox doesn't override it
+	spinData[plr].connection = RunService.Stepped:Connect(function()
+		if hrp and hrp.Parent then
+			pcall(function()
+				hrp:SetNetworkOwner(nil)
+			end)
+		end
+	end)
 end
 
-local function unspin(plr)
-    if plr ~= client then
-        notify("❌ Unspin only works on yourself", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    if not spinData[plr] then return end
-    
-    local data = spinData[plr]
-    if data.connection then
-        data.connection:Disconnect()
-    end
-    if data.angularVel then
-        data.angularVel:Destroy()
-    end
-    if data.attachment then
-        data.attachment:Destroy()
-    end
-    if data.bodyPos then
-        data.bodyPos:Destroy()
-    end
-    
-    spinData[plr] = nil
-    notify("✅ Spin stopped", Color3.fromRGB(200, 200, 200))
+
+function unspin(plr)
+
+	local data = spinData[plr]
+	if not data then return end
+
+	if data.connection then
+		data.connection:Disconnect()
+	end
+
+	if data.angular then
+		data.angular:Destroy()
+	end
+
+	if data.attachment then
+		data.attachment:Destroy()
+	end
+
+	local char = plr.Character
+	if char then
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.AutoRotate = true
+		end
+	end
+
+	spinData[plr] = nil
 end
+
+
+Players.PlayerAdded:Connect(function(plr)
+	plr.CharacterAdded:Connect(function()
+		unspin(plr)
+	end)
+end)
 
 -- =============================================================
 -- LEAVE COMMAND
@@ -1280,14 +1425,16 @@ local cmdBarData = {
     inputBox = nil
 }
 
--- Global command processor reference for cmdbar
+-- Global command processor reference
 local commandProcessor = nil
 
 local function toggleCmdBar()
     if cmdBarData.gui then
         cmdBarData.gui.Enabled = not cmdBarData.gui.Enabled
         cmdBarData.visible = cmdBarData.gui.Enabled
+        
         if cmdBarData.visible and cmdBarData.inputBox then
+            task.wait() -- Small delay for better UX
             cmdBarData.inputBox:CaptureFocus()
         end
         return
@@ -1301,34 +1448,48 @@ local function toggleCmdBar()
     
     local main = Instance.new("Frame")
     main.Name = "Main"
-    main.Size = UDim2.new(0, 600, 0, 50)
-    main.Position = UDim2.new(0.5, -300, 0.1, 0)
+    main.Size = UDim2.new(0, 620, 0, 55)
+    main.Position = UDim2.new(0.5, -310, 0.08, 0)  -- Slightly higher and wider
     main.BackgroundColor3 = currentTheme.glass
     main.BorderSizePixel = 0
+    main.Active = true
+    main.Draggable = true
     main.Parent = gui
     applyGlassEffect(main, globalConfig.uiTransparency, 0.4)
     
+    -- Title hint
+    local titleHint = Instance.new("TextLabel", main)
+    titleHint.Size = UDim2.new(0, 120, 1, 0)
+    titleHint.Position = UDim2.new(0, 10, 0, 0)
+    titleHint.BackgroundTransparency = 1
+    titleHint.Text = "Command Bar"
+    titleHint.Font = Enum.Font.GothamBlack
+    titleHint.TextSize = 18
+    titleHint.TextColor3 = currentTheme.accent
+    titleHint.TextXAlignment = Enum.TextXAlignment.Left
+    
     local input = Instance.new("TextBox")
     input.Name = "Input"
-    input.Size = UDim2.new(1, -20, 1, -10)
-    input.Position = UDim2.new(0, 10, 0, 5)
+    input.Size = UDim2.new(1, -140, 1, -12)
+    input.Position = UDim2.new(0, 130, 0, 6)
     input.BackgroundTransparency = 1
-    input.PlaceholderText = "Type command and press ENTER..."
+    input.PlaceholderText = "Type command here... (e.g. !aimbot)"
     input.Font = Enum.Font.GothamBold
     input.TextSize = 20
     input.TextColor3 = globalConfig.textColor
-    input.TextTransparency = 0 -- SOLID
-    input.TextStrokeTransparency = 0.5
+    input.TextTransparency = 0
+    input.TextStrokeTransparency = 0.6
     input.TextStrokeColor3 = Color3.new(0,0,0)
     input.ClearTextOnFocus = false
     input.Parent = main
     
     cmdBarData.inputBox = input
     
+    -- Dropdown suggestions
     local dropdown = Instance.new("Frame")
     dropdown.Name = "Dropdown"
-    dropdown.Size = UDim2.new(1, 0, 0, 200)
-    dropdown.Position = UDim2.new(0, 0, 1, 5)
+    dropdown.Size = UDim2.new(1, 0, 0, 220)
+    dropdown.Position = UDim2.new(0, 0, 1, 8)
     dropdown.BackgroundColor3 = currentTheme.list
     dropdown.BorderSizePixel = 0
     dropdown.Visible = false
@@ -1337,14 +1498,14 @@ local function toggleCmdBar()
     applyGlassEffect(dropdown, globalConfig.uiTransparency + 0.1, 0.5)
     
     local dropdownScroll = Instance.new("ScrollingFrame", dropdown)
-    dropdownScroll.Size = UDim2.new(1, -10, 1, -10)
-    dropdownScroll.Position = UDim2.new(0, 5, 0, 5)
+    dropdownScroll.Size = UDim2.new(1, -12, 1, -12)
+    dropdownScroll.Position = UDim2.new(0, 6, 0, 6)
     dropdownScroll.BackgroundTransparency = 1
-    dropdownScroll.ScrollBarThickness = 6
+    dropdownScroll.ScrollBarThickness = 5
     dropdownScroll.ScrollBarImageColor3 = currentTheme.accent
     
     local dropdownList = Instance.new("UIListLayout", dropdownScroll)
-    dropdownList.Padding = UDim.new(0, 2)
+    dropdownList.Padding = UDim.new(0, 3)
     
     local allCommands = {
         "!aimbot", "!bring", "!clicktp", "!cmdbar", "!console", "!dance", "!destroyscript", 
@@ -1360,9 +1521,7 @@ local function toggleCmdBar()
     
     local function updateDropdown(text)
         for _, child in ipairs(dropdownScroll:GetChildren()) do
-            if child:IsA("TextButton") then
-                child:Destroy()
-            end
+            if child:IsA("TextButton") then child:Destroy() end
         end
         
         if text == "" or text == "!" then
@@ -1381,16 +1540,14 @@ local function toggleCmdBar()
             dropdown.Visible = true
             for _, match in ipairs(matches) do
                 local btn = Instance.new("TextButton")
-                btn.Size = UDim2.new(1, 0, 0, 30)
+                btn.Size = UDim2.new(1, 0, 0, 32)
                 btn.BackgroundColor3 = currentTheme.btn
-                btn.BackgroundTransparency = 0.5
-                btn.Text = match
+                btn.BackgroundTransparency = 0.4
+                btn.Text = "  " .. match
                 btn.Font = Enum.Font.Gotham
-                btn.TextSize = 16
+                btn.TextSize = 17
                 btn.TextColor3 = globalConfig.textColor
-                btn.TextTransparency = 0 -- SOLID
-                btn.TextStrokeTransparency = 0.5
-                btn.TextStrokeColor3 = Color3.new(0,0,0)
+                btn.TextXAlignment = Enum.TextXAlignment.Left
                 btn.Parent = dropdownScroll
                 
                 btn.MouseButton1Click:Connect(function()
@@ -1400,15 +1557,10 @@ local function toggleCmdBar()
                     input:CaptureFocus()
                 end)
                 
-                btn.MouseEnter:Connect(function()
-                    btn.BackgroundColor3 = currentTheme.accent
-                end)
-                
-                btn.MouseLeave:Connect(function()
-                    btn.BackgroundColor3 = currentTheme.btn
-                end)
+                btn.MouseEnter:Connect(function() btn.BackgroundColor3 = currentTheme.accent end)
+                btn.MouseLeave:Connect(function() btn.BackgroundColor3 = currentTheme.btn end)
             end
-            dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * 32)
+            dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * 35)
         else
             dropdown.Visible = false
         end
@@ -1418,12 +1570,15 @@ local function toggleCmdBar()
         updateDropdown(input.Text)
     end)
     
-    -- FIXED: Command execution on Enter
     local function executeCommand()
-        local cmdText = input.Text
+        local cmdText = input.Text:match("^%s*(.-)%s*$") -- trim whitespace
         if cmdText and cmdText ~= "" then
-            notify("▶️ Executing: " .. cmdText, Color3.fromRGB(200, 200, 255))
-            processCmd(cmdText)
+            notify("▶️ Executing: " .. cmdText, Color3.fromRGB(180, 220, 255))
+            if processCmd then
+                processCmd(cmdText)
+            else
+                warn("processCmd function not found!")
+            end
             input.Text = ""
             dropdown.Visible = false
         end
@@ -1435,21 +1590,23 @@ local function toggleCmdBar()
         end
     end)
     
-    -- Backup: Also check for Return key
-    UserInputService.InputBegan:Connect(function(key, gameProcessed)
-        if not gameProcessed and key.KeyCode == Enum.KeyCode.Return and cmdBarData.visible and input:IsFocused() then
+    -- Enter key support even if not focused
+    UserInputService.InputBegan:Connect(function(inp, gp)
+        if not gp and inp.KeyCode == Enum.KeyCode.Return and cmdBarData.visible and cmdBarData.inputBox:IsFocused() then
             executeCommand()
         end
     end)
     
-    UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local pos = UserInputService:GetMouseLocation()
-            local absPos = main.AbsolutePosition
-            local absSize = main.AbsoluteSize
+    -- Click outside to close dropdown
+    UserInputService.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 and cmdBarData.gui then
+            local mousePos = UserInputService:GetMouseLocation()
+            local mainPos = main.AbsolutePosition
+            local mainSize = main.AbsoluteSize
+            local dropdownArea = dropdown.AbsoluteSize.Y + 50
             
-            if pos.X < absPos.X or pos.X > absPos.X + absSize.X or
-               pos.Y < absPos.Y or pos.Y > absPos.Y + absSize.Y + 200 then
+            if (mousePos.X < mainPos.X or mousePos.X > mainPos.X + mainSize.X) or
+               (mousePos.Y < mainPos.Y or mousePos.Y > mainPos.Y + mainSize.Y + dropdownArea) then
                 dropdown.Visible = false
             end
         end
@@ -1457,506 +1614,851 @@ local function toggleCmdBar()
     
     cmdBarData.gui = gui
     cmdBarData.visible = true
-    input:CaptureFocus()
     
-    notify("✅ Command bar opened - Type and press ENTER", currentTheme.accent)
+    -- Auto focus
+    task.spawn(function()
+        task.wait(0.1)
+        input:CaptureFocus()
+    end)
+    
+    notify("✅ Command Bar Auto-Opened • Press INSERT to toggle", currentTheme.accent)
 end
+
+-- ==================== AUTO SHOW + HOTKEY ====================
+
+-- Auto show when script executes
+task.spawn(function()
+    task.wait(0.6)  -- Small delay to let other UI load
+    toggleCmdBar()
+end)
+
+-- Hotkey to toggle (INSERT key - very common for cheats)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        toggleCmdBar()
+    end
+end)
+
+-- Optional: You can change the hotkey here if you want
+-- Example: F2 key → Enum.KeyCode.F2
 
 -- =============================================================
 -- AIMBOT SYSTEM
 -- =============================================================
 local aimbotData = {
     enabled = false,
-    fovEnabled = false,
-    fovSize = 150,
     smoothness = 0.5,
     smoothnessEnabled = true,
     teamCheck = false,
     wallCheck = false,
-    target = nil,
-    rightClickHeld = false,
+    targetTeam = nil,
+    aimPart = "HumanoidRootPart",
+    predictionEnabled = false,
+    predictionAmount = 0.15,
+    espEnabled = false,
+
+    -- Advanced ESP - ALL START DISABLED
+    espBoxEnabled = false,
+    espSkeletonEnabled = false,
+    espTracersEnabled = false,
+    espChamsEnabled = false,
+    espHealthTextEnabled = false,
+    espFilledBox = false,
+    espBoxStyle = "Full",
+    espMaxDistance = 1000, -- Max distance for ESP to work
+
     panel = nil,
-    fovCircle = nil,
+    teamsList = nil,
     connection = nil,
     inputBeganConn = nil,
     inputEndedConn = nil,
-    renderConn = nil
+    espConnection = nil,
+    espDrawings = {},
+    espHighlights = {},
+    minimized = false,
+    mainFrame = nil,
+    rightClickHeld = false
+}
+
+-- Skeleton joint connections for ESP
+local SKELETON_JOINTS = {
+    {"Head", "UpperTorso"},
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"},
+    {"LeftUpperArm", "LeftLowerArm"},
+    {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"},
+    {"RightUpperArm", "RightLowerArm"},
+    {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"},
+    {"LeftUpperLeg", "LeftLowerLeg"},
+    {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"},
+    {"RightUpperLeg", "RightLowerLeg"},
+    {"RightLowerLeg", "RightFoot"}
 }
 
 local function createAimbotPanel()
-    -- Clean up existing
-    if aimbotData.panel then
-        aimbotData.panel:Destroy()
-        aimbotData.panel = nil
+    -- Full cleanup
+    if aimbotData.panel then aimbotData.panel:Destroy() end
+    if aimbotData.espConnection then aimbotData.espConnection:Disconnect() end
+    for _, drawings in pairs(aimbotData.espDrawings) do
+        for _, obj in pairs(drawings) do if obj then obj:Remove() end end
     end
-    if aimbotData.fovCircle then
-        aimbotData.fovCircle:Destroy()
-        aimbotData.fovCircle = nil
-    end
-    if aimbotData.connection then
-        aimbotData.connection:Disconnect()
-        aimbotData.connection = nil
-    end
-    if aimbotData.inputBeganConn then
-        aimbotData.inputBeganConn:Disconnect()
-        aimbotData.inputBeganConn = nil
-    end
-    if aimbotData.inputEndedConn then
-        aimbotData.inputEndedConn:Disconnect()
-        aimbotData.inputEndedConn = nil
-    end
-    if aimbotData.renderConn then
-        aimbotData.renderConn:Disconnect()
-        aimbotData.renderConn = nil
-    end
-    
+    for _, hl in pairs(aimbotData.espHighlights) do if hl then hl:Destroy() end end
+    aimbotData.espDrawings = {}
+    aimbotData.espHighlights = {}
+
     aimbotData.enabled = false
-    aimbotData.fovEnabled = false
-    
+    aimbotData.targetTeam = nil
+    aimbotData.espEnabled = false
+    aimbotData.minimized = false
+    aimbotData.rightClickHeld = false
+
     local panel = Instance.new("ScreenGui")
     panel.Name = "AimbotPanel"
     panel.ResetOnSpawn = false
     panel.DisplayOrder = 999999
     panel.Parent = client.PlayerGui
-    
-    -- FOV Circle - Centered on cursor
-    local fovCircle = Instance.new("Frame")
-    fovCircle.Name = "FOVCircle"
-    fovCircle.Size = UDim2.new(0, aimbotData.fovSize * 2, 0, aimbotData.fovSize * 2)
-    fovCircle.BackgroundTransparency = 1
-    fovCircle.BorderSizePixel = 0
-    fovCircle.Visible = false
-    fovCircle.Parent = panel
-    
-    local circleCorner = Instance.new("UICorner")
-    circleCorner.CornerRadius = UDim.new(1, 0)
-    circleCorner.Parent = fovCircle
-    
-    local circleStroke = Instance.new("UIStroke")
-    circleStroke.Color = currentTheme.accent
-    circleStroke.Thickness = 2
-    circleStroke.Parent = fovCircle
-    
-    aimbotData.fovCircle = fovCircle
-    
-    -- Update FOV circle position to center on mouse
-    aimbotData.renderConn = RunService.RenderStepped:Connect(function()
-        if aimbotData.fovCircle and aimbotData.fovEnabled then
-            local mousePos = UserInputService:GetMouseLocation()
-            local size = aimbotData.fovSize * 2
-            -- Center the circle on the mouse cursor
-            aimbotData.fovCircle.Position = UDim2.new(0, mousePos.X - aimbotData.fovSize, 0, mousePos.Y - aimbotData.fovSize)
-            aimbotData.fovCircle.Size = UDim2.new(0, size, 0, size)
-        end
-    end)
-    
+
+    -- Main UI
     local main = Instance.new("Frame")
     main.Name = "Main"
-    main.Size = UDim2.new(0, 340, 0, 520)
-    main.Position = UDim2.new(0, 430, 0.5, -260)
+    main.Size = UDim2.new(0, 480, 0, 650)
+    main.Position = UDim2.new(0, 430, 0.5, -325)
     main.BackgroundColor3 = currentTheme.glass
     main.Active = true
     main.Draggable = true
     main.Parent = panel
     applyGlassEffect(main, globalConfig.uiTransparency, 0.4)
-    
-    local title = Instance.new("TextLabel", main)
-    title.Size = UDim2.new(1, 0, 0, 50)
+    aimbotData.mainFrame = main
+
+    -- Title bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 65)
+    titleBar.BackgroundColor3 = currentTheme.glass
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = main
+    applyGlassEffect(titleBar, globalConfig.uiTransparency, 0.4)
+
+    local title = Instance.new("TextLabel", titleBar)
+    title.Size = UDim2.new(1, -100, 1, 0)
+    title.Position = UDim2.new(0, 20, 0, 0)
     title.BackgroundTransparency = 1
-    title.Text = "AIMBOT CONTROL"
+    title.Text = "ADVANCED AIMBOT + ESP"
     title.Font = Enum.Font.GothamBlack
     title.TextSize = 26
     title.TextColor3 = currentTheme.accent
-    title.TextTransparency = 0 -- SOLID
-    title.TextStrokeTransparency = 0.5
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextStrokeTransparency = 0.3
     title.TextStrokeColor3 = Color3.new(0,0,0)
-    
-    local toggleBtn = Instance.new("TextButton", main)
-    toggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    toggleBtn.Position = UDim2.new(0.05, 0, 0, 55)
-    toggleBtn.BackgroundColor3 = currentTheme.btn
-    toggleBtn.Text = "Toggle Aimbot: OFF"
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 18
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    toggleBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(toggleBtn, 0.2, 0.5)
-    
-    local fovBtn = Instance.new("TextButton", main)
-    fovBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    fovBtn.Position = UDim2.new(0.05, 0, 0, 105)
-    fovBtn.BackgroundColor3 = currentTheme.btn
-    fovBtn.Text = "Toggle FOV Circle: OFF"
-    fovBtn.Font = Enum.Font.GothamBold
-    fovBtn.TextSize = 18
-    fovBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    fovBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(fovBtn, 0.2, 0.5)
-    
-    local fovLabel = Instance.new("TextLabel", main)
-    fovLabel.Size = UDim2.new(0.9, 0, 0, 30)
-    fovLabel.Position = UDim2.new(0.05, 0, 0, 155)
-    fovLabel.BackgroundTransparency = 1
-    fovLabel.Text = "FOV Size: 150"
-    fovLabel.Font = Enum.Font.GothamBold
-    fovLabel.TextSize = 16
-    fovLabel.TextColor3 = globalConfig.textColor
-    fovLabel.TextTransparency = 0 -- SOLID
-    fovLabel.TextStrokeTransparency = 0.5
-    fovLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    
-    local fovSlider = Instance.new("Frame", main)
-    fovSlider.Size = UDim2.new(0.9, 0, 0, 12)
-    fovSlider.Position = UDim2.new(0.05, 0, 0, 185)
-    fovSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-    applyGlassEffect(fovSlider, 0.3, 0.7)
-    
-    local fovFill = Instance.new("Frame", fovSlider)
-    fovFill.Size = UDim2.new(0.33, 0, 1, 0)
-    fovFill.BackgroundColor3 = currentTheme.accent
-    fovFill.BorderSizePixel = 0
-    Instance.new("UICorner", fovFill).CornerRadius = UDim.new(0, 6)
-    
-    local fovDrag = Instance.new("TextButton", fovSlider)
-    fovDrag.Size = UDim2.new(0, 20, 0, 20)
-    fovDrag.Position = UDim2.new(0.33, -10, 0.5, -10)
-    fovDrag.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    fovDrag.Text = ""
-    Instance.new("UICorner", fovDrag).CornerRadius = UDim.new(1, 0)
-    
-    local smoothToggleBtn = Instance.new("TextButton", main)
-    smoothToggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    smoothToggleBtn.Position = UDim2.new(0.05, 0, 0, 205)
-    smoothToggleBtn.BackgroundColor3 = currentTheme.btn
-    smoothToggleBtn.Text = "Smoothness: ON"
-    smoothToggleBtn.Font = Enum.Font.GothamBold
-    smoothToggleBtn.TextSize = 18
-    smoothToggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-    smoothToggleBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(smoothToggleBtn, 0.2, 0.5)
-    
-    local smoothLabel = Instance.new("TextLabel", main)
-    smoothLabel.Size = UDim2.new(0.9, 0, 0, 30)
-    smoothLabel.Position = UDim2.new(0.05, 0, 0, 255)
-    smoothLabel.BackgroundTransparency = 1
-    smoothLabel.Text = "Smoothness Amount: 0.5"
-    smoothLabel.Font = Enum.Font.GothamBold
-    smoothLabel.TextSize = 16
-    smoothLabel.TextColor3 = globalConfig.textColor
-    smoothLabel.TextTransparency = 0 -- SOLID
-    smoothLabel.TextStrokeTransparency = 0.5
-    smoothLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    
-    local smoothSlider = Instance.new("Frame", main)
-    smoothSlider.Size = UDim2.new(0.9, 0, 0, 12)
-    smoothSlider.Position = UDim2.new(0.05, 0, 0, 285)
-    smoothSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-    applyGlassEffect(smoothSlider, 0.3, 0.7)
-    
-    local smoothFill = Instance.new("Frame", smoothSlider)
-    smoothFill.Size = UDim2.new(0.44, 0, 1, 0)
-    smoothFill.BackgroundColor3 = currentTheme.accent
-    smoothFill.BorderSizePixel = 0
-    Instance.new("UICorner", smoothFill).CornerRadius = UDim.new(0, 6)
-    
-    local smoothDrag = Instance.new("TextButton", smoothSlider)
-    smoothDrag.Size = UDim2.new(0, 20, 0, 20)
-    smoothDrag.Position = UDim2.new(0.44, -10, 0.5, -10)
-    smoothDrag.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    smoothDrag.Text = ""
-    Instance.new("UICorner", smoothDrag).CornerRadius = UDim.new(1, 0)
-    
-    local teamBtn = Instance.new("TextButton", main)
-    teamBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    teamBtn.Position = UDim2.new(0.05, 0, 0, 305)
-    teamBtn.BackgroundColor3 = currentTheme.btn
-    teamBtn.Text = "Team Check: OFF"
-    teamBtn.Font = Enum.Font.GothamBold
-    teamBtn.TextSize = 18
-    teamBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    teamBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(teamBtn, 0.2, 0.5)
-    
-    local wallBtn = Instance.new("TextButton", main)
-    wallBtn.Size = UDim2.new(0.9, 0, 0, 45)
-    wallBtn.Position = UDim2.new(0.05, 0, 0, 355)
-    wallBtn.BackgroundColor3 = currentTheme.btn
-    wallBtn.Text = "Wall Check: OFF"
-    wallBtn.Font = Enum.Font.GothamBold
-    wallBtn.TextSize = 18
-    wallBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    wallBtn.TextTransparency = 0 -- SOLID
-    applyGlassEffect(wallBtn, 0.2, 0.5)
-    
-    local closeBtn = Instance.new("TextButton", main)
-    closeBtn.Size = UDim2.new(0, 35, 0, 35)
-    closeBtn.Position = UDim2.new(1, -45, 0, 8)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+
+    -- Minimize and Close Buttons
+    local minimizeBtn = Instance.new("TextButton", titleBar)
+    minimizeBtn.Size = UDim2.new(0, 38, 0, 38)
+    minimizeBtn.Position = UDim2.new(1, -85, 0.5, -19)
+    minimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 60)
+    minimizeBtn.Text = "-"
+    minimizeBtn.Font = Enum.Font.GothamBlack
+    minimizeBtn.TextSize = 30
+    minimizeBtn.TextColor3 = Color3.new(1,1,1)
+    applyGlassEffect(minimizeBtn, 0.2, 0.4)
+
+    local closeBtn = Instance.new("TextButton", titleBar)
+    closeBtn.Size = UDim2.new(0, 38, 0, 38)
+    closeBtn.Position = UDim2.new(1, -42, 0.5, -19)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
     closeBtn.Text = "X"
     closeBtn.Font = Enum.Font.GothamBlack
-    closeBtn.TextSize = 20
+    closeBtn.TextSize = 26
     closeBtn.TextColor3 = Color3.new(1,1,1)
-    closeBtn.TextTransparency = 0 -- SOLID
     applyGlassEffect(closeBtn, 0.2, 0.4)
-    
-    local statusLabel = Instance.new("TextLabel", main)
-    statusLabel.Size = UDim2.new(0.9, 0, 0, 60)
-    statusLabel.Position = UDim2.new(0.05, 0, 0, 410)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "Hold Right Click to Lock"
-    statusLabel.Font = Enum.Font.GothamBold
-    statusLabel.TextSize = 18
-    statusLabel.TextColor3 = currentTheme.accent
-    statusLabel.TextTransparency = 0 -- SOLID
-    statusLabel.TextStrokeTransparency = 0.5
-    statusLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    statusLabel.TextWrapped = true
-    
-    local function updateAimbot()
-        if aimbotData.enabled then
-            toggleBtn.Text = "Toggle Aimbot: ON"
-            toggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+
+    -- Content ScrollingFrame
+    local contentScroll = Instance.new("ScrollingFrame")
+    contentScroll.Name = "Content"
+    contentScroll.Size = UDim2.new(1, -20, 1, -75)
+    contentScroll.Position = UDim2.new(0, 10, 0, 70)
+    contentScroll.BackgroundTransparency = 1
+    contentScroll.BorderSizePixel = 0
+    contentScroll.ScrollBarThickness = 6
+    contentScroll.ScrollBarImageColor3 = currentTheme.accent
+    contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    contentScroll.Parent = main
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0, 8)
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    listLayout.Parent = contentScroll
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 20)
+    padding.Parent = contentScroll
+
+    minimizeBtn.MouseButton1Click:Connect(function()
+        aimbotData.minimized = not aimbotData.minimized
+        if aimbotData.minimized then
+            main.Size = UDim2.new(0, 480, 0, 65)
+            contentScroll.Visible = false
+            minimizeBtn.Text = "+"
         else
-            toggleBtn.Text = "Toggle Aimbot: OFF"
-            toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+            main.Size = UDim2.new(0, 480, 0, 650)
+            contentScroll.Visible = true
+            minimizeBtn.Text = "-"
         end
-    end
-    
-    local function updateFOV()
-        if aimbotData.fovEnabled then
-            fovBtn.Text = "Toggle FOV Circle: ON"
-            fovBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-            if aimbotData.fovCircle then
-                aimbotData.fovCircle.Visible = true
-            end
-        else
-            fovBtn.Text = "Toggle FOV Circle: OFF"
-            fovBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-            if aimbotData.fovCircle then
-                aimbotData.fovCircle.Visible = false
-            end
-        end
-    end
-    
-    local function updateSmoothnessToggle()
-        if aimbotData.smoothnessEnabled then
-            smoothToggleBtn.Text = "Smoothness: ON"
-            smoothToggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            smoothToggleBtn.Text = "Smoothness: OFF"
-            smoothToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    end
-    
-    local function updateTeamCheck()
-        if aimbotData.teamCheck then
-            teamBtn.Text = "Team Check: ON"
-            teamBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            teamBtn.Text = "Team Check: OFF"
-            teamBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    end
-    
-    local function updateWallCheck()
-        if aimbotData.wallCheck then
-            wallBtn.Text = "Wall Check: ON"
-            wallBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            wallBtn.Text = "Wall Check: OFF"
-            wallBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
-    end
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        aimbotData.enabled = not aimbotData.enabled
-        updateAimbot()
     end)
-    
-    fovBtn.MouseButton1Click:Connect(function()
-        aimbotData.fovEnabled = not aimbotData.fovEnabled
-        updateFOV()
-    end)
-    
-    smoothToggleBtn.MouseButton1Click:Connect(function()
-        aimbotData.smoothnessEnabled = not aimbotData.smoothnessEnabled
-        updateSmoothnessToggle()
-    end)
-    
-    teamBtn.MouseButton1Click:Connect(function()
-        aimbotData.teamCheck = not aimbotData.teamCheck
-        updateTeamCheck()
-    end)
-    
-    wallBtn.MouseButton1Click:Connect(function()
-        aimbotData.wallCheck = not aimbotData.wallCheck
-        updateWallCheck()
-    end)
-    
-    local function setupSlider(slider, fill, drag, label, dataKey, min, max, isInt, prefixText)
-        local dragging = false
-        
-        drag.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-            end
-        end)
-        
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
-            end
-        end)
-        
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                local pos = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-                fill.Size = UDim2.new(pos, 0, 1, 0)
-                drag.Position = UDim2.new(pos, -10, 0.5, -10)
-                
-                local value = min + (pos * (max - min))
-                if isInt then
-                    value = math.floor(value)
-                else
-                    value = math.round(value * 10) / 10
-                end
-                
-                aimbotData[dataKey] = value
-                label.Text = prefixText .. ": " .. value
-                
-                if dataKey == "fovSize" and aimbotData.fovCircle then
-                    local size = value * 2
-                    aimbotData.fovCircle.Size = UDim2.new(0, size, 0, size)
-                end
-            end
-        end)
-    end
-    
-    setupSlider(fovSlider, fovFill, fovDrag, fovLabel, "fovSize", 50, 400, true, "FOV Size")
-    setupSlider(smoothSlider, smoothFill, smoothDrag, smoothLabel, "smoothness", 0.1, 1, false, "Smoothness Amount")
-    
+
     closeBtn.MouseButton1Click:Connect(function()
         aimbotData.enabled = false
-        aimbotData.fovEnabled = false
-        aimbotData.rightClickHeld = false
-        
-        if aimbotData.connection then
-            aimbotData.connection:Disconnect()
-            aimbotData.connection = nil
+        aimbotData.espEnabled = false
+        if aimbotData.connection then aimbotData.connection:Disconnect() end
+        if aimbotData.espConnection then aimbotData.espConnection:Disconnect() end
+        if aimbotData.inputBeganConn then aimbotData.inputBeganConn:Disconnect() end
+        if aimbotData.inputEndedConn then aimbotData.inputEndedConn:Disconnect() end
+
+        for _, drawings in pairs(aimbotData.espDrawings) do
+            for _, obj in pairs(drawings) do if obj then obj:Remove() end end
         end
-        if aimbotData.inputBeganConn then
-            aimbotData.inputBeganConn:Disconnect()
-            aimbotData.inputBeganConn = nil
-        end
-        if aimbotData.inputEndedConn then
-            aimbotData.inputEndedConn:Disconnect()
-            aimbotData.inputEndedConn = nil
-        end
-        if aimbotData.renderConn then
-            aimbotData.renderConn:Disconnect()
-            aimbotData.renderConn = nil
-        end
-        
+        for _, hl in pairs(aimbotData.espHighlights) do if hl then hl:Destroy() end end
+
         panel:Destroy()
         aimbotData.panel = nil
-        aimbotData.fovCircle = nil
-        
-        notify("✅ Aimbot panel closed", Color3.fromRGB(255, 160, 60))
+        notify("Aimbot + ESP fully closed. Use !aimbot to reopen.", Color3.fromRGB(255, 160, 60))
     end)
+
+    -- Headers
+    local function createHeader(text)
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(0.95, 0, 0, 36)
+        container.BackgroundColor3 = currentTheme.accent
+        container.BorderSizePixel = 0
+        container.Parent = contentScroll
+        
+        local corner = Instance.new("UICorner", container)
+        corner.CornerRadius = UDim.new(0, 6)
+        
+        local label = Instance.new("TextLabel", container)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.Font = Enum.Font.GothamBlack
+        label.TextSize = 16
+        label.TextColor3 = Color3.new(0, 0, 0)
+        label.TextStrokeTransparency = 0.8
+        
+        local stroke = Instance.new("UIStroke", container)
+        stroke.Color = Color3.new(1, 1, 1)
+        stroke.Transparency = 0.7
+        stroke.Thickness = 1
+        
+        return container
+    end
+
+    -- Helper for consistent button sizing
+    local function createButtonContainer()
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.95, 0, 0, 42)
+        btn.BackgroundColor3 = currentTheme.btn
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 17
+        btn.AutoButtonColor = true
+        applyGlassEffect(btn, 0.2, 0.5)
+        return btn
+    end
+
+    -- Team Selection
+    createHeader("AIMBOT TARGETING")
+
+    local teamsContainer = Instance.new("Frame")
+    teamsContainer.Size = UDim2.new(0.95, 0, 0, 110)
+    teamsContainer.BackgroundColor3 = Color3.fromRGB(30,30,40)
+    teamsContainer.BorderSizePixel = 0
+    applyGlassEffect(teamsContainer, 0.4, 0.6)
+    teamsContainer.Parent = contentScroll
+
+    local teamsScroll = Instance.new("ScrollingFrame", teamsContainer)
+    teamsScroll.Size = UDim2.new(1, -10, 1, -10)
+    teamsScroll.Position = UDim2.new(0, 5, 0, 5)
+    teamsScroll.BackgroundTransparency = 1
+    teamsScroll.BorderSizePixel = 0
+    teamsScroll.ScrollBarThickness = 4
+
+    local teamsListLayout = Instance.new("UIListLayout", teamsScroll)
+    teamsListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    teamsListLayout.Padding = UDim.new(0, 4)
+
+    aimbotData.teamsList = teamsScroll
+
+    local function refreshTeamsList()
+        for _, child in pairs(teamsScroll:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+
+        local allBtn = Instance.new("TextButton")
+        allBtn.Size = UDim2.new(1, -10, 0, 30)
+        allBtn.BackgroundColor3 = (aimbotData.targetTeam == nil) and currentTheme.accent or currentTheme.btn
+        allBtn.Text = "All Teams"
+        allBtn.Font = Enum.Font.GothamBold
+        allBtn.TextSize = 15
+        allBtn.TextColor3 = (aimbotData.targetTeam == nil) and Color3.new(0,0,0) or globalConfig.textColor
+        allBtn.Parent = teamsScroll
+        allBtn.MouseButton1Click:Connect(function()
+            aimbotData.targetTeam = nil
+            refreshTeamsList()
+        end)
+
+        local seen = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr.Team and not seen[plr.Team] then
+                seen[plr.Team] = true
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -10, 0, 30)
+                btn.BackgroundColor3 = (aimbotData.targetTeam == plr.Team) and currentTheme.accent or currentTheme.btn
+                btn.Text = plr.Team.Name
+                btn.Font = Enum.Font.GothamBold
+                btn.TextSize = 15
+                btn.TextColor3 = (aimbotData.targetTeam == plr.Team) and Color3.new(0,0,0) or globalConfig.textColor
+                btn.Parent = teamsScroll
+                btn.MouseButton1Click:Connect(function()
+                    aimbotData.targetTeam = plr.Team
+                    refreshTeamsList()
+                end)
+            end
+        end
+        teamsScroll.CanvasSize = UDim2.new(0, 0, 0, teamsListLayout.AbsoluteContentSize.Y)
+    end
+    refreshTeamsList()
+
+    -- Main Toggles
+    createHeader("AIMBOT SETTINGS")
+
+    local espToggleBtn = nil
     
+    local function createToggle(name, key, callback)
+        local btn = createButtonContainer()
+        btn.Text = name .. ": " .. (aimbotData[key] and "ON" or "OFF")
+        btn.TextColor3 = aimbotData[key] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        btn.TextStrokeTransparency = 0.3
+        btn.TextStrokeColor3 = Color3.new(0,0,0)
+        btn.Parent = contentScroll
+
+        btn.MouseButton1Click:Connect(function()
+            aimbotData[key] = not aimbotData[key]
+            btn.Text = name .. ": " .. (aimbotData[key] and "ON" or "OFF")
+            btn.TextColor3 = aimbotData[key] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+            
+            if callback then
+                callback(aimbotData[key])
+            end
+        end)
+        
+        return btn
+    end
+
+    createToggle("Aimbot Enabled", "enabled")
+    createToggle("Smoothness", "smoothnessEnabled")
+    createToggle("Wall Check", "wallCheck")
+    createToggle("Prediction", "predictionEnabled")
+
+    -- Aim Part Button
+    local aimPartBtn = createButtonContainer()
+    aimPartBtn.Text = "Aim Part: " .. (aimbotData.aimPart == "Head" and "HEAD" or "TORSO")
+    aimPartBtn.TextColor3 = currentTheme.accent
+    aimPartBtn.Parent = contentScroll
+    aimPartBtn.MouseButton1Click:Connect(function()
+        aimbotData.aimPart = aimbotData.aimPart == "Head" and "HumanoidRootPart" or "Head"
+        aimPartBtn.Text = "Aim Part: " .. (aimbotData.aimPart == "Head" and "HEAD" or "TORSO")
+    end)
+
+    -- Sliders
+    createHeader("FINE TUNING")
+
+    local function createSlider(labelText, dataKey, minVal, maxVal, isInt)
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(0.95, 0, 0, 55)
+        container.BackgroundTransparency = 1
+        container.Parent = contentScroll
+
+        local label = Instance.new("TextLabel", container)
+        label.Size = UDim2.new(1, 0, 0, 22)
+        label.BackgroundTransparency = 1
+        label.Text = labelText .. ": " .. aimbotData[dataKey]
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 15
+        label.TextColor3 = globalConfig.textColor
+
+        local sliderFrame = Instance.new("Frame", container)
+        sliderFrame.Size = UDim2.new(1, 0, 0, 10)
+        sliderFrame.Position = UDim2.new(0, 0, 0, 28)
+        sliderFrame.BackgroundColor3 = Color3.fromRGB(40,40,50)
+        Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 5)
+
+        local fill = Instance.new("Frame", sliderFrame)
+        fill.BackgroundColor3 = currentTheme.accent
+        fill.BorderSizePixel = 0
+        Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 5)
+
+        local drag = Instance.new("TextButton", sliderFrame)
+        drag.Size = UDim2.new(0, 18, 0, 18)
+        drag.BackgroundColor3 = Color3.new(1,1,1)
+        Instance.new("UICorner", drag).CornerRadius = UDim.new(1, 0)
+        drag.Text = ""
+
+        local dragging = false
+        drag.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
+        UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+
+        UserInputService.InputChanged:Connect(function(i)
+            if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+                local percent = math.clamp((i.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+                fill.Size = UDim2.new(percent, 0, 1, 0)
+                drag.Position = UDim2.new(percent, -9, 0.5, -9)
+
+                local value = minVal + percent * (maxVal - minVal)
+                if isInt then value = math.floor(value) else value = math.round(value * 100) / 100 end
+
+                aimbotData[dataKey] = value
+                label.Text = labelText .. ": " .. value
+            end
+        end)
+
+        local initP = (aimbotData[dataKey] - minVal) / (maxVal - minVal)
+        fill.Size = UDim2.new(initP, 0, 1, 0)
+        drag.Position = UDim2.new(initP, -9, 0.5, -9)
+    end
+
+    createSlider("Smoothness", "smoothness", 0.1, 1, false)
+    createSlider("Prediction Strength", "predictionAmount", 0, 0.5, false)
+
+    -- ESP Section
+    createHeader("ESP SETTINGS")
+
+    -- ESP Master Toggle
+    espToggleBtn = createToggle("Toggle ESP", "espEnabled", function(enabled)
+        if enabled then
+            startESP()
+            notify("ESP Enabled - Select features below", Color3.fromRGB(100, 255, 100))
+        else
+            -- Immediately hide all ESP elements
+            for plr, drawings in pairs(aimbotData.espDrawings) do
+                if drawings.box then drawings.box.Visible = false end
+                if drawings.nameText then drawings.nameText.Visible = false end
+                if drawings.healthText then drawings.healthText.Visible = false end
+                if drawings.tracer then drawings.tracer.Visible = false end
+                if drawings.skeleton then
+                    for _, line in pairs(drawings.skeleton) do
+                        if line then line.Visible = false end
+                    end
+                end
+            end
+            
+            for _, hl in pairs(aimbotData.espHighlights) do
+                if hl then hl.Enabled = false end
+            end
+            
+            aimbotData.espEnabled = false
+            
+            task.delay(0.1, function()
+                for _, drawings in pairs(aimbotData.espDrawings) do
+                    for name, obj in pairs(drawings) do 
+                        if typeof(obj) == "table" then
+                            for _, line in pairs(obj) do if line then line:Remove() end end
+                        elseif obj then 
+                            obj:Remove() 
+                        end 
+                    end
+                end
+                for _, hl in pairs(aimbotData.espHighlights) do
+                    if hl then hl:Destroy() end
+                end
+                aimbotData.espDrawings = {}
+                aimbotData.espHighlights = {}
+            end)
+            
+            notify("ESP Disabled", Color3.fromRGB(255, 100, 100))
+        end
+    end)
+
+    -- All ESP feature toggles - start OFF by default
+    createToggle("Box ESP", "espBoxEnabled")
+    createToggle("Skeleton", "espSkeletonEnabled")
+    createToggle("Tracers", "espTracersEnabled")
+    createToggle("Chams (Wallhack)", "espChamsEnabled")
+    createToggle("Health Text", "espHealthTextEnabled")
+
+    local styleBtn = createButtonContainer()
+    styleBtn.Text = "Box Style: " .. aimbotData.espBoxStyle
+    styleBtn.TextColor3 = currentTheme.accent
+    styleBtn.Parent = contentScroll
+    styleBtn.MouseButton1Click:Connect(function()
+        aimbotData.espBoxStyle = aimbotData.espBoxStyle == "Full" and "Corner" or "Full"
+        styleBtn.Text = "Box Style: " .. aimbotData.espBoxStyle
+    end)
+
+    createToggle("Filled Box", "espFilledBox")
+
     aimbotData.panel = panel
-    
-    -- FIXED: Better target validation with team check
+
+    -- Aimbot Logic
     local function isValidTarget(plr)
-        if not plr or plr == client then return false end
-        if not plr.Character then return false end
-        if not plr.Character:FindFirstChild("HumanoidRootPart") then return false end
-        if not plr.Character:FindFirstChild("Humanoid") then return false end
-        if plr.Character.Humanoid.Health <= 0 then return false end
-        
-        -- FIXED: Team Check - Skip teammates
-        if aimbotData.teamCheck then
-            if client.Team and plr.Team and client.Team == plr.Team then
-                return false
-            end
+        if not plr or plr == client or not plr.Character then return false end
+        local char = plr.Character
+        local hum = char:FindFirstChild("Humanoid")
+        if not hum or hum.Health <= 0 then return false end
+
+        if aimbotData.targetTeam then
+            if not plr.Team or plr.Team ~= aimbotData.targetTeam then return false end
+        elseif aimbotData.teamCheck and client.Team and plr.Team and client.Team == plr.Team then
+            return false
         end
-        
+
         if aimbotData.wallCheck then
-            local targetPos = plr.Character.HumanoidRootPart.Position
-            local cameraPos = workspace.CurrentCamera.CFrame.Position
-            local direction = (targetPos - cameraPos).Unit
-            local distance = (targetPos - cameraPos).Magnitude
-            
-            local raycastParams = RaycastParams.new()
-            raycastParams.FilterDescendantsInstances = {client.Character, plr.Character}
-            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-            
-            local result = Workspace:Raycast(cameraPos, direction * distance, raycastParams)
-            if result then
-                return false
-            end
+            local cam = workspace.CurrentCamera
+            local root = char:FindFirstChild(aimbotData.aimPart) or char:FindFirstChild("HumanoidRootPart")
+            if not root then return false end
+            local origin = cam.CFrame.Position
+            local dir = root.Position - origin
+            local params = RaycastParams.new()
+            params.FilterDescendantsInstances = {client.Character or Instance.new("Folder")}
+            params.FilterType = Enum.RaycastFilterType.Blacklist
+            local result = workspace:Raycast(origin, dir, params)
+            if result and not char:IsAncestorOf(result.Instance) then return false end
         end
-        
         return true
     end
-    
+
+    local function getPredictedPosition(rootPart)
+        local pos = rootPart.Position
+        if aimbotData.predictionEnabled and rootPart.AssemblyLinearVelocity then
+            local vel = rootPart.AssemblyLinearVelocity
+            local dist = (pos - workspace.CurrentCamera.CFrame.Position).Magnitude
+            pos = pos + vel * (dist / 220) * aimbotData.predictionAmount
+        end
+        return pos
+    end
+
     local function getClosestPlayer()
-        local closest = nil
-        local closestDist = aimbotData.fovEnabled and aimbotData.fovSize or math.huge
+        local closest, closestDist = nil, math.huge
         local mousePos = UserInputService:GetMouseLocation()
-        
+        local cam = workspace.CurrentCamera
+
         for _, plr in ipairs(Players:GetPlayers()) do
             if isValidTarget(plr) then
-                local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closest = plr
+                local root = plr.Character:FindFirstChild(aimbotData.aimPart) or plr.Character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local predicted = getPredictedPosition(root)
+                    local screenPos, onScreen = cam:WorldToViewportPoint(predicted)
+                    if onScreen then
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closest = plr
+                        end
                     end
                 end
             end
         end
-        
         return closest
     end
-    
-    -- FIXED: Aimbot loop that works even after death
+
     aimbotData.connection = RunService.RenderStepped:Connect(function()
-        if aimbotData.enabled and aimbotData.rightClickHeld then
-            local target = getClosestPlayer()
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                local pos = workspace.CurrentCamera:WorldToViewportPoint(target.Character.HumanoidRootPart.Position)
-                local mousePos = UserInputService:GetMouseLocation()
-                local targetPos = Vector2.new(pos.X, pos.Y)
-                
-                local moveVec
-                if aimbotData.smoothnessEnabled then
-                    moveVec = mousePos:Lerp(targetPos, 1 - aimbotData.smoothness)
-                else
-                    moveVec = targetPos
-                end
-                
-                if mousemoverel then
-                    mousemoverel(moveVec.X - mousePos.X, moveVec.Y - mousePos.Y)
-                end
-            end
+        if not (aimbotData.enabled and aimbotData.rightClickHeld) then return end
+
+        local target = getClosestPlayer()
+        if not target or not target.Character then return end
+
+        local root = target.Character:FindFirstChild(aimbotData.aimPart) or target.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local predictedPos = getPredictedPosition(root)
+        local screenPos = workspace.CurrentCamera:WorldToViewportPoint(predictedPos)
+        local mousePos = UserInputService:GetMouseLocation()
+        local targetScreen = Vector2.new(screenPos.X, screenPos.Y)
+
+        local moveVec = aimbotData.smoothnessEnabled 
+            and mousePos:Lerp(targetScreen, 1 - aimbotData.smoothness) 
+            or targetScreen
+
+        if mousemoverel then
+            mousemoverel(moveVec.X - mousePos.X, moveVec.Y - mousePos.Y)
         end
     end)
-    
+
     aimbotData.inputBeganConn = UserInputService.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton2 then
             aimbotData.rightClickHeld = true
         end
     end)
-    
+
     aimbotData.inputEndedConn = UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton2 then
             aimbotData.rightClickHeld = false
         end
     end)
-end
 
+    -- FIXED ESP System - Optimized for distance and performance
+    function startESP()
+        if aimbotData.espConnection then return end
+
+        -- Use Heartbeat instead of RenderStepped for better performance [^11^]
+        aimbotData.espConnection = RunService.Heartbeat:Connect(function()
+            if not aimbotData.espEnabled then 
+                -- Hide all drawings immediately
+                for _, drawings in pairs(aimbotData.espDrawings) do
+                    if drawings.box then drawings.box.Visible = false end
+                    if drawings.nameText then drawings.nameText.Visible = false end
+                    if drawings.healthText then drawings.healthText.Visible = false end
+                    if drawings.tracer then drawings.tracer.Visible = false end
+                    if drawings.skeleton then
+                        for _, line in pairs(drawings.skeleton) do
+                            if line then line.Visible = false end
+                        end
+                    end
+                end
+                for _, hl in pairs(aimbotData.espHighlights) do
+                    if hl then hl.Enabled = false end
+                end
+                return 
+            end
+
+            local cam = workspace.CurrentCamera
+            local localPlayer = client
+            local localRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+            
+            if not localRoot then return end -- Don't run if local player has no character
+
+            local localPos = localRoot.Position
+
+            -- Clean up disconnected players first
+            for plr, drawings in pairs(aimbotData.espDrawings) do
+                if not plr.Parent then
+                    for name, obj in pairs(drawings) do 
+                        if typeof(obj) == "table" then
+                            for _, line in pairs(obj) do if line then line:Remove() end end
+                        elseif obj then 
+                            obj:Remove() 
+                        end 
+                    end
+                    aimbotData.espDrawings[plr] = nil
+                end
+            end
+
+            -- Process players with distance check
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr == localPlayer then continue end
+
+                local char = plr.Character
+                -- CRITICAL FIX: Hide ESP if player is too far or has no character
+                if not char then 
+                    if aimbotData.espDrawings[plr] then
+                        for _, obj in pairs(aimbotData.espDrawings[plr]) do 
+                            if typeof(obj) == "table" then
+                                for _, line in pairs(obj) do if line then line.Visible = false end end
+                            elseif obj then 
+                                obj.Visible = false
+                            end 
+                        end
+                    end
+                    continue 
+                end
+
+                local root = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChild("Humanoid")
+                local head = char:FindFirstChild("Head")
+                
+                -- CRITICAL FIX: Distance check - don't render if too far
+                if not root or not hum or hum.Health <= 0 then
+                    if aimbotData.espDrawings[plr] then
+                        for _, obj in pairs(aimbotData.espDrawings[plr]) do 
+                            if typeof(obj) == "table" then
+                                for _, line in pairs(obj) do if line then line.Visible = false end end
+                            elseif obj then 
+                                obj.Visible = false
+                            end 
+                        end
+                    end
+                    if aimbotData.espHighlights[plr] then
+                        aimbotData.espHighlights[plr].Enabled = false
+                    end
+                    continue
+                end
+
+                -- Distance check - max 1000 studs
+                local distance = (root.Position - localPos).Magnitude
+                if distance > aimbotData.espMaxDistance then
+                    -- Hide ESP for far away players instead of keeping them visible
+                    if aimbotData.espDrawings[plr] then
+                        for _, obj in pairs(aimbotData.espDrawings[plr]) do 
+                            if typeof(obj) == "table" then
+                                for _, line in pairs(obj) do if line then line.Visible = false end end
+                            elseif obj then 
+                                obj.Visible = false
+                            end 
+                        end
+                    end
+                    if aimbotData.espHighlights[plr] then
+                        aimbotData.espHighlights[plr].Enabled = false
+                    end
+                    continue
+                end
+
+                local teamColor = plr.Team and plr.Team.TeamColor.Color or Color3.fromRGB(255,255,255)
+                
+                local torsoCenter = root.Position
+                local headPos = head and head.Position or (root.Position + Vector3.new(0, 2.5, 0))
+                local legPos = root.Position - Vector3.new(0, 3, 0)
+                
+                local screenPos, onScreen = cam:WorldToViewportPoint(torsoCenter)
+                
+                -- Initialize drawings if needed
+                if not aimbotData.espDrawings[plr] then
+                    aimbotData.espDrawings[plr] = {
+                        box = Drawing.new("Square"),
+                        nameText = Drawing.new("Text"),
+                        healthText = Drawing.new("Text"),
+                        tracer = Drawing.new("Line"),
+                        skeleton = {}
+                    }
+                    
+                    for i = 1, #SKELETON_JOINTS do
+                        local line = Drawing.new("Line")
+                        line.Thickness = 1.5
+                        line.Transparency = 0.8
+                        aimbotData.espDrawings[plr].skeleton[i] = line
+                    end
+                    
+                    local d = aimbotData.espDrawings[plr]
+                    d.box.Thickness = 2
+                    d.box.Filled = aimbotData.espFilledBox
+                    d.nameText.Size = 16
+                    d.nameText.Center = true
+                    d.nameText.Outline = true
+                    d.healthText.Size = 15
+                    d.healthText.Center = true
+                    d.healthText.Outline = true
+                    d.tracer.Thickness = 1.5
+                    d.tracer.Transparency = 0.7
+                end
+
+                local d = aimbotData.espDrawings[plr]
+                local healthPercent = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+
+                -- Hide if off screen
+                if not onScreen then
+                    d.box.Visible = false
+                    d.nameText.Visible = false
+                    d.healthText.Visible = false
+                    d.tracer.Visible = false
+                    for _, line in pairs(d.skeleton) do line.Visible = false end
+                    if aimbotData.espHighlights[plr] then
+                        aimbotData.espHighlights[plr].Enabled = false
+                    end
+                    continue
+                end
+
+                -- Box ESP
+                if aimbotData.espBoxEnabled then
+                    local headScreen, headVisible = cam:WorldToViewportPoint(headPos)
+                    local legScreen, legVisible = cam:WorldToViewportPoint(legPos)
+                    
+                    if headVisible and legVisible then
+                        local height = math.abs(headScreen.Y - legScreen.Y) * 1.1
+                        local width = height * 0.55
+
+                        d.box.Visible = true
+                        d.box.Color = teamColor
+                        d.box.Filled = aimbotData.espFilledBox
+                        d.box.Size = Vector2.new(width, height)
+                        d.box.Position = Vector2.new(screenPos.X - width/2, screenPos.Y - height/2)
+                    else
+                        d.box.Visible = false
+                    end
+                else
+                    d.box.Visible = false
+                end
+
+                -- Skeleton ESP
+                if aimbotData.espSkeletonEnabled then
+                    for i, joint in ipairs(SKELETON_JOINTS) do
+                        local part1 = char:FindFirstChild(joint[1])
+                        local part2 = char:FindFirstChild(joint[2])
+                        local line = d.skeleton[i]
+                        
+                        if part1 and part2 then
+                            local pos1, vis1 = cam:WorldToViewportPoint(part1.Position)
+                            local pos2, vis2 = cam:WorldToViewportPoint(part2.Position)
+                            
+                            if vis1 and vis2 then
+                                line.Visible = true
+                                line.Color = teamColor
+                                line.From = Vector2.new(pos1.X, pos1.Y)
+                                line.To = Vector2.new(pos2.X, pos2.Y)
+                            else
+                                line.Visible = false
+                            end
+                        else
+                            line.Visible = false
+                        end
+                    end
+                else
+                    for _, line in pairs(d.skeleton) do line.Visible = false end
+                end
+
+                -- Name
+                d.nameText.Visible = true
+                d.nameText.Text = "@" .. plr.Name
+                d.nameText.Color = teamColor
+                local boxHeight = aimbotData.espBoxEnabled and d.box.Size.Y or 60
+                d.nameText.Position = Vector2.new(screenPos.X, screenPos.Y - boxHeight/2 - 20)
+
+                -- Health Text
+                if aimbotData.espHealthTextEnabled then
+                    d.healthText.Visible = true
+                    d.healthText.Text = math.floor(hum.Health) .. " HP"
+                    d.healthText.Color = healthPercent > 0.6 and Color3.fromRGB(80,255,80) or (healthPercent > 0.3 and Color3.fromRGB(255,220,60) or Color3.fromRGB(255,70,70))
+                    d.healthText.Position = Vector2.new(screenPos.X, screenPos.Y - boxHeight/2 - 5)
+                else
+                    d.healthText.Visible = false
+                end
+
+                -- Tracers
+                if aimbotData.espTracersEnabled then
+                    d.tracer.Visible = true
+                    d.tracer.Color = teamColor
+                    d.tracer.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+                    d.tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+                else
+                    d.tracer.Visible = false
+                end
+
+                -- Chams
+                if aimbotData.espChamsEnabled then
+                    if not aimbotData.espHighlights[plr] then
+                        local hl = Instance.new("Highlight")
+                        hl.Adornee = char
+                        hl.FillColor = teamColor
+                        hl.OutlineColor = Color3.new(1,1,1)
+                        hl.FillTransparency = 0.75
+                        hl.OutlineTransparency = 0.2
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Parent = panel
+                        aimbotData.espHighlights[plr] = hl
+                    else
+                        aimbotData.espHighlights[plr].Enabled = true
+                        aimbotData.espHighlights[plr].FillColor = teamColor
+                    end
+                elseif aimbotData.espHighlights[plr] then
+                    aimbotData.espHighlights[plr].Enabled = false
+                end
+            end
+        end)
+    end
+
+    
+end
 -- =============================================================
 -- UNLOCK MOUSE SYSTEM
 -- =============================================================
@@ -1969,7 +2471,7 @@ local function toggleMouseUnlock()
     mouseUnlockData.enabled = not mouseUnlockData.enabled
     
     if mouseUnlockData.enabled then
-        notify("🔓 Mouse unlock enabled! Press F to toggle lock/unlock", Color3.fromRGB(100, 255, 100))
+        notify("Mouse unlock enabled! Press F to toggle lock/unlock", Color3.fromRGB(100, 255, 100))
         
         mouseUnlockData.connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if input.KeyCode == Enum.KeyCode.F and not gameProcessed then
@@ -2138,7 +2640,7 @@ local function toggleLogs()
         logsScroll.CanvasSize = UDim2.new(0,0,0,0)
     end)
     
-    notify("✅ Logs panel opened", Color3.fromRGB(180,180,255))
+    notify("Logs panel opened", Color3.fromRGB(180,180,255))
 end
 
 TextChatService.MessageReceived:Connect(function(msg)
@@ -2256,7 +2758,7 @@ local function toggleStopwatch()
     end)
     
     stopwatchData.label = timeLabel
-    notify("✅ Stopwatch panel opened", Color3.fromRGB(200, 200, 255))
+    notify("Stopwatch panel opened", Color3.fromRGB(200, 200, 255))
 end
 
 -- =============================================================
@@ -2273,7 +2775,7 @@ local function removeWaypoint()
         if last.conn then last.conn:Disconnect() end
         if last.part then last.part:Destroy() end
         table.remove(waypoints, #waypoints)
-        notify("✅ Removed waypoint #" .. (#waypoints + 1), Color3.fromRGB(255, 160, 60))
+        notify("Removed waypoint #" .. (#waypoints + 1), Color3.fromRGB(255, 160, 60))
     end
 end
 
@@ -2322,7 +2824,9 @@ local gods = {}
 local invis = {}
 local rainbowData = {}
 local ragdolls = {}
-
+------------------------------------------------
+-- advanced speed
+------------------------------------------------
 local function setspeed(plr, num)
     if plr ~= client then
         notify("❌ Speed only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2331,10 +2835,12 @@ local function setspeed(plr, num)
     local hum = getHum(plr)
     if hum then
         hum.WalkSpeed = tonumber(num) or 16
-        notify("✅ WalkSpeed set to " .. hum.WalkSpeed, currentTheme.accent)
+        notify("WalkSpeed set to " .. hum.WalkSpeed, currentTheme.accent)
     end
 end
-
+------------------------------------------------
+-- advanced resetspeed
+------------------------------------------------
 local function resetspeed(plr)
     if plr ~= client then
         notify("❌ Resetspeed only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2343,10 +2849,12 @@ local function resetspeed(plr)
     local hum = getHum(plr)
     if hum then
         hum.WalkSpeed = 16
-        notify("✅ WalkSpeed reset to 16", Color3.fromRGB(180, 180, 255))
+        notify("WalkSpeed reset to 16", Color3.fromRGB(180, 180, 255))
     end
 end
-
+------------------------------------------------
+-- advanced noclip
+------------------------------------------------
 local function noclip(plr)
     if plr ~= client then
         notify("❌ Noclip only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2365,9 +2873,11 @@ local function noclip(plr)
             end
         end
     end)
-    notify("✅ Noclip enabled", Color3.fromRGB(100, 255, 120))
+    notify("Noclip enabled", Color3.fromRGB(100, 255, 120))
 end
-
+------------------------------------------------
+-- advanced unnoclip
+------------------------------------------------
 local function unnoclip(plr)
     if plr ~= client then
         notify("❌ Unnoclip only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2384,23 +2894,27 @@ local function unnoclip(plr)
             end
         end
     end
-    notify("✅ Noclip disabled", Color3.fromRGB(255, 120, 100))
+    notify("⚠️Noclip disabled", Color3.fromRGB(255, 120, 100))
 end
-
+------------------------------------------------
+-- advanced heal
+------------------------------------------------
 local function heal(plr)
     local hum = getHum(plr)
     if hum then
         hum.Health = hum.MaxHealth
-        notify("✅ Healed " .. plr.Name, Color3.fromRGB(100, 255, 100))
+        notify("⚠️DOES NOT WORK⚠️ " .. plr.Name, Color3.fromRGB(100, 255, 100))
     else
-        notify("❌ Cannot heal - no humanoid found", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
     end
 end
-
+------------------------------------------------
+-- advanced kill
+------------------------------------------------
 local function kill(plr)
     local char = plr and plr.Character
     if not char then 
-        notify("❌ Cannot kill - no character", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
         return 
     end
     pcall(function()
@@ -2408,9 +2922,11 @@ local function kill(plr)
         if hum then hum.Health = 0 end
         char:BreakJoints()
     end)
-    notify("💀 Killed " .. plr.Name, Color3.fromRGB(255, 80, 80))
+    notify("Only works in FTAP ⚠️DOES NOT WORK⚠️" .. plr.Name, Color3.fromRGB(255, 80, 80))
 end
-
+------------------------------------------------
+-- advanced tp
+------------------------------------------------
 local function tp(p1, p2)
     if p1 ~= client then
         notify("❌ Teleport only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2423,16 +2939,20 @@ local function tp(p1, p2)
     local h1, h2 = getHRP(p1), getHRP(p2)
     if h1 and h2 then
         h1.CFrame = h2.CFrame * CFrame.new(0, 3, 0)
-        notify("✅ Teleported to " .. p2.Name, currentTheme.accent)
+        notify("Teleported to " .. p2.Name, currentTheme.accent)
     else
         notify("❌ Teleport failed - missing character parts", Color3.fromRGB(255, 100, 100))
     end
 end
-
+------------------------------------------------
+-- advanced bring
+------------------------------------------------
 local function bring(plr)
     notify("⚠️ Bring not possible client-side", Color3.fromRGB(255, 200, 100))
 end
-
+------------------------------------------------
+-- advanced to
+------------------------------------------------
 local function gotoMe(target)
     if not target then
         notify("❌ No target specified", Color3.fromRGB(255, 100, 100))
@@ -2440,7 +2960,9 @@ local function gotoMe(target)
     end
     tp(client, target)
 end
-
+------------------------------------------------
+-- advanced Jumppower
+------------------------------------------------
 local function jump(plr, pow)
     if plr ~= client then
         notify("❌ Jump only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2449,10 +2971,12 @@ local function jump(plr, pow)
     local hum = getHum(plr)
     if hum then
         hum.JumpPower = tonumber(pow) or 50
-        notify("✅ Jump power set to " .. hum.JumpPower, Color3.fromRGB(200, 200, 100))
+        notify("Jump power set to " .. hum.JumpPower, Color3.fromRGB(200, 200, 100))
     end
 end
-
+------------------------------------------------
+-- advanced sit
+------------------------------------------------
 local function sit(plr)
     if plr ~= client then
         notify("❌ Sit only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2461,10 +2985,12 @@ local function sit(plr)
     local hum = getHum(plr)
     if hum then 
         hum.Sit = true 
-        notify("✅ Sitting", Color3.fromRGB(200, 150, 255))
+        notify("Sitting", Color3.fromRGB(200, 150, 255))
     end
 end
-
+------------------------------------------------
+-- advanced Lay
+------------------------------------------------
 local function lay(plr)
     if plr ~= client then
         notify("❌ Lay only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2476,10 +3002,12 @@ local function lay(plr)
         task.wait(0.1)
         local hrp = getHRP(plr)
         if hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(90), 0, 0) end
-        notify("✅ Laying down", Color3.fromRGB(200, 150, 255))
+        notify("Laying down", Color3.fromRGB(200, 150, 255))
     end
 end
-
+------------------------------------------------
+-- advanced Freeze
+------------------------------------------------
 local function freeze(plr)
     if plr ~= client then
         notify("❌ Freeze only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2493,9 +3021,11 @@ local function freeze(plr)
     frozen[plr] = {ws = hum.WalkSpeed, jp = hum.JumpPower}
     hum.WalkSpeed = 0
     hum.JumpPower = 0
-    notify("❄️ Frozen", Color3.fromRGB(100, 100, 255))
+    notify("Frozen", Color3.fromRGB(100, 100, 255))
 end
-
+------------------------------------------------
+-- advanced Unfreeze
+------------------------------------------------
 local function unfreeze(plr)
     if plr ~= client then
         notify("❌ Unfreeze only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2507,19 +3037,21 @@ local function unfreeze(plr)
         hum.WalkSpeed = data.ws
         hum.JumpPower = data.jp
         frozen[plr] = nil
-        notify("✅ Unfrozen", Color3.fromRGB(200, 100, 200))
+        notify("Unfrozen", Color3.fromRGB(200, 100, 200))
     else
-        notify("⚠️ Not frozen", Color3.fromRGB(255, 200, 100))
+        notify("⚠️Not frozen", Color3.fromRGB(255, 200, 100))
     end
 end
-
+------------------------------------------------
+-- advanced God
+------------------------------------------------
 local function god(plr)
     if plr ~= client then
-        notify("❌ God mode only works on yourself", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
         return
     end
     if gods[plr] then 
-        notify("⚠️ Already in god mode", Color3.fromRGB(255, 200, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 200, 100))
         return 
     end
     local hum = getHum(plr)
@@ -2527,24 +3059,28 @@ local function god(plr)
         gods[plr] = hum.HealthChanged:Connect(function()
             hum.Health = hum.MaxHealth
         end)
-        notify("👑 God mode enabled", Color3.fromRGB(255, 215, 0))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 215, 0))
     end
 end
-
+------------------------------------------------
+-- advanced Ungod
+------------------------------------------------
 local function ungod(plr)
     if plr ~= client then
-        notify("❌ Ungod only works on yourself", Color3.fromRGB(255, 100, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
         return
     end
     if gods[plr] then
         gods[plr]:Disconnect()
         gods[plr] = nil
-        notify("✅ God mode disabled", Color3.fromRGB(255, 140, 0))
+        notify("God mode disabled", Color3.fromRGB(255, 140, 0))
     else
-        notify("⚠️ Not in god mode", Color3.fromRGB(255, 200, 100))
+        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 200, 100))
     end
 end
-
+------------------------------------------------
+-- advanced Invisible
+------------------------------------------------
 local function invisP(plr)
     if plr ~= client then
         notify("❌ Invisibility only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2563,9 +3099,11 @@ local function invisP(plr)
         end
     end
     invis[plr] = true
-    notify("👻 Invisible", Color3.fromRGB(180, 100, 255))
+    notify("Invisible", Color3.fromRGB(180, 100, 255))
 end
-
+------------------------------------------------
+-- advanced Visible
+------------------------------------------------
 local function visP(plr)
     if plr ~= client then
         notify("❌ Visibility only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2584,9 +3122,11 @@ local function visP(plr)
         end
     end
     invis[plr] = nil
-    notify("✅ Visible", Color3.fromRGB(100, 180, 255))
+    notify("Visible", Color3.fromRGB(100, 180, 255))
 end
-
+------------------------------------------------
+-- advanced Fling
+------------------------------------------------
 local function fling(plr)
     if plr ~= client then
         notify("❌ Fling only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2599,27 +3139,40 @@ local function fling(plr)
         v.Velocity = Vector3.new(math.random(-200,200)*100, 200*100, math.random(-200,200)*100)
         v.Parent = hrp
         task.delay(0.3, function() if v then v:Destroy() end end)
-        notify("💨 Flung!", Color3.fromRGB(255, 100, 180))
+        notify("Flung", Color3.fromRGB(255, 100, 180))
     end
 end
+------------------------------------------------
+-- advanced Rejoin
+------------------------------------------------
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
 local function rejoin()
-    notify("🔄 Rejoining server...", Color3.fromRGB(100, 200, 255))
-    TeleportService:Teleport(game.PlaceId, client)
+    -- Optional: show a little notification (if you have a notify function already)
+    notify("🔄 Rejoining same server...", Color3.fromRGB(100, 200, 255))
+    
+    -- This rejoins **exactly** the current server (using current JobId)
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end
-
+------------------------------------------------
+-- advanced Ping
+------------------------------------------------
 local function ping()
     local ping = math.round(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
     local color = ping < 100 and Color3.fromRGB(100, 255, 100) or (ping < 200 and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 100, 100))
     notify("📶 Ping: " .. ping .. "ms", color)
 end
-
+------------------------------------------------
+-- advanced ClickTP
+------------------------------------------------
 local clickTPconn
 local function clickTP()
     if clickTPconn then
         clickTPconn:Disconnect()
         clickTPconn = nil
-        notify("✅ Click TP disabled", Color3.fromRGB(255, 120, 100))
+        notify("⚠️Click TP disabled", Color3.fromRGB(255, 120, 100))
     else
         clickTPconn = Mouse.Button1Down:Connect(function()
             if Mouse.Target then
@@ -2629,20 +3182,24 @@ local function clickTP()
                 end
             end
         end)
-        notify("✅ Click TP enabled - click anywhere to teleport", Color3.fromRGB(100, 255, 120))
+        notify("Click TP enabled - click anywhere to teleport", Color3.fromRGB(100, 255, 120))
     end
 end
-
+------------------------------------------------
+-- advanced FOV
+------------------------------------------------
 local function setFov(val)
     local num = tonumber(val)
     if num and num >= 1 and num <= 120 then
         workspace.CurrentCamera.FieldOfView = num
-        notify("✅ FOV set to " .. num, currentTheme.accent)
+        notify("FOV set to " .. num, currentTheme.accent)
     else
         notify("❌ Invalid FOV (1-120)", Color3.fromRGB(255, 100, 100))
     end
 end
-
+------------------------------------------------
+-- advanced kick
+------------------------------------------------
 local function kick(plr)
     if plr == client then
         client:Kick("Kicked via Lunar Admin")
@@ -2650,7 +3207,9 @@ local function kick(plr)
         notify("⚠️ Kick only works on yourself (client-side)", Color3.fromRGB(255, 170, 0))
     end
 end
-
+------------------------------------------------
+-- advanced ragdoll
+------------------------------------------------
 local function ragdoll(plr)
     if plr ~= client then
         notify("❌ Ragdoll only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2672,9 +3231,11 @@ local function ragdoll(plr)
         end
     end
     ragdolls[plr] = joints
-    notify("🦴 Ragdolled", Color3.fromRGB(200, 100, 100))
+    notify("Ragdolled", Color3.fromRGB(200, 100, 100))
 end
-
+------------------------------------------------
+-- advanced unragdoll
+------------------------------------------------
 local function unragdoll(plr)
     if plr ~= client then
         notify("❌ Unragdoll only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2692,14 +3253,18 @@ local function unragdoll(plr)
         hum.PlatformStand = false
     end
     ragdolls[plr] = nil
-    notify("✅ Unragdolled", Color3.fromRGB(100, 200, 100))
+    notify("Unragdolled", Color3.fromRGB(100, 200, 100))
 end
-
+------------------------------------------------
+-- advanced console
+------------------------------------------------
 local function console()
     StarterGui:SetCore("DevConsoleVisible", true)
-    notify("✅ Console opened", Color3.fromRGB(180, 180, 255))
+    notify("Console opened", Color3.fromRGB(180, 180, 255))
 end
-
+------------------------------------------------
+-- disable fall damage
+------------------------------------------------
 local function disableFallDamage()
     local conn = client.CharacterAdded:Connect(function(char)
         local hum = char:WaitForChild("Humanoid", 5)
@@ -2707,9 +3272,11 @@ local function disableFallDamage()
             hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
         end
     end)
-    notify("✅ Fall damage disabled", Color3.fromRGB(100, 255, 180))
+    notify("⚠️THIS DOES NOT WORK⚠️", Color3.fromRGB(100, 255, 180))
 end
-
+------------------------------------------------
+-- enable inventory
+------------------------------------------------
 local function enableCore(name)
     local enum
     if name == "inventory" then enum = Enum.CoreGuiType.Backpack
@@ -2722,23 +3289,56 @@ local function enableCore(name)
     StarterGui:SetCoreGuiEnabled(enum, not current)
     notify("✅ " .. name:gsub("^%l", string.upper) .. (not current and " enabled" or " disabled"), Color3.fromRGB(180, 180, 255))
 end
-
-local function dance(plr)
+------------------------------------------------
+-- Dance
+------------------------------------------------
+local function dance(plr, number)
     if plr ~= client then
         notify("❌ Dance only works on yourself", Color3.fromRGB(255, 100, 100))
         return
     end
-    local hum = getHum(plr)
-    if hum then
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://507771019"
-        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-        local track = animator:LoadAnimation(anim)
-        track:Play()
-        notify("💃 Dancing!", Color3.fromRGB(255, 100, 255))
-    end
-end
 
+    local hum = getHum(plr)
+    if not hum then
+        notify("❌ No humanoid found", Color3.fromRGB(255, 100, 100))
+        return
+    end
+
+    -- Default to random dance if no number is given
+    if not number then
+        number = math.random(1, 3)
+    else
+        number = tonumber(number) or 1
+        number = math.clamp(number, 1, 3)  -- Only 1, 2, or 3 are valid
+    end
+
+    -- Roblox default dance animation IDs
+    local danceIds = {
+        [1] = "rbxassetid://507771019",   -- Dance 1 (the one you had)
+        [2] = "rbxassetid://507776043",   -- Dance 2
+        [3] = "rbxassetid://507777268"    -- Dance 3
+    }
+
+    local anim = Instance.new("Animation")
+    anim.AnimationId = danceIds[number]
+
+    local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+    
+    -- Stop any existing dance animation first (prevents stacking)
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        if track.Animation.AnimationId:find("50777") then  -- stops previous dances
+            track:Stop()
+        end
+    end
+
+    local track = animator:LoadAnimation(anim)
+    track:Play()
+
+    notify("Dancing " .. number, Color3.fromRGB(255, 100, 255))
+end
+------------------------------------------------
+-- advanced trip
+------------------------------------------------
 local function trip(plr)
     if plr ~= client then
         notify("❌ Trip only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2748,38 +3348,94 @@ local function trip(plr)
     if hum then
         hum.Sit = true
         hum.Jump = true
-        notify("🤕 Tripped!", Color3.fromRGB(255, 180, 100))
+        notify("Tripped", Color3.fromRGB(255, 180, 100))
     end
 end
+
+------------------------------------
+-- advanced explode 
+------------------------------------
 
 local function explode(plr)
-    local hrp = getHRP(plr)
-    if hrp then
-        local ex = Instance.new("Explosion")
-        ex.Position = hrp.Position
-        ex.BlastPressure = 0
-        ex.Parent = workspace
-        notify("💥 Exploded!", Color3.fromRGB(255, 80, 80))
-    else
-        notify("❌ Cannot explode - no character", Color3.fromRGB(255, 100, 100))
-    end
-end
-
-local function giant(plr)
-    if plr ~= client then
-        notify("❌ Giant only works on yourself", Color3.fromRGB(255, 100, 100))
+    local char = plr.Character
+    if not char then
+        notify("❌ No character found", Color3.fromRGB(255, 100, 100))
         return
     end
-    local hum = getHum(plr)
-    if hum then
-        for _, scaleName in ipairs({"BodyDepthScale", "BodyHeightScale", "BodyWidthScale", "HeadScale"}) do
-            local scale = hum:FindFirstChild(scaleName)
-            if scale then scale.Value = 3 end
-        end
-        notify("🦕 Giant mode!", Color3.fromRGB(100, 255, 100))
+    
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoid or not root or humanoid.Health <= 0 then
+        notify("❌ Cannot explode - invalid or already dead", Color3.fromRGB(255, 100, 100))
+        return
     end
+    
+    -- Step 1: Create a big visible explosion for everyone
+    local explosion = Instance.new("Explosion")
+    explosion.Position = root.Position
+    explosion.BlastRadius = 12           -- decent size
+    explosion.BlastPressure = 500000     -- strong visual push
+    explosion.DestroyJointRadiusPercent = 0  -- don't auto-break joints (we do it manually)
+    explosion.Parent = workspace
+    
+    -- Step 2: Force death + ragdoll (kills you and makes physics take over)
+    humanoid.Health = 0
+    humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+    
+    -- Step 3: Detach limbs visibly (breaks Motor6D joints → parts fly apart)
+    -- This is what makes limbs scatter like an explosion
+    for _, motor in ipairs(char:GetDescendants()) do
+        if motor:IsA("Motor6D") and motor.Part1 and motor.Part0 then
+            -- Create a BallSocketConstraint or just break the joint
+            -- Option A: Simple break (most games let this replicate)
+            motor.Enabled = false
+            
+            -- Option B: Replace with BallSocket + NoCollision for flying parts (more dramatic)
+            local socket = Instance.new("BallSocketConstraint")
+            socket.Attachment0 = Instance.new("Attachment", motor.Part0)
+            socket.Attachment1 = Instance.new("Attachment", motor.Part1)
+            socket.LimitsEnabled = false
+            socket.Parent = motor.Part0
+            
+            -- Optional: Give random velocity to make limbs fly farther
+            if motor.Part1:IsA("BasePart") then
+                motor.Part1.Velocity = Vector3.new(
+                    math.random(-80,80),
+                    math.random(60,140),
+                    math.random(-80,80)
+                )
+                motor.Part1.RotVelocity = Vector3.new(
+                    math.random(-10,10),
+                    math.random(-10,10),
+                    math.random(-10,10)
+                )
+            end
+        end
+    end
+    
+    -- Step 4: Extra ragdoll physics boost (makes body flop/scatter more)
+    if root then
+        root.Velocity = Vector3.new(0, 80, 0)  -- upward kick
+        root.AssemblyLinearVelocity = Vector3.new(
+            math.random(-60,60),
+            math.random(40,100),
+            math.random(-60,60)
+        )
+    end
+    
+    -- Optional: Hide head or make dramatic (some games detect head removal)
+    local head = char:FindFirstChild("Head")
+    if head then
+        head.Transparency = 0.3  -- slight fade or leave visible
+        head.Velocity = Vector3.new(math.random(-50,50), 100, math.random(-50,50))
+    end
+    
+    notify("Exploded! Limbs detached & scattered", Color3.fromRGB(255, 60, 60))
 end
-
+------------------------------------------------
+-- advanced tiny mode
+------------------------------------------------
 local function tiny(plr)
     if plr ~= client then
         notify("❌ Tiny only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2794,7 +3450,9 @@ local function tiny(plr)
         notify("🐜 Tiny mode!", Color3.fromRGB(100, 200, 255))
     end
 end
-
+------------------------------------------------
+-- advanced rainbow
+------------------------------------------------
 local function rainbow(plr)
     if plr ~= client then
         notify("❌ Rainbow only works on yourself", Color3.fromRGB(255, 100, 100))
@@ -2809,7 +3467,7 @@ local function rainbow(plr)
         notify("❌ No character for rainbow", Color3.fromRGB(255, 100, 100))
         return 
     end
-    local conn = RunService.Heartbeat:Connect(function()
+	local conn = RunService.Heartbeat:Connect(function()
         local hue = tick() % 5 / 5
         local c = Color3.fromHSV(hue, 1, 1)
         for _, part in char:GetDescendants() do
@@ -2819,60 +3477,110 @@ local function rainbow(plr)
         end
     end)
     rainbowData[plr] = conn
-    notify("🌈 Rainbow ON", Color3.fromRGB(255, 100, 255))
+    notify("Rainbow ON", Color3.fromRGB(255, 100, 255))
 end
-
+------------------------------------------------
+-- advanced unrainbow
+------------------------------------------------
 local function unrainbow(plr)
     if plr ~= client then
-        notify("❌ Unrainbow only works on yourself", Color3.fromRGB(255, 100, 100))
+        notify("Unrainbow only works on yourself", Color3.fromRGB(255, 100, 100))
         return
     end
     if rainbowData[plr] then
         rainbowData[plr]:Disconnect()
         rainbowData[plr] = nil
-        notify("✅ Rainbow OFF", Color3.fromRGB(200, 100, 200))
+        notify("Rainbow OFF", Color3.fromRGB(200, 100, 200))
     else
         notify("⚠️ Not in rainbow mode", Color3.fromRGB(255, 200, 100))
     end
 end
-
+------------------------------------------------
+-- advanced fire
+------------------------------------------------
 local function fire(plr)
     local hrp = getHRP(plr)
     if hrp and not hrp:FindFirstChild("Fire") then
         local f = Instance.new("Fire", hrp)
         f.Size = 10
         f.Heat = 25
-        notify("🔥 On fire!", Color3.fromRGB(255, 100, 0))
+        notify("On fire", Color3.fromRGB(255, 100, 0))
     else
         notify("⚠️ Already on fire or no character", Color3.fromRGB(255, 200, 100))
     end
 end
-
+------------------------------------------------
+-- advanced unfire
+------------------------------------------------
 local function unfire(plr)
     local hrp = getHRP(plr)
     if hrp then
         local f = hrp:FindFirstChild("Fire")
         if f then 
             f:Destroy() 
-            notify("✅ Fire off", Color3.fromRGB(200, 100, 0))
+            notify("Fire off", Color3.fromRGB(200, 100, 0))
         else
-            notify("⚠️ Not on fire", Color3.fromRGB(255, 200, 100))
+            notify("Not on fire", Color3.fromRGB(255, 200, 100))
         end
     end
 end
+------------------------------------------------
+-- advanced first person/thrid person
+------------------------------------------------
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local client = Players.LocalPlayer  -- assuming 'client' is LocalPlayer in your script
 
 local function thirdp()
+    -- Step 1: Switch to Classic mode (allows zooming)
     client.CameraMode = Enum.CameraMode.Classic
+    
+    -- Step 2: Temporarily force a zoom-out to exit first person reliably
+    -- (Roblox camera won't exit FP just by setting Classic if already zoomed in)
+    local originalMinZoom = client.CameraMinZoomDistance
+    client.CameraMinZoomDistance = 10  -- or higher, forces zoom out
     client.CameraMaxZoomDistance = 400
-    client.CameraMinZoomDistance = 0.5
-    notify("✅ Third person enabled", currentTheme.accent)
+    
+    -- Wait one frame so the camera module processes the change and zooms out
+    RunService.RenderStepped:Wait()  -- or task.wait(0.03) if you prefer
+    
+    -- Step 3: Restore normal min zoom (so player can zoom in again if they want)
+    client.CameraMinZoomDistance = originalMinZoom  -- or set to 0.5 if you want tight zoom allowed
+    
+    -- Step 4: Fix "invisible to self" glitch
+    -- Roblox sets LocalTransparencyModifier = 1 on parts in FP; doesn't always reset
+    local character = client.Character
+    if character then
+        for _, obj in ipairs(character:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
+                obj.LocalTransparencyModifier = 0
+            end
+        end
+        
+        -- Optional: If head/face is still hidden, force it visible too
+        local head = character:FindFirstChild("Head")
+        if head then
+            head.LocalTransparencyModifier = 0
+        end
+    end
+    
+    -- Optional: Re-focus camera on your humanoid to snap back cleanly
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        workspace.CurrentCamera.CameraSubject = humanoid
+    end
+    
+    notify("Third person enabled (forced zoom out + visibility fix)", currentTheme.accent)
 end
 
 local function firstp()
     client.CameraMode = Enum.CameraMode.LockFirstPerson
-    notify("✅ First person enabled", currentTheme.accent)
+    notify("First person enabled", currentTheme.accent)
 end
-
+------------------------------------------------
+-- advanced Waypoint
+------------------------------------------------
 local function waypoint()
     local num = #waypoints + 1
     local wp = Instance.new("Part")
@@ -2912,36 +3620,216 @@ local function waypoint()
         distLabel.Text = math.floor(dist) .. " studs"
     end)
     table.insert(waypoints, {part = wp, conn = conn})
-    notify("📍 Waypoint #" .. num .. " added", currentTheme.accent)
+    notify("Waypoint #" .. num .. " added", currentTheme.accent)
 end
 
-local function enableTracers()
-    for _, line in ipairs(tracerLines) do 
-        if line then line:Destroy() end 
+------------------------------------------------
+-- advanced tracers
+------------------------------------------------
+local Players = game:GetService("Players")
+
+local tracerSystem = {
+    enabled = false,
+    players = {},
+    connections = {}
+}
+
+----------------------------------------------------
+-- GET YOUR HRP
+----------------------------------------------------
+local function getMyHRP()
+    if client.Character then
+        return client.Character:FindFirstChild("HumanoidRootPart")
     end
-    tracerLines = {}
-    
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= client and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local line = Instance.new("Beam")
-            line.Color = ColorSequence.new(Color3.new(1,0,0))
-            line.Width0 = 0.2
-            line.Width1 = 0.2
-            line.Transparency = NumberSequence.new(0.3)
-            line.Attachment0 = Instance.new("Attachment", hrp)
-            line.Attachment1 = Instance.new("Attachment", p.Character.HumanoidRootPart)
-            line.Parent = workspace
-            table.insert(tracerLines, line)
-        end
-    end
-    notify("✅ Tracers enabled", currentTheme.accent)
+    return nil
 end
 
+----------------------------------------------------
+-- TEAM COLOR LOGIC
+----------------------------------------------------
+local function getTracerColor(plr)
+    if not client.Team or not plr.Team then
+        return Color3.new(1,1,1) -- white if no team
+    end
+
+    if plr.Team == client.Team then
+        return Color3.fromRGB(0,255,0) -- friendly
+    else
+        return Color3.fromRGB(255,0,0) -- enemy
+    end
+end
+
+----------------------------------------------------
+-- CLEAR ONE PLAYER TRACER
+----------------------------------------------------
+local function clearPlayer(plr)
+    local data = tracerSystem.players[plr]
+    if not data then return end
+
+    if data.beam then data.beam:Destroy() end
+    if data.att0 then data.att0:Destroy() end
+    if data.att1 then data.att1:Destroy() end
+
+    for _,conn in ipairs(data.connections) do
+        conn:Disconnect()
+    end
+
+    tracerSystem.players[plr] = nil
+end
+
+----------------------------------------------------
+-- ATTACH TRACER
+----------------------------------------------------
+local function attachTracer(plr, char)
+
+    if not tracerSystem.enabled then return end
+    if plr == client then return end
+
+    local myHRP = getMyHRP()
+    if not myHRP then return end
+
+    local enemyHRP = char:WaitForChild("HumanoidRootPart",10)
+    if not enemyHRP then return end
+
+    clearPlayer(plr)
+
+    local data = { connections = {} }
+    tracerSystem.players[plr] = data
+
+    local beam = Instance.new("Beam")
+    beam.Width0 = 0.2
+    beam.Width1 = 0.2
+    beam.Transparency = NumberSequence.new(0.3)
+    beam.FaceCamera = true
+    beam.Color = ColorSequence.new(getTracerColor(plr))
+
+    local att0 = Instance.new("Attachment")
+    att0.Parent = myHRP
+
+    local att1 = Instance.new("Attachment")
+    att1.Parent = enemyHRP
+
+    beam.Attachment0 = att0
+    beam.Attachment1 = att1
+    beam.Parent = workspace
+
+    data.beam = beam
+    data.att0 = att0
+    data.att1 = att1
+
+    -- Update color if THEY change team
+    table.insert(data.connections,
+        plr:GetPropertyChangedSignal("Team"):Connect(function()
+            if beam then
+                beam.Color = ColorSequence.new(getTracerColor(plr))
+            end
+        end)
+    )
+
+    -- Update color if YOU change team
+    table.insert(data.connections,
+        client:GetPropertyChangedSignal("Team"):Connect(function()
+            if beam then
+                beam.Color = ColorSequence.new(getTracerColor(plr))
+            end
+        end)
+    )
+
+    -- Reattach if THEY respawn
+    table.insert(data.connections,
+        plr.CharacterAdded:Connect(function(newChar)
+            task.wait(0.2)
+            attachTracer(plr, newChar)
+        end)
+    )
+end
+
+----------------------------------------------------
+-- CREATE FOR PLAYER
+----------------------------------------------------
+local function createForPlayer(plr)
+    if plr == client then return end
+    if tracerSystem.players[plr] then return end
+
+    if plr.Character then
+        attachTracer(plr, plr.Character)
+    end
+end
+
+----------------------------------------------------
+-- ENABLE
+----------------------------------------------------
+function enableTracers()
+
+    if tracerSystem.enabled then return end
+    tracerSystem.enabled = true
+
+    -- existing players
+    for _,plr in ipairs(Players:GetPlayers()) do
+        createForPlayer(plr)
+    end
+
+    -- new players
+    table.insert(tracerSystem.connections,
+        Players.PlayerAdded:Connect(function(plr)
+            if tracerSystem.enabled then
+                createForPlayer(plr)
+            end
+        end)
+    )
+
+    -- cleanup on leave
+    table.insert(tracerSystem.connections,
+        Players.PlayerRemoving:Connect(function(plr)
+            clearPlayer(plr)
+        end)
+    )
+
+    -- YOU respawn → rebuild all
+    table.insert(tracerSystem.connections,
+        client.CharacterAdded:Connect(function()
+            task.wait(0.3)
+
+            for plr,_ in pairs(tracerSystem.players) do
+                clearPlayer(plr)
+            end
+
+            for _,plr in ipairs(Players:GetPlayers()) do
+                createForPlayer(plr)
+            end
+        end)
+    )
+
+    notify("Tracers enabled", currentTheme.accent)
+end
+
+----------------------------------------------------
+-- DISABLE
+----------------------------------------------------
+function disableTracers()
+
+    if not tracerSystem.enabled then return end
+    tracerSystem.enabled = false
+
+    for _,conn in ipairs(tracerSystem.connections) do
+        conn:Disconnect()
+    end
+    tracerSystem.connections = {}
+
+    for plr,_ in pairs(tracerSystem.players) do
+        clearPlayer(plr)
+    end
+
+    tracerSystem.players = {}
+
+    notify("❌ Tracers disabled", currentTheme.accent)
+end
+----------------------------------------------------
+-- advanced Disable tracers
+------------------------------------------------
 local function disableTracers()
-    for _, line in ipairs(tracerLines) do 
-        if line then line:Destroy() end 
-    end
-    tracerLines = {}
+    tracersEnabled = false
+    clearTracers()
     notify("❌ Tracers disabled", currentTheme.accent)
 end
 
@@ -3317,7 +4205,7 @@ for i, cmdStr in ipairs(cmds) do
     btn.MouseButton1Click:Connect(function()
         if setclipboard then
             setclipboard(cmdStr)
-            notify("✅ Copied: " .. cmdStr, Color3.fromRGB(100, 255, 100))
+            notify("Copied: " .. cmdStr, Color3.fromRGB(100, 255, 100))
         end
     end)
 end
@@ -3386,7 +4274,7 @@ applyGlassEffect(prefixInput, 0.25, 0.5)
 prefixInput.FocusLost:Connect(function(enter)
     if enter then
         prefix = prefixInput.Text ~= "" and prefixInput.Text or "!"
-        notify("✅ Prefix changed to: " .. prefix, currentTheme.accent)
+        notify("Prefix changed to: " .. prefix, currentTheme.accent)
     end
 end)
 
@@ -3632,7 +4520,7 @@ for name, th in pairs(themes) do
             end
         end
         
-        notify("✅ Theme changed to " .. name, th.accent)
+        notify("Theme changed to " .. name, th.accent)
     end)
 end
 
@@ -3671,9 +4559,9 @@ applyGlassEffect(discordBtn, 0.15, 0.4)
 discordBtn.MouseButton1Click:Connect(function()
     if setclipboard then
         setclipboard("https://discord.gg/5GeQAXYYcW")
-        notify("✅ Discord link copied to clipboard!", Color3.fromRGB(88,101,242))
+        notify("Discord link copied to clipboard!", Color3.fromRGB(88,101,242))
     else
-        notify("❌ Clipboard not supported in this executor", Color3.fromRGB(255,100,100))
+        notify("Clipboard not supported in this executor", Color3.fromRGB(255,100,100))
     end
 end)
 
@@ -3703,7 +4591,10 @@ end)
 -- =============================================================
 lunarGui.Enabled = true
 playOpen()
-notify("✅ Lunar Admin loaded • RightShift to toggle", Color3.fromRGB(120,220,255))
+notify("Lunar Admin loaded • Enjoy :3", Color3.fromRGB(120,220,255))
+
+-- After lunarGui.Enabled = true and before the notify
+setupButtonSounds()
 
 task.spawn(function()
     task.wait(0.8)
