@@ -1,4 +1,4 @@
--- Join my Discord :3 https://discord.gg/5GeQAXYYcW   
+-- Join my Discord :3 https://discord.gg/5GeQAXYYcW
 -- Created by @LunarRbxZ
 -- Fixed and Enhanced Admin Script
 
@@ -16,7 +16,6 @@ local Workspace = game:GetService("Workspace")
 local client = Players.LocalPlayer
 local Mouse = client:GetMouse()
 local prefix = "!"
-
 local waypoints = {}
 local tracerLines = {}
 
@@ -30,17 +29,94 @@ if not hrp or not hum then
     return
 end
 
-client.CharacterAdded:Connect(function(newChar)
-    char = newChar
-    hrp = char:WaitForChild("HumanoidRootPart", 10)
-    hum = char:WaitForChild("Humanoid", 10)
-    
-    if flyData[client] and flyData[client].enabled then
-        task.wait(0.5)
-        startFly(client, flyData[client].speed)
-    end
-end)
+client.Chatted:Connect(processCmd)
 
+-- =============================================================
+-- LUNAR HUB WATERMARK (Right-Aligned next to Mic)
+-- =============================================================
+task.spawn(function()
+    if client.PlayerGui:FindFirstChild("LunarWatermark") then
+        client.PlayerGui.LunarWatermark:Destroy()
+    end
+
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "LunarWatermark"
+    sg.ResetOnSpawn = false
+    sg.IgnoreGuiInset = true
+    sg.DisplayOrder = 999999
+    sg.Parent = client.PlayerGui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 380, 0, 34)           -- Slightly wider
+    frame.Position = UDim2.new(1, -3220, 0, 15)       -- Right side, aligned under mic
+    frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    frame.BackgroundTransparency = 0.15
+    frame.Parent = sg
+
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+
+    -- Glows
+    local s1 = Instance.new("UIStroke", frame)
+    s1.Color = Color3.fromRGB(255, 215, 0)
+    s1.Thickness = 2.5
+    s1.Transparency = 0.65
+
+    local s2 = Instance.new("UIStroke", frame)
+    s2.Color = Color3.fromRGB(60, 60, 60)
+    s2.Thickness = 1
+    s2.Transparency = 0.4
+
+    -- Moon Icon
+    local moon = Instance.new("TextLabel", frame)
+    moon.Size = UDim2.new(0, 32, 1, 0)
+    moon.Position = UDim2.new(0, 12, 0, 0)
+    moon.BackgroundTransparency = 1
+    moon.Text = "🌙"
+    moon.TextColor3 = Color3.fromRGB(255, 215, 0)
+    moon.TextSize = 22
+    moon.Font = Enum.Font.GothamBold
+
+    -- Main Label
+    local label = Instance.new("TextLabel", frame)
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, -68, 1, 0)
+    label.Position = UDim2.new(0, 52, 0, 0)
+    label.Font = Enum.Font.GothamSemibold
+    label.TextSize = 16
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = "Lunar Hub | Loading..."
+
+    -- FPS + Ping System
+    local fps = 0
+    local frames = 0
+    local last = tick()
+
+    RunService.RenderStepped:Connect(function()
+        frames += 1
+        if tick() - last >= 1 then
+            fps = frames
+            frames = 0
+            last = tick()
+        end
+    end)
+
+    local function getPing()
+        local ping = 999
+        pcall(function()
+            local p = client:GetNetworkPing()
+            if p then ping = math.floor(p * 2000) end
+        end)
+        return ping
+    end
+
+    task.spawn(function()
+        while sg.Parent do
+            label.Text = string.format("Lunar Hub | %d FPS | %d ms", fps, getPing())
+            task.wait(0.25)
+        end
+    end)
+end)
 -- =============================================================
 -- GLOBAL CONFIGURATION
 -- =============================================================
@@ -4762,5 +4838,6 @@ end
 ------------------------------------------------------------------------------
 ----------------- END OF IT LOL ----------------------------------------------
 ------------------------------------------------------------------------------
+
 -- Chat handler
 client.Chatted:Connect(processCmd)
