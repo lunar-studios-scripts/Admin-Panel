@@ -4393,17 +4393,27 @@ end
 ------------------------------------------------
 -- advanced tracers
 ------------------------------------------------
-local Players = game:GetService("Players")
+-- ============================================
+-- TRACER SYSTEM - Improved & Fixed
+-- ============================================
 
 local tracerSystem = {
     enabled = false,
     players = {},
-    connections = {}
+    beams = {} -- Track all beams for cleanup
 }
 
-----------------------------------------------------
--- GET YOUR HRP
-----------------------------------------------------
+-- Thinner, better looking tracers
+local TRACER_SETTINGS = {
+    width0 = 0.05,        -- Much thinner (was 0.2)
+    width1 = 0.02,        -- Taper to point
+    transparency = 0.15,   -- More visible (was 0.3)
+    brightness = 2,      -- Neon glow effect
+    texture = "rbxassetid://7151778302", -- Optional: thin line texture
+    textureLength = 1,
+    textureMode = Enum.TextureMode.Stretch
+}
+
 local function getMyHRP()
     if client.Character then
         return client.Character:FindFirstChild("HumanoidRootPart")
@@ -4411,74 +4421,100 @@ local function getMyHRP()
     return nil
 end
 
-----------------------------------------------------
--- TEAM COLOR LOGIC
-----------------------------------------------------
 local function getTracerColor(plr)
     if not client.Team or not plr.Team then
-        return Color3.new(1,1,1) -- white if no team
+        return Color3.fromRGB(200, 200, 255) -- Soft white/blue if no team
     end
 
     if plr.Team == client.Team then
-        return Color3.fromRGB(0,255,0) -- friendly
+        return Color3.fromRGB(0, 255, 150)   -- Bright green for friendly
     else
-        return Color3.fromRGB(255,0,0) -- enemy
+        return Color3.fromRGB(255, 50, 50)   -- Bright red for enemy
     end
 end
 
-----------------------------------------------------
--- CLEAR ONE PLAYER TRACER
-----------------------------------------------------
 local function clearPlayer(plr)
     local data = tracerSystem.players[plr]
     if not data then return end
 
-    if data.beam then data.beam:Destroy() end
-    if data.att0 then data.att0:Destroy() end
-    if data.att1 then data.att1:Destroy() end
+    if data.beam then 
+        data.beam:Destroy() 
+    end
+    if data.att0 then 
+        data.att0:Destroy() 
+    end
+    if data.att1 then 
+        data.att1:Destroy() 
+    end
 
-    for _,conn in ipairs(data.connections) do
+    for _, conn in ipairs(data.connections or {}) do
         conn:Disconnect()
     end
 
     tracerSystem.players[plr] = nil
 end
 
-----------------------------------------------------
--- ATTACH TRACER
-----------------------------------------------------
-local function attachTracer(plr, char)
+local function clearAllTracers()
+    for plr, _ in pairs(tracerSystem.players) do
+        clearPlayer(plr)
+    end
+    tracerSystem.players = {}
+    tracerSystem.enabled = false
+end
 
+local function createBeam(att0, att1, color)
+    local beam = Instance.new("Beam")
+    beam.Width0 = TRACER_SETTINGS.width0
+    beam.Width1 = TRACER_SETTINGS.width1
+    beam.Transparency = NumberSequence.new(TRACER_SETTINGS.transparency)
+    beam.FaceCamera = true
+    beam.Color = ColorSequence.new(color)
+    beam.LightEmission = TRACER_SETTINGS.brightness
+    beam.LightInfluence = 0
+    beam.Segments = 1
+    beam.ZOffset = 0
+    
+    -- Optional: add texture for better look
+    -- beam.Texture = TRACER_SETTINGS.texture
+    -- beam.TextureLength = TRACER_SETTINGS.textureLength
+    -- beam.TextureMode = TRACER_SETTINGS.textureMode
+    
+    beam.Attachment0 = att0
+    beam.Attachment1 = att1
+    beam.Parent = workspace.Terrain -- Use Terrain instead of workspace for cleaner hierarchy
+    
+    return beam
+end
+
+local function attachTracer(plr, char)
     if not tracerSystem.enabled then return end
     if plr == client then return end
 
     local myHRP = getMyHRP()
     if not myHRP then return end
 
-    local enemyHRP = char:WaitForChild("HumanoidRootPart",10)
+    local enemyHRP = char:WaitForChild("HumanoidRootPart", 10)
     if not enemyHRP then return end
 
+    -- Clear existing first
     clearPlayer(plr)
 
     local data = { connections = {} }
     tracerSystem.players[plr] = data
 
-    local beam = Instance.new("Beam")
-    beam.Width0 = 0.2
-    beam.Width1 = 0.2
-    beam.Transparency = NumberSequence.new(0.3)
-    beam.FaceCamera = true
-    beam.Color = ColorSequence.new(getTracerColor(plr))
-
+    -- Create attachments
     local att0 = Instance.new("Attachment")
+    att0.Name = "TracerAtt0_" .. plr.Name
     att0.Parent = myHRP
+    att0.WorldPosition = myHRP.Position
 
     local att1 = Instance.new("Attachment")
+    att1.Name = "TracerAtt1_" .. plr.Name
     att1.Parent = enemyHRP
+    att1.WorldPosition = enemyHRP.Position
 
-    beam.Attachment0 = att0
-    beam.Attachment1 = att1
-    beam.Parent = workspace
+    -- Create beam with improved visuals
+    local beam = createBeam(att0, att1, getTracerColor(plr))
 
     data.beam = beam
     data.att0 = att0
@@ -4487,8 +4523,8 @@ local function attachTracer(plr, char)
     -- Update color if THEY change team
     table.insert(data.connections,
         plr:GetPropertyChangedSignal("Team"):Connect(function()
-            if beam then
-                beam.Color = ColorSequence.new(getTracerColor(plr))
+            if data.beam then
+                data.beam.Color = ColorSequence.new(getTracerColor(plr))
             end
         end)
     )
@@ -4496,19 +4532,112 @@ local function attachTracer(plr, char)
     -- Update color if YOU change team
     table.insert(data.connections,
         client:GetPropertyChangedSignal("Team"):Connect(function()
-            if beam then
-                beam.Color = ColorSequence.new(getTracerColor(plr))
+            if data.beam then
+                data.beam.Color = ColorSequence.new(getTracerColor(plr))
             end
         end)
     )
 
-    -- Reattach if THEY respawn
+    -- Handle THEIR respawn
     table.insert(data.connections,
         plr.CharacterAdded:Connect(function(newChar)
-            task.wait(0.2)
+            task.wait(0.3)
             attachTracer(plr, newChar)
         end)
     )
+
+    -- Handle THEIR death (remove beam until respawn)
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        table.insert(data.connections,
+            humanoid.Died:Connect(function()
+                clearPlayer(plr)
+            end)
+        )
+    end
+end
+
+-- Main enable/disable functions
+function tracerSystem:Enable()
+    if self.enabled then return end
+    self.enabled = true
+
+    -- Attach to all existing players
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= client and plr.Character then
+            task.spawn(function()
+                attachTracer(plr, plr.Character)
+            end)
+        end
+    end
+
+    -- Listen for new players
+    self.playerAddedConn = Players.PlayerAdded:Connect(function(plr)
+        plr.CharacterAdded:Connect(function(char)
+            task.wait(0.2)
+            if self.enabled then
+                attachTracer(plr, char)
+            end
+        end)
+    end)
+
+    -- Clean up when players leave
+    self.playerRemovingConn = Players.PlayerRemoving:Connect(function(plr)
+        clearPlayer(plr)
+    end)
+
+    -- Update our position when we respawn
+    self.charAddedConn = client.CharacterAdded:Connect(function(char)
+        task.wait(0.3)
+        if not self.enabled then return end
+        
+        -- Reattach all tracers to new character
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= client and plr.Character then
+                task.spawn(function()
+                    attachTracer(plr, plr.Character)
+                end)
+            end
+        end
+    end)
+
+    -- Constant update loop for smooth positioning
+    self.updateLoop = RunService.Heartbeat:Connect(function()
+        if not self.enabled then return end
+        
+        local myHRP = getMyHRP()
+        if not myHRP then return end
+
+        for plr, data in pairs(self.players) do
+            if data.att0 and data.att0.Parent then
+                data.att0.WorldPosition = myHRP.Position
+            end
+        end
+    end)
+end
+
+function tracerSystem:Disable()
+    if not self.enabled then return end
+    self.enabled = false
+
+    -- Disconnect all connections
+    if self.playerAddedConn then self.playerAddedConn:Disconnect() end
+    if self.playerRemovingConn then self.playerRemovingConn:Disconnect() end
+    if self.charAddedConn then self.charAddedConn:Disconnect() end
+    if self.updateLoop then self.updateLoop:Disconnect() end
+
+    -- Clear all tracers
+    clearAllTracers()
+end
+
+function tracerSystem:Toggle()
+    if self.enabled then
+        self:Disable()
+        return false
+    else
+        self:Enable()
+        return true
+    end
 end
 
 ----------------------------------------------------
@@ -4803,10 +4932,21 @@ elseif cmd == "flyspeed" or cmd == "fs" then
         tp(client, getPlr(args[2] or "me"))
     elseif cmd == "trip" then 
         trip(target)
-    elseif cmd == "tracers" then 
-        enableTracers()
-    elseif cmd == "untracers" then 
-        disableTracers()
+   elseif cmd == "tracers" then
+    tracerSystem:Enable()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Tracers", 
+        Text = "Enabled - Thin neon tracers active", 
+        Duration = 3
+    })
+
+elseif cmd == "untracers" then
+    tracerSystem:Disable()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Tracers", 
+        Text = "Disabled - All tracers cleared", 
+        Duration = 3
+    })
     elseif cmd == "view" then 
         view(target)
     elseif cmd == "unview" then 
