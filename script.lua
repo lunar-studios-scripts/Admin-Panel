@@ -3203,21 +3203,382 @@ end
 ------------------------------------------------
 -- advanced Fling
 ------------------------------------------------
-local function fling(plr)
-    if plr ~= client then
-        notify("❌ Fling only works on yourself", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    local hrp = getHRP(plr)
-    if hrp then
-        local v = Instance.new("BodyVelocity")
-        v.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        v.Velocity = Vector3.new(math.random(-200,200)*100, 200*100, math.random(-200,200)*100)
-        v.Parent = hrp
-        task.delay(0.3, function() if v then v:Destroy() end end)
-        notify("Flung", Color3.fromRGB(255, 100, 180))
+local TouchFling = {
+    enabled = false,
+    flingAll = false,
+    lockFling = false,
+    clickTP = false,
+    oneTimeTP = false,
+    selectedPlayer = nil,
+    movel = 0.1,
+    gui = nil,
+    mainFrame = nil,
+    toggles = {},
+    buttons = {}
+}
+
+function TouchFling:UpdateToggle(name, displayName)
+    local state = self[name]
+    local btn = self.toggles[name]
+    if btn then
+        btn.Text = displayName .. ": " .. (state and "ON" or "OFF")
+        
+        if name == "lockFling" then
+            btn.TextColor3 = state and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(255, 80, 80)
+        else
+            btn.TextColor3 = state and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
+        end
     end
 end
+
+function TouchFling:SelectPlayer(player)
+    self.selectedPlayer = player
+    for plr, btn in pairs(self.buttons) do
+        if btn and btn.Parent then
+            btn.BackgroundColor3 = (plr == player) and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(35, 35, 50)
+        end
+    end
+end
+
+function TouchFling:ToggleMinimize()
+    if not self.mainFrame then return end
+    local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
+    if self.mainFrame.Size.Y.Offset > 100 then
+        TweenService:Create(self.mainFrame, tweenInfo, {Size = UDim2.new(0, 300, 0, 40)}):Play()
+        for _, obj in pairs(self.mainFrame:GetDescendants()) do
+            if obj:IsA("TextButton") and obj.Name ~= "MinimizeBtn" and obj.Name ~= "CloseBtn" then
+                TweenService:Create(obj, tweenInfo, {TextTransparency = 1}):Play()
+            elseif obj:IsA("TextLabel") and obj.Name ~= "Title" then
+                TweenService:Create(obj, tweenInfo, {TextTransparency = 1}):Play()
+            elseif obj:IsA("ScrollingFrame") then
+                TweenService:Create(obj, tweenInfo, {BackgroundTransparency = 1}):Play()
+            end
+        end
+    else
+        TweenService:Create(self.mainFrame, tweenInfo, {Size = UDim2.new(0, 300, 0, 500)}):Play()
+        for _, obj in pairs(self.mainFrame:GetDescendants()) do
+            if obj:IsA("TextButton") and obj.Name ~= "MinimizeBtn" and obj.Name ~= "CloseBtn" then
+                TweenService:Create(obj, tweenInfo, {TextTransparency = 0}):Play()
+            elseif obj:IsA("TextLabel") then
+                TweenService:Create(obj, tweenInfo, {TextTransparency = obj.Name == "Watermark" and 0.5 or 0}):Play()
+            elseif obj:IsA("ScrollingFrame") then
+                TweenService:Create(obj, tweenInfo, {BackgroundTransparency = 0.7}):Play()
+            end
+        end
+    end
+end
+
+function TouchFling:CreateGUI()
+    if self.gui then 
+        self.gui.Enabled = true
+        return 
+    end
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "LunarTouchFling"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = client:WaitForChild("PlayerGui")
+    self.gui = ScreenGui
+    
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "Main"
+    MainFrame.Parent = ScreenGui
+    MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
+    MainFrame.Size = UDim2.new(0, 300, 0, 500)
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.ClipsDescendants = true
+    self.mainFrame = MainFrame
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+    
+    local UIGradient = Instance.new("UIGradient")
+    UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(30,30,50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10,10,20))}
+    UIGradient.Rotation = 90
+    UIGradient.Parent = MainFrame
+    
+    local TopBar = Instance.new("Frame")
+    TopBar.Name = "TopBar"
+    TopBar.Parent = MainFrame
+    TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+    TopBar.BorderSizePixel = 0
+    TopBar.Size = UDim2.new(1, 0, 0, 40)
+    TopBar.Active = true
+    
+    local TopCorner = Instance.new("UICorner")
+    TopCorner.CornerRadius = UDim.new(0, 12)
+    TopCorner.Parent = TopBar
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Parent = TopBar
+    Title.BackgroundTransparency = 1
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.Size = UDim2.new(0.6, 0, 1, 0)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = "Touch Fling"
+    Title.TextColor3 = Color3.fromRGB(180, 220, 255)
+    Title.TextSize = 22
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Name = "MinimizeBtn"
+    MinimizeBtn.Parent = TopBar
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    MinimizeBtn.Position = UDim2.new(1, -70, 0.5, -12)
+    MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
+    MinimizeBtn.Font = Enum.Font.GothamBold
+    MinimizeBtn.Text = "-"
+    MinimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+    MinimizeBtn.TextSize = 20
+    local MinCorner = Instance.new("UICorner")
+    MinCorner.CornerRadius = UDim.new(0, 8)
+    MinCorner.Parent = MinimizeBtn
+    
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "CloseBtn"
+    CloseBtn.Parent = TopBar
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+    CloseBtn.Position = UDim2.new(1, -36, 0.5, -12)
+    CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+    CloseBtn.TextSize = 18
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 8)
+    CloseCorner.Parent = CloseBtn
+    
+    CloseBtn.MouseButton1Click:Connect(function()
+        self.gui:Destroy()
+        self.gui = nil
+        self.mainFrame = nil
+        self.toggles = {}
+        self.buttons = {}
+        self.enabled = false
+        self.flingAll = false
+        self.lockFling = false
+        self.clickTP = false
+        self.oneTimeTP = false
+        self.selectedPlayer = nil
+    end)
+    
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        self:ToggleMinimize()
+    end)
+    
+    local function makeToggle(y, text, name)
+        local btn = Instance.new("TextButton")
+        btn.Name = name
+        btn.Parent = MainFrame
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        btn.Position = UDim2.new(0.1, 0, y, 0)
+        btn.Size = UDim2.new(0.8, 0, 0, 38)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.Text = text .. ": OFF"
+        btn.TextColor3 = Color3.fromRGB(255, 80, 80)
+        btn.TextSize = 13
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 10)
+        c.Parent = btn
+        return btn
+    end
+    
+        self.toggles.enabled = makeToggle(0.10, "Touch Fling", "TouchFling")
+    self.toggles.flingAll = makeToggle(0.20, "Fling All (wip)", "FlingAll")
+    self.toggles.lockFling = makeToggle(0.30, "Lock Fling", "LockFling")
+    self.toggles.clickTP = makeToggle(0.40, "Click TP", "ClickTP")
+    self.toggles.oneTimeTP = makeToggle(0.50, "One-Time TP", "OneTimeTP")
+    -- Removed: hidePlayerList toggle
+    
+    -- Touch Fling Toggle
+    self.toggles.enabled.MouseButton1Click:Connect(function()
+        self.enabled = not self.enabled
+        self:UpdateToggle("enabled", "Touch Fling")
+    end)
+    
+    -- Fling All Toggle
+    self.toggles.flingAll.MouseButton1Click:Connect(function()
+        self.flingAll = not self.flingAll
+        self:UpdateToggle("flingAll", "Fling All (wip)")
+    end)
+    
+    -- Lock Fling Toggle
+    self.toggles.lockFling.MouseButton1Click:Connect(function()
+        self.lockFling = not self.lockFling
+        self:UpdateToggle("lockFling", "Lock Fling")
+    end)
+    
+    -- Click TP Toggle
+    self.toggles.clickTP.MouseButton1Click:Connect(function()
+        self.clickTP = not self.clickTP
+        self:UpdateToggle("clickTP", "Click TP")
+    end)
+    
+    -- One-Time TP Toggle
+    self.toggles.oneTimeTP.MouseButton1Click:Connect(function()
+        self.oneTimeTP = not self.oneTimeTP
+        self:UpdateToggle("oneTimeTP", "One-Time TP")
+    end)
+    
+    -- Player List Label (moved up to position 0.60)
+    local ListLabel = Instance.new("TextLabel")
+    ListLabel.Name = "ListLabel"
+    ListLabel.Parent = MainFrame
+    ListLabel.BackgroundTransparency = 1
+    ListLabel.Position = UDim2.new(0.1, 0, 0.60, 0)  -- Changed from 0.70 to 0.60
+    ListLabel.Size = UDim2.new(0.8, 0, 0, 20)
+    ListLabel.Font = Enum.Font.GothamSemibold
+    ListLabel.Text = "Select Player"
+    ListLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+    ListLabel.TextSize = 14
+    
+    -- Player Scroll (moved up to position 0.65)
+    local Scroll = Instance.new("ScrollingFrame")
+    Scroll.Name = "PlayerScroll"
+    Scroll.Parent = MainFrame
+    Scroll.Position = UDim2.new(0.1, 0, 0.65, 0)  -- Changed from 0.75 to 0.65
+    Scroll.Size = UDim2.new(0.8, 0, 0, 140)  -- Increased height from 110 to 140
+    Scroll.BackgroundTransparency = 0.7
+    Scroll.ScrollBarThickness = 4
+    local sc = Instance.new("UICorner")
+    sc.CornerRadius = UDim.new(0, 8)
+    sc.Parent = Scroll
+    
+    local UIList = Instance.new("UIListLayout")
+    UIList.Parent = Scroll
+    UIList.Padding = UDim.new(0, 4)
+    
+    local Watermark = Instance.new("TextLabel")
+    Watermark.Name = "Watermark"
+    Watermark.Parent = MainFrame
+    Watermark.BackgroundTransparency = 1
+    Watermark.Position = UDim2.new(0.05, 0, 0.92, 0)
+    Watermark.Size = UDim2.new(0.9, 0, 0, 18)
+    Watermark.Font = Enum.Font.Gotham
+    Watermark.Text = "https://discord.gg/5GeQAXYYcW"
+    Watermark.TextColor3 = Color3.fromRGB(120, 180, 255)
+    Watermark.TextSize = 13
+    Watermark.TextTransparency = 0.5
+    
+    local function refreshList()
+        for plr, btn in pairs(self.buttons) do
+            if not plr.Parent then 
+                btn:Destroy()
+                self.buttons[plr] = nil 
+            end
+        end
+        
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= client and not self.buttons[plr] then
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -8, 0, 32)
+                btn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+                btn.Text = plr.Name
+                btn.TextColor3 = Color3.new(1, 1, 1)
+                btn.Font = Enum.Font.GothamSemibold
+                btn.TextSize = 16
+                btn.Parent = Scroll
+                local c = Instance.new("UICorner")
+                c.CornerRadius = UDim.new(0, 8)
+                c.Parent = btn
+                
+                btn.MouseButton1Click:Connect(function()
+                    self:SelectPlayer(plr)
+                end)
+                
+                self.buttons[plr] = btn
+            end
+        end
+        
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 10)
+    end
+    
+    Players.PlayerAdded:Connect(refreshList)
+    Players.PlayerRemoving:Connect(refreshList)
+    refreshList()
+end
+
+-- Click TP
+Mouse.Button1Down:Connect(function()
+    if TouchFling.clickTP and Mouse.Target then
+        local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            myRoot.CFrame = Mouse.Hit + Vector3.new(0, 3, 0)
+        end
+    end
+end)
+
+-- Main Loop
+RunService.Heartbeat:Connect(function()
+    if TouchFling.enabled then
+        local char = client.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local old = hrp.Velocity
+                hrp.Velocity = old * 12000 + Vector3.new(0, 14000, 0)
+                RunService.RenderStepped:Wait()
+                if hrp.Parent then hrp.Velocity = old end
+                RunService.Stepped:Wait()
+                if hrp.Parent then 
+                    hrp.Velocity = old + Vector3.new(0, TouchFling.movel * 2, 0)
+                    TouchFling.movel = -TouchFling.movel 
+                end
+            end
+        end
+    end
+    
+    if TouchFling.flingAll then
+        local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= client and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    local t = plr.Character.HumanoidRootPart
+                    if (myRoot.Position - t.Position).Magnitude < 15 then
+                        t.AssemblyLinearVelocity = Vector3.new(
+                            math.random(-6000, 6000),
+                            2200 + math.random(0, 800),
+                            math.random(-6000, 6000)
+                        )
+                    end
+                end
+            end
+        end
+    end
+    
+    if TouchFling.lockFling and TouchFling.selectedPlayer and TouchFling.selectedPlayer.Character then
+        local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+        local tRoot = TouchFling.selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+        
+        if myRoot and tRoot then
+            myRoot.CFrame = tRoot.CFrame
+            
+            local oldVel = tRoot.Velocity
+            tRoot.Velocity = oldVel * 12000 + Vector3.new(0, 16000, 0)
+            RunService.RenderStepped:Wait()
+            if tRoot.Parent then tRoot.Velocity = oldVel end
+            RunService.Stepped:Wait()
+            if tRoot.Parent then
+                tRoot.Velocity = oldVel + Vector3.new(0, TouchFling.movel * 3, 0)
+                TouchFling.movel = -TouchFling.movel
+            end
+        end
+    end
+    
+    if TouchFling.oneTimeTP and TouchFling.selectedPlayer and TouchFling.selectedPlayer.Character then
+        local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+        local tRoot = TouchFling.selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot and tRoot then
+            myRoot.CFrame = tRoot.CFrame
+        end
+    end
+end)
 ------------------------------------------------
 -- advanced Rejoin
 ------------------------------------------------
@@ -3964,8 +4325,33 @@ function processCmd(msg)
         unfire(target)
     elseif cmd == "firstp" then 
         firstp()
-    elseif cmd == "fling" then 
-        fling(target)
+elseif cmd == "fling" then
+    TouchFling:CreateGUI()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Touch Fling", 
+        Text = "GUI Opened", 
+        Duration = 3
+    })
+
+elseif cmd == "unfling" then
+    if TouchFling.gui then
+        TouchFling.gui:Destroy()
+        TouchFling.gui = nil
+        TouchFling.mainFrame = nil
+        TouchFling.toggles = {}
+        TouchFling.buttons = {}
+        TouchFling.enabled = false
+        TouchFling.flingAll = false
+        TouchFling.lockFling = false
+        TouchFling.clickTP = false
+        TouchFling.oneTimeTP = false
+        TouchFling.selectedPlayer = nil
+    end
+    StarterGui:SetCore("SendNotification", {
+        Title = "Touch Fling", 
+        Text = "GUI Closed", 
+        Duration = 3
+    })
     elseif cmd == "fly" then 
         fly(target, args[2])
     elseif cmd == "unfly" then 
@@ -4183,7 +4569,8 @@ local commandDescriptions = {
     ["!fire [plr]"] = "Sets player on fire",
     ["!unfire [plr]"] = "Extinguishes player",
     ["!firstp"] = "Enable first person mode",
-    ["!fling [plr]"] = "Flings player randomly",
+    ["!fling"] = "Summons the Touch Fling GUI",
+	["!unfling"] = "Destroys the Touch Fling GUI and resets all features",
     ["!fly [plr] [speed]"] = "Enables flying with optional speed",
     ["!unfly [plr]"] = "Disables flying",
     ["!freecam"] = "Enables free camera mouse control",
@@ -4237,7 +4624,7 @@ local cmds = {
     "!aimbot", "!bring [plr]", "!clicktp", "!cmdbar", "!console", "!dance [plr]",
     "!destroyscript", "!disablefalldamage", "!enable inventory", "!enable playerlist",
     "!esp all", "!unesp all", "!explode [plr]", "!fire [plr]", "!unfire [plr]",
-    "!firstp", "!fling [plr]", "!fly [plr] [speed]", "!unfly [plr]", "!freecam",
+    "!firstp", "!fling", "!unfling", "!fly [plr] [speed]", "!unfly [plr]", "!freecam",
     "!unfreecam", "!freeze [plr]", "!unfreeze [plr]", "!giant [plr]", "!tiny [plr]",
     "!god [plr]", "!ungod [plr]", "!heal [plr]", "!invis [plr]", "!vis [plr]",
     "!joinlogs", "!jump [power]", "!kill [plr/all/me]", "!lay", "!leave", "!logs",
