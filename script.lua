@@ -4633,6 +4633,134 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
     end
 end)
+------------------------------------------------------------------------------
+----------------- UI OVERHEAD THING I MADE YEA -------------------------------
+------------------------------------------------------------------------------
+-- 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
 
+local function createHubGUI(character)
+    -- Remove old one
+    for _, v in ipairs(player.PlayerGui:GetChildren()) do
+        if v.Name == "LunarHubGUI" then v:Destroy() end
+    end
+    
+    local head = character:WaitForChild("Head")
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "LunarHubGUI"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(4.2, 0, 1.6, 0)
+    billboard.StudsOffset = Vector3.new(0, 3.1, 0)
+    billboard.AlwaysOnTop = true
+    billboard.LightInfluence = 0
+    billboard.MaxDistance = 300
+    billboard.Parent = player.PlayerGui
+    
+    -- Main Frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(1, 0, 1, 0)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(5, 10, 8)
+    mainFrame.BackgroundTransparency = 0.65
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = billboard
+    
+    -- Rounded corners
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 14)
+    corner.Parent = mainFrame
+    
+    --  neon outline
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 255, 120)
+    stroke.Thickness = 2.2
+    stroke.Transparency = 0.2
+    stroke.Parent = mainFrame
+    
+    -- soft glow for blurry effect
+    local glow = Instance.new("UIStroke")
+    glow.Color = Color3.fromRGB(0, 255, 140)
+    glow.Thickness = 8
+    glow.Transparency = 0.88
+    glow.Parent = mainFrame
+    
+    -- Lunar Hub
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0.40, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "LUNAR HUB"
+    title.TextColor3 = Color3.fromRGB(0, 255, 100)
+    title.TextScaled = true
+    title.Font = Enum.Font.Code
+    title.TextStrokeTransparency = .1
+    title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    title.Parent = mainFrame
+    
+     -- Greetings (you can rename it to whatever you want)
+    local greeting = Instance.new("TextLabel")
+    greeting.Size = UDim2.new(.3, 10, 1, 10)
+    greeting.BackgroundTransparency = 1
+    greeting.Text = "Greetings ------------"
+    greeting.TextColor3 = Color3.fromRGB(0, 255, 100)
+    greeting.TextScaled = true
+    greeting.Font = Enum.Font.Code
+    greeting.TextStrokeTransparency = .1
+    greeting.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    greeting.Parent = mainFrame
+
+    -- Username + Time Container
+    local bottomFrame = Instance.new("Frame")
+    bottomFrame.Size = UDim2.new(1, 0, 0.60, 0)
+    bottomFrame.Position = UDim2.new(0, 0, 0.40, 0)
+    bottomFrame.BackgroundTransparency = 1
+    bottomFrame.Parent = mainFrame
+
+    -- Username
+    local username = Instance.new("TextLabel")
+    username.Size = UDim2.new(0.62, 0, 1.3, 0)
+    username.BackgroundTransparency = 1
+    username.Text = player.Name
+    username.TextColor3 = Color3.fromRGB(180, 255, 200)
+    username.TextScaled = true
+    username.Font = Enum.Font.Code
+    username.TextStrokeTransparency = 0.5
+    username.TextXAlignment = Enum.TextXAlignment.Left
+    username.Parent = bottomFrame
+
+    -- Local Time
+    local timeLabel = Instance.new("TextLabel")
+    timeLabel.Size = UDim2.new(0.30, 10, .5, 1)
+    timeLabel.Position = UDim2.new(0.62, 0, 0, 0)
+    timeLabel.BackgroundTransparency = 1
+    timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    timeLabel.TextScaled = true
+    timeLabel.Font = Enum.Font.Code
+    timeLabel.TextStrokeTransparency = 0.4
+    timeLabel.TextXAlignment = Enum.TextXAlignment.Right
+    timeLabel.Parent = bottomFrame
+
+    -- Live Time Updater
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        if not billboard.Parent then
+            connection:Disconnect()
+            return
+        end
+        timeLabel.Text = os.date("%I:%M %p")   -- Example: 11:45 PM
+    end)
+end
+
+-- Auto create when character loads / respawns
+player.CharacterAdded:Connect(createHubGUI)
+
+if player.Character then
+    createHubGUI(player.Character)
+end
+
+------------------------------------------------------------------------------
+----------------- END OF IT LOL ----------------------------------------------
+------------------------------------------------------------------------------
 -- Chat handler
 client.Chatted:Connect(processCmd)
