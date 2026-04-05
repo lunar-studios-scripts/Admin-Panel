@@ -154,7 +154,7 @@ local function applyGlassEffect(frame, transparency, strokeTransparency)
         ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 220, 240))
     })
     gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.85),
+        NumberSequenceKeypoint.new(0, 0.35),
         NumberSequenceKeypoint.new(1, 0.9)
     })
     gradient.Rotation = 45
