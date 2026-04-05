@@ -1838,14 +1838,14 @@ local function toggleCmdBar()
     dropdownList.Padding = UDim.new(0, 3)
     
     local allCommands = {
-        "!aimbot", "!bring", "!clicktp", "!cmdbar", "!console", "!dance", "!destroyscript", 
+        "!aimbot", "!clicktp", "!cmdbar", "!console", "!dance", "!destroyscript", 
         "!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!unesp all", 
         "!explode", "!fire", "!unfire", "!firstp", "!fling", "!fly", "!unfly", "!freecam", 
-        "!unfreecam", "!freeze", "!unfreeze", "!giant", "!tiny", "!god", "!ungod", "!heal", 
+        "!unfreecam", "!freeze", "!unfreeze",
         "!joinlogs", "!jump", "!kill", "!lay", "!leave", "!logs", "!noclip", 
         "!unnoclip", "!ping", "!ragdoll", "!unragdoll", "!rainbow", "!unrainbow", "!rejoin", 
         "!removewaypoint", "!resetspeed", "!sit", "!speed", "!spin", "!unspin", "!stopwatch", 
-        "!thirdp", "!to", "!tp", "!trip", "!tracers", "!untracers", "!view", "!unview", 
+        "!thirdp", "!to", "!trip", "!tracers", "!untracers", "!view", "!unview", 
         "!waypoint", "!fov", "!kick", "!unlockmouse"
     }
     
