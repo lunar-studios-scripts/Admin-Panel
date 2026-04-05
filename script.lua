@@ -452,374 +452,7 @@ local function notify(text, col)
     end
 end
 -- =============================================================
--- FIXED FLY SYSTEM
--- =============================================================
-
-local FlyModule = {
-    enabled = false,
-    speed = 200,
-    gui = nil,
-    mainFrame = nil,
-    flyData = {},
-    currentVelocity = Vector3.new(0, 0, 0),
-    lerpFactor = 0.25
-}
-
-function FlyModule:StartFly(spd)
-    local char = client.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
-
-    spd = math.clamp(tonumber(spd) or self.speed, 1, 10000)
-    self.speed = spd
-
-    -- Freeze animations & pose
-    hum.PlatformStand = true
-    hum.AutoRotate = false
-
-    -- BodyGyro (keeps character aligned with camera)
-    local bg = Instance.new("BodyGyro")
-    bg.P = 90000
-    bg.MaxTorque = Vector3.new(900000000, 900000000, 900000000)
-    bg.CFrame = hrp.CFrame
-    bg.Parent = hrp
-
-    -- BodyVelocity
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(900000000, 900000000, 900000000)
-    bv.Velocity = Vector3.new(0, 0, 0)
-    bv.Parent = hrp
-
-    self.flyData = {
-        enabled = true,
-        speed = spd,
-        bodyGyro = bg,
-        bodyVelocity = bv,
-        connection = nil
-    }
-
-    self.currentVelocity = Vector3.new(0, 0, 0)
-
-    self.flyData.connection = RunService.RenderStepped:Connect(function()
-        if not self.flyData or not self.flyData.enabled then return end
-        if not char or not hrp.Parent then return end
-
-        -- Disable controls while typing
-        if UserInputService:GetFocusedTextBox() then
-            self.flyData.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            return
-        end
-
-        local cam = workspace.CurrentCamera
-
-        -- Update rotation
-        self.flyData.bodyGyro.CFrame = cam.CFrame
-
-        -- Movement input
-        local moveDir = Vector3.new(0, 0, 0)
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0, 1, 0) end
-
-        local targetVelocity = Vector3.new(0, 0, 0)
-        if moveDir.Magnitude > 0 then
-            targetVelocity = moveDir.Unit * self.flyData.speed
-        end
-
-        -- Smooth lerp for inertia
-        self.currentVelocity = self.currentVelocity:Lerp(targetVelocity, self.lerpFactor)
-
-        self.flyData.bodyVelocity.Velocity = self.currentVelocity
-    end)
-
-    self.enabled = true
-    print("Flying enabled at speed: " .. spd)
-end
-
-function FlyModule:StopFly()
-    if self.flyData and self.flyData.enabled then
-        self.flyData.enabled = false
-        if self.flyData.connection then
-            self.flyData.connection:Disconnect()
-        end
-        if self.flyData.bodyGyro then self.flyData.bodyGyro:Destroy() end
-        if self.flyData.bodyVelocity then self.flyData.bodyVelocity:Destroy() end
-
-        local char = client.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.PlatformStand = false
-            hum.AutoRotate = true
-        end
-
-        self.flyData = {}
-        self.currentVelocity = Vector3.new(0, 0, 0)
-        self.enabled = false
-        print("Flying disabled")
-    end
-end
-
-function FlyModule:ToggleFly()
-    if self.enabled then
-        self:StopFly()
-    else
-        self:StartFly(self.speed)
-    end
-    return self.enabled
-end
-
-function FlyModule:SetSpeed(newSpeed)
-    self.speed = math.clamp(tonumber(newSpeed) or 200, 1, 10000)
-    if self.flyData and self.flyData.enabled then
-        self.flyData.speed = self.speed
-    end
-    return self.speed
-end
-
-function FlyModule:CreateGUI()
-    if self.gui then
-        self.gui.Enabled = true
-        return
-    end
-
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "LunarFlyPanel"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = client:WaitForChild("PlayerGui")
-    self.gui = ScreenGui
-
-    -- Main Frame (matching Touch Fling style)
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "Main"
-    MainFrame.Parent = ScreenGui
-    MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Position = UDim2.new(0.35, 0, 0.05, 0) -- Above Touch Fling
-    MainFrame.Size = UDim2.new(0, 300, 0, 200)
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.ClipsDescendants = true
-    self.mainFrame = MainFrame
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 12)
-    UICorner.Parent = MainFrame
-
-    local UIGradient = Instance.new("UIGradient")
-    UIGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 50)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 20))
-    }
-    UIGradient.Rotation = 90
-    UIGradient.Parent = MainFrame
-
-    -- Top Bar with Minimize and Close
-    local TopBar = Instance.new("Frame")
-    TopBar.Name = "TopBar"
-    TopBar.Parent = MainFrame
-    TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-    TopBar.BorderSizePixel = 0
-    TopBar.Size = UDim2.new(1, 0, 0, 40)
-    TopBar.Active = true
-
-    local TopCorner = Instance.new("UICorner")
-    TopCorner.CornerRadius = UDim.new(0, 12)
-    TopCorner.Parent = TopBar
-
-    -- Title
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Parent = TopBar
-    Title.BackgroundTransparency = 1
-    Title.Position = UDim2.new(0, 15, 0, 0)
-    Title.Size = UDim2.new(0.6, 0, 1, 0)
-    Title.Font = Enum.Font.GothamBold
-    Title.Text = "Advanced Fly"
-    Title.TextColor3 = Color3.fromRGB(180, 220, 255)
-    Title.TextSize = 22
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-
-    -- Minimize Button (-)
-    local MinimizeBtn = Instance.new("TextButton")
-    MinimizeBtn.Name = "MinimizeBtn"
-    MinimizeBtn.Parent = TopBar
-    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    MinimizeBtn.Position = UDim2.new(1, -70, 0.5, -12)
-    MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
-    MinimizeBtn.Font = Enum.Font.GothamBold
-    MinimizeBtn.Text = "-"
-    MinimizeBtn.TextColor3 = Color3.new(1, 1, 1)
-    MinimizeBtn.TextSize = 20
-    local MinCorner = Instance.new("UICorner")
-    MinCorner.CornerRadius = UDim.new(0, 8)
-    MinCorner.Parent = MinimizeBtn
-
-    -- Close Button (X)
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "CloseBtn"
-    CloseBtn.Parent = TopBar
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-    CloseBtn.Position = UDim2.new(1, -36, 0.5, -12)
-    CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-    CloseBtn.TextSize = 18
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 8)
-    CloseCorner.Parent = CloseBtn
-
-    -- Close functionality
-    CloseBtn.MouseButton1Click:Connect(function()
-        self:StopFly()
-        self.gui:Destroy()
-        self.gui = nil
-        self.mainFrame = nil
-    end)
-
-    -- Minimize functionality
-    local isMinimized = false
-    MinimizeBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        if isMinimized then
-            TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, 300, 0, 40)}):Play()
-            for _, obj in pairs(MainFrame:GetDescendants()) do
-                if obj:IsA("GuiObject") and obj ~= TopBar and obj ~= MinimizeBtn and obj ~= CloseBtn and obj ~= Title then
-                    TweenService:Create(obj, tweenInfo, {TextTransparency = 1, BackgroundTransparency = 1}):Play()
-                end
-            end
-        else
-            TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, 300, 0, 200)}):Play()
-            for _, obj in pairs(MainFrame:GetDescendants()) do
-                if obj:IsA("GuiObject") and obj ~= TopBar and obj ~= MinimizeBtn and obj ~= CloseBtn then
-                    local bgTrans = 0
-                    if obj:IsA("TextBox") then bgTrans = 0 end
-                    if obj:IsA("ScrollingFrame") then bgTrans = 0.7 end
-                    TweenService:Create(obj, tweenInfo, {
-                        TextTransparency = obj.Name == "Watermark" and 0.5 or 0,
-                        BackgroundTransparency = bgTrans
-                    }):Play()
-                end
-            end
-        end
-    end)
-
-    -- Speed Label
-    local SpeedLabel = Instance.new("TextLabel")
-    SpeedLabel.Name = "SpeedLabel"
-    SpeedLabel.Parent = MainFrame
-    SpeedLabel.BackgroundTransparency = 1
-    SpeedLabel.Position = UDim2.new(0.1, 0, 0.25, 0)
-    SpeedLabel.Size = UDim2.new(0.8, 0, 0, 20)
-    SpeedLabel.Font = Enum.Font.GothamSemibold
-    SpeedLabel.Text = "Speed: 200"
-    SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-    SpeedLabel.TextSize = 14
-
-    -- Speed Input Box
-    local SpeedBox = Instance.new("TextBox")
-    SpeedBox.Name = "SpeedBox"
-    SpeedBox.Parent = MainFrame
-    SpeedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    SpeedBox.Position = UDim2.new(0.1, 0, 0.40, 0)
-    SpeedBox.Size = UDim2.new(0.5, 0, 0, 35)
-    SpeedBox.Font = Enum.Font.Gotham
-    SpeedBox.Text = "200"
-    SpeedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SpeedBox.TextSize = 14
-    SpeedBox.ClearTextOnFocus = false
-    local SpeedBoxCorner = Instance.new("UICorner")
-    SpeedBoxCorner.CornerRadius = UDim.new(0, 8)
-    SpeedBoxCorner.Parent = SpeedBox
-
-    -- Fly Toggle Button
-    local FlyToggle = Instance.new("TextButton")
-    FlyToggle.Name = "FlyToggle"
-    FlyToggle.Parent = MainFrame
-    FlyToggle.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-    FlyToggle.Position = UDim2.new(0.65, 0, 0.40, 0)
-    FlyToggle.Size = UDim2.new(0.25, 0, 0, 35)
-    FlyToggle.Font = Enum.Font.GothamBold
-    FlyToggle.Text = "FLY"
-    FlyToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    FlyToggle.TextSize = 14
-    local FlyToggleCorner = Instance.new("UICorner")
-    FlyToggleCorner.CornerRadius = UDim.new(0, 8)
-    FlyToggleCorner.Parent = FlyToggle
-
-    -- Speed Box Logic
-    SpeedBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            local newSpeed = tonumber(SpeedBox.Text) or 200
-            newSpeed = math.clamp(newSpeed, 1, 10000)
-            self:SetSpeed(newSpeed)
-            SpeedBox.Text = tostring(self.speed)
-            SpeedLabel.Text = "Speed: " .. self.speed
-        end
-    end)
-
-    -- Fly Toggle Logic
-    FlyToggle.MouseButton1Click:Connect(function()
-        local isFlying = self:ToggleFly()
-        if isFlying then
-            FlyToggle.Text = "UNFLY"
-            FlyToggle.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-        else
-            FlyToggle.Text = "FLY"
-            FlyToggle.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-        end
-    end)
-
-    -- Controls Label
-    local ControlsLabel = Instance.new("TextLabel")
-    ControlsLabel.Name = "ControlsLabel"
-    ControlsLabel.Parent = MainFrame
-    ControlsLabel.BackgroundTransparency = 1
-    ControlsLabel.Position = UDim2.new(0.1, 0, 0.70, 0)
-    ControlsLabel.Size = UDim2.new(0.8, 0, 0, 40)
-    ControlsLabel.Font = Enum.Font.Gotham
-    ControlsLabel.Text = "WASD to move | Space/Shift for up/down"
-    ControlsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    ControlsLabel.TextSize = 12
-
-    -- Watermark
-    local Watermark = Instance.new("TextLabel")
-    Watermark.Name = "Watermark"
-    Watermark.Parent = MainFrame
-    Watermark.BackgroundTransparency = 1
-    Watermark.Position = UDim2.new(0.05, 0, 0.90, 0)
-    Watermark.Size = UDim2.new(0.9, 0, 0, 18)
-    Watermark.Font = Enum.Font.Gotham
-    Watermark.Text = "https://discord.gg/5GeQAXYYcW"
-    Watermark.TextColor3 = Color3.fromRGB(120, 180, 255)
-    Watermark.TextSize = 13
-    Watermark.TextTransparency = 0.5
-end
-
--- Death handler - stop fly on death
-client.CharacterAdded:Connect(function(char)
-    task.wait(0.1)
-    if FlyModule.enabled then
-        FlyModule:StopFly()
-        -- Reset GUI button if open
-        if FlyModule.gui and FlyModule.mainFrame then
-            local flyBtn = FlyModule.mainFrame:FindFirstChild("FlyToggle", true)
-            if flyBtn then
-                flyBtn.Text = "FLY"
-                flyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-            end
-        end
-    end
-end)
--- =============================================================
--- SPEED PANEL SYSTEM
+--  speed SYSTEM
 -- =============================================================
 local speedPanelData = {
     panel = nil,
@@ -1003,6 +636,383 @@ local function createSpeedPanel()
     notify("Speed panel opened", currentTheme.accent)
 end
 
+-- =============================================================
+-- FLY SYSTEM
+-- =============================================================
+local FlySystem = {
+    enabled = false,
+    uiSpeed = 1,
+    actualSpeed = 50,
+    speedMultiplier = 50,
+    gui = nil,
+    mainFrame = nil,
+    flyBtn = nil,
+    speedBox = nil,
+    bodyGyro = nil,
+    bodyVelocity = nil,
+    connection = nil,
+    currentVelocity = Vector3.new(0, 0, 0),
+    lerpFactor = 0.25
+}
+
+function FlySystem:CreatePanel()
+    if self.gui then return end
+    
+    local playerGui = client:WaitForChild("PlayerGui")
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "FlySystemPanel"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.DisplayOrder = 999999
+    ScreenGui.Parent = playerGui
+    self.gui = ScreenGui
+    
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "Main"
+    MainFrame.Size = UDim2.new(0, 320, 0, 220)
+    MainFrame.Position = UDim2.new(0.5, -160, 0.3, 0)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+    self.mainFrame = MainFrame
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 12)
+    Corner.Parent = MainFrame
+    
+    local Gradient = Instance.new("UIGradient")
+    Gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 55)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
+    }
+    Gradient.Rotation = 90
+    Gradient.Parent = MainFrame
+    
+    -- Top Bar
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 45)
+    TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+    TopBar.BorderSizePixel = 0
+    TopBar.Parent = MainFrame
+    
+    local TopCorner = Instance.new("UICorner")
+    TopCorner.CornerRadius = UDim.new(0, 12)
+    TopCorner.Parent = TopBar
+    
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(0.6, 0, 1, 0)
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "✈️ FLY SYSTEM"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 20
+    Title.TextColor3 = Color3.fromRGB(100, 200, 255)
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+    
+    -- Minimize Button
+    local MinBtn = Instance.new("TextButton")
+    MinBtn.Size = UDim2.new(0, 32, 0, 32)
+    MinBtn.Position = UDim2.new(1, -75, 0.5, -16)
+    MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    MinBtn.Text = "−"
+    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.TextSize = 24
+    MinBtn.TextColor3 = Color3.new(1, 1, 1)
+    MinBtn.Parent = TopBar
+    
+    local MinCorner = Instance.new("UICorner")
+    MinCorner.CornerRadius = UDim.new(0, 8)
+    MinCorner.Parent = MinBtn
+    
+    -- Close Button
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+    CloseBtn.Position = UDim2.new(1, -38, 0.5, -16)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+    CloseBtn.Text = "×"
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = 22
+    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+    CloseBtn.Parent = TopBar
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 8)
+    CloseCorner.Parent = CloseBtn
+    
+    -- Speed Label
+    local SpeedLabel = Instance.new("TextLabel")
+    SpeedLabel.Size = UDim2.new(1, 0, 0, 25)
+    SpeedLabel.Position = UDim2.new(0, 0, 0, 55)
+    SpeedLabel.BackgroundTransparency = 1
+    SpeedLabel.Text = "SPEED (1-10000)"
+    SpeedLabel.Font = Enum.Font.GothamSemibold
+    SpeedLabel.TextSize = 14
+    SpeedLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+    SpeedLabel.Parent = MainFrame
+    
+    -- Speed Input Box
+    local SpeedInput = Instance.new("TextBox")
+    SpeedInput.Size = UDim2.new(0, 180, 0, 45)
+    SpeedInput.Position = UDim2.new(0.5, -90, 0, 85)
+    SpeedInput.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    SpeedInput.Text = tostring(self.uiSpeed)
+    SpeedInput.Font = Enum.Font.GothamBold
+    SpeedInput.TextSize = 22
+    SpeedInput.TextColor3 = Color3.fromRGB(100, 255, 150)
+    SpeedInput.ClearTextOnFocus = false
+    SpeedInput.Parent = MainFrame
+    
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.CornerRadius = UDim.new(0, 10)
+    InputCorner.Parent = SpeedInput
+    
+    self.speedBox = SpeedInput
+    
+    -- Stats Label
+    local StatsLabel = Instance.new("TextLabel")
+    StatsLabel.Size = UDim2.new(1, 0, 0, 20)
+    StatsLabel.Position = UDim2.new(0, 0, 0, 135)
+    StatsLabel.BackgroundTransparency = 1
+    StatsLabel.Text = "Actual: 50 studs/sec"
+    StatsLabel.Font = Enum.Font.Gotham
+    StatsLabel.TextSize = 12
+    StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+    StatsLabel.Parent = MainFrame
+    
+    -- Fly Toggle Button
+    local FlyBtn = Instance.new("TextButton")
+    FlyBtn.Size = UDim2.new(0, 200, 0, 50)
+    FlyBtn.Position = UDim2.new(0.5, -100, 0, 160)
+    FlyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+    FlyBtn.Text = "▶ START FLY"
+    FlyBtn.Font = Enum.Font.GothamBlack
+    FlyBtn.TextSize = 20
+    FlyBtn.TextColor3 = Color3.new(1, 1, 1)
+    FlyBtn.Parent = MainFrame
+    
+    local FlyCorner = Instance.new("UICorner")
+    FlyCorner.CornerRadius = UDim.new(0, 12)
+    FlyCorner.Parent = FlyBtn
+    
+    self.flyBtn = FlyBtn
+    
+    -- Controls Help
+    local HelpLabel = Instance.new("TextLabel")
+    HelpLabel.Size = UDim2.new(1, 0, 0, 20)
+    HelpLabel.Position = UDim2.new(0, 0, 1, -25)
+    HelpLabel.BackgroundTransparency = 1
+    HelpLabel.Text = "WASD | Space ↑ | Shift ↓"
+    HelpLabel.Font = Enum.Font.Gotham
+    HelpLabel.TextSize = 11
+    HelpLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
+    HelpLabel.Parent = MainFrame
+    
+    -- Speed Input Handler
+    SpeedInput.FocusLost:Connect(function()
+        local newVal = tonumber(SpeedInput.Text)
+        if newVal then
+            newVal = math.clamp(math.floor(newVal), 1, 10000)
+            self.uiSpeed = newVal
+            self.actualSpeed = newVal * self.speedMultiplier
+            SpeedInput.Text = tostring(newVal)
+            StatsLabel.Text = "Actual: " .. self.actualSpeed .. " studs/sec"
+            if self.enabled then
+                notify("Fly speed: " .. newVal, Color3.fromRGB(100, 255, 100))
+            end
+        else
+            SpeedInput.Text = tostring(self.uiSpeed)
+        end
+    end)
+    
+    -- Fly Button Handler
+    FlyBtn.MouseButton1Click:Connect(function()
+        self:ToggleFly()
+    end)
+    
+    -- Minimize Handler
+    local minimized = false
+    MinBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        if minimized then
+            TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, 320, 0, 45)}):Play()
+            MinBtn.Text = "+"
+            for _, obj in pairs(MainFrame:GetDescendants()) do
+                if obj:IsA("GuiObject") and obj ~= TopBar and obj ~= MinBtn and obj ~= CloseBtn and obj.Parent ~= TopBar then
+                    obj.Visible = false
+                end
+            end
+        else
+            TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, 320, 0, 220)}):Play()
+            MinBtn.Text = "−"
+            for _, obj in pairs(MainFrame:GetDescendants()) do
+                if obj:IsA("GuiObject") then
+                    obj.Visible = true
+                end
+            end
+        end
+    end)
+    
+    -- Close Handler - just hides panel, doesn't stop fly
+    CloseBtn.MouseButton1Click:Connect(function()
+        ScreenGui.Enabled = false
+    end)
+end
+
+function FlySystem:StartFly()
+    local char = client.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+    
+    hum.PlatformStand = true
+    hum.AutoRotate = false
+    
+    self.bodyGyro = Instance.new("BodyGyro")
+    self.bodyGyro.P = 90000
+    self.bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    self.bodyGyro.CFrame = hrp.CFrame
+    self.bodyGyro.Parent = hrp
+    
+    self.bodyVelocity = Instance.new("BodyVelocity")
+    self.bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    self.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    self.bodyVelocity.Parent = hrp
+    
+    self.enabled = true
+    self.currentVelocity = Vector3.new(0, 0, 0)
+    
+    if self.flyBtn then
+        self.flyBtn.Text = "⏹ STOP FLY"
+        self.flyBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+    end
+    
+    self.connection = RunService.RenderStepped:Connect(function()
+        if not self.enabled then return end
+        if not client.Character or not client.Character:FindFirstChild("HumanoidRootPart") then
+            self:StopFly()
+            return
+        end
+        
+        local currentHrp = client.Character.HumanoidRootPart
+        local cam = workspace.CurrentCamera
+        
+        if UserInputService:GetFocusedTextBox() then
+            self.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            return
+        end
+        
+        self.bodyGyro.CFrame = cam.CFrame
+        
+        local moveDir = Vector3.new(0, 0, 0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += Vector3.new(0, 1, 0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0, 1, 0) end
+        
+        local targetVel = Vector3.new(0, 0, 0)
+        if moveDir.Magnitude > 0 then
+            targetVel = moveDir.Unit * self.actualSpeed
+        end
+        
+        self.currentVelocity = self.currentVelocity:Lerp(targetVel, self.lerpFactor)
+        self.bodyVelocity.Velocity = self.currentVelocity
+    end)
+    
+    notify("🚀 Flying at speed " .. self.uiSpeed .. "!", Color3.fromRGB(0, 255, 150))
+end
+
+function FlySystem:StopFly()
+    if not self.enabled then return end
+    self.enabled = false
+    
+    if self.connection then self.connection:Disconnect() self.connection = nil end
+    if self.bodyGyro then self.bodyGyro:Destroy() self.bodyGyro = nil end
+    if self.bodyVelocity then self.bodyVelocity:Destroy() self.bodyVelocity = nil end
+    
+    local char = client.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand = false hum.AutoRotate = true end
+    
+    self.currentVelocity = Vector3.new(0, 0, 0)
+    
+    if self.flyBtn then
+        self.flyBtn.Text = "▶ START FLY"
+        self.flyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+    end
+    
+    notify("✋ Fly stopped", Color3.fromRGB(255, 160, 60))
+end
+
+function FlySystem:ToggleFly()
+    if self.enabled then self:StopFly() else self:StartFly() end
+    return self.enabled
+end
+
+-- Death handler
+client.CharacterAdded:Connect(function()
+    task.wait(0.1)
+    if FlySystem.enabled then
+        FlySystem:StopFly()
+        if FlySystem.gui and FlySystem.flyBtn then
+            FlySystem.flyBtn.Text = "▶ START FLY"
+            FlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+        end
+    end
+end)
+
+local function fly(plr, spd)
+    if plr ~= client then
+        notify("Fly only works on yourself", Color3.fromRGB(255, 100, 100))
+        return
+    end
+    
+    -- Create panel if not exists
+    FlySystem:CreatePanel()
+    
+    -- Update speed if provided
+    if spd then
+        local newSpeed = tonumber(spd)
+        if newSpeed then
+            FlySystem.uiSpeed = math.clamp(math.floor(newSpeed), 1, 10000)
+            FlySystem.actualSpeed = FlySystem.uiSpeed * FlySystem.speedMultiplier
+            if FlySystem.speedBox then
+                FlySystem.speedBox.Text = tostring(FlySystem.uiSpeed)
+            end
+        end
+    end
+    
+    -- Start flying immediately
+    FlySystem:StartFly()
+    
+    -- Update button state
+    if FlySystem.flyBtn then
+        FlySystem.flyBtn.Text = "⏹ STOP FLY"
+        FlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+    end
+end
+
+local function unfly(plr)
+    if plr ~= client then
+        notify("Unfly only works on yourself", Color3.fromRGB(255, 100, 100))
+        return
+    end
+    
+    FlySystem:StopFly()
+    
+    -- Update button state
+    if FlySystem.flyBtn then
+        FlySystem.flyBtn.Text = "▶ START FLY"
+        FlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+    end
+end
 -- =============================================================
 -- VIEW SYSTEM
 -- =============================================================
@@ -1832,7 +1842,7 @@ local function toggleCmdBar()
         "!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!unesp all", 
         "!explode", "!fire", "!unfire", "!firstp", "!fling", "!fly", "!unfly", "!freecam", 
         "!unfreecam", "!freeze", "!unfreeze", "!giant", "!tiny", "!god", "!ungod", "!heal", 
-        "!invis", "!vis", "!joinlogs", "!jump", "!kill", "!lay", "!leave", "!logs", "!noclip", 
+        "!joinlogs", "!jump", "!kill", "!lay", "!leave", "!logs", "!noclip", 
         "!unnoclip", "!ping", "!ragdoll", "!unragdoll", "!rainbow", "!unrainbow", "!rejoin", 
         "!removewaypoint", "!resetspeed", "!sit", "!speed", "!spin", "!unspin", "!stopwatch", 
         "!thirdp", "!to", "!tp", "!trip", "!tracers", "!untracers", "!view", "!unview", 
@@ -3145,7 +3155,7 @@ local invis = {}
 local rainbowData = {}
 local ragdolls = {}
 ------------------------------------------------
--- advanced speed
+--  speed
 ------------------------------------------------
 local function setspeed(plr, num)
     if plr ~= client then
@@ -3159,21 +3169,7 @@ local function setspeed(plr, num)
     end
 end
 ------------------------------------------------
--- advanced resetspeed
-------------------------------------------------
-local function resetspeed(plr)
-    if plr ~= client then
-        notify("❌ Resetspeed only works on yourself", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    local hum = getHum(plr)
-    if hum then
-        hum.WalkSpeed = 16
-        notify("WalkSpeed reset to 16", Color3.fromRGB(180, 180, 255))
-    end
-end
-------------------------------------------------
--- advanced noclip
+-- noclip
 ------------------------------------------------
 local function noclip(plr)
     if plr ~= client then
@@ -3196,7 +3192,7 @@ local function noclip(plr)
     notify("Noclip enabled", Color3.fromRGB(100, 255, 120))
 end
 ------------------------------------------------
--- advanced unnoclip
+-- unnoclip
 ------------------------------------------------
 local function unnoclip(plr)
     if plr ~= client then
@@ -3217,19 +3213,7 @@ local function unnoclip(plr)
     notify("⚠️Noclip disabled", Color3.fromRGB(255, 120, 100))
 end
 ------------------------------------------------
--- advanced heal
-------------------------------------------------
-local function heal(plr)
-    local hum = getHum(plr)
-    if hum then
-        hum.Health = hum.MaxHealth
-        notify("⚠️DOES NOT WORK⚠️ " .. plr.Name, Color3.fromRGB(100, 255, 100))
-    else
-        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
-    end
-end
-------------------------------------------------
--- advanced kill
+-- kill
 ------------------------------------------------
 local function kill(plr)
     local char = plr and plr.Character
@@ -3245,7 +3229,7 @@ local function kill(plr)
     notify("Only works in FTAP ⚠️DOES NOT WORK⚠️" .. plr.Name, Color3.fromRGB(255, 80, 80))
 end
 ------------------------------------------------
--- advanced tp
+-- tp
 ------------------------------------------------
 local function tp(p1, p2)
     if p1 ~= client then
@@ -3265,13 +3249,7 @@ local function tp(p1, p2)
     end
 end
 ------------------------------------------------
--- advanced bring
-------------------------------------------------
-local function bring(plr)
-    notify("⚠️ Bring not possible client-side", Color3.fromRGB(255, 200, 100))
-end
-------------------------------------------------
--- advanced to
+-- to
 ------------------------------------------------
 local function gotoMe(target)
     if not target then
@@ -3281,7 +3259,7 @@ local function gotoMe(target)
     tp(client, target)
 end
 ------------------------------------------------
--- advanced Jumppower
+-- Jumppower
 ------------------------------------------------
 local function jump(plr, pow)
     if plr ~= client then
@@ -3295,7 +3273,7 @@ local function jump(plr, pow)
     end
 end
 ------------------------------------------------
--- advanced sit
+-- sit
 ------------------------------------------------
 local function sit(plr)
     if plr ~= client then
@@ -3309,7 +3287,7 @@ local function sit(plr)
     end
 end
 ------------------------------------------------
--- advanced Lay
+-- Lay
 ------------------------------------------------
 local function lay(plr)
     if plr ~= client then
@@ -3326,7 +3304,7 @@ local function lay(plr)
     end
 end
 ------------------------------------------------
--- advanced Freeze
+-- Freeze
 ------------------------------------------------
 local function freeze(plr)
     if plr ~= client then
@@ -3344,7 +3322,7 @@ local function freeze(plr)
     notify("Frozen", Color3.fromRGB(100, 100, 255))
 end
 ------------------------------------------------
--- advanced Unfreeze
+-- Unfreeze
 ------------------------------------------------
 local function unfreeze(plr)
     if plr ~= client then
@@ -3363,89 +3341,7 @@ local function unfreeze(plr)
     end
 end
 ------------------------------------------------
--- advanced God
-------------------------------------------------
-local function god(plr)
-    if plr ~= client then
-        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    if gods[plr] then 
-        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 200, 100))
-        return 
-    end
-    local hum = getHum(plr)
-    if hum then
-        gods[plr] = hum.HealthChanged:Connect(function()
-            hum.Health = hum.MaxHealth
-        end)
-        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 215, 0))
-    end
-end
-------------------------------------------------
--- advanced Ungod
-------------------------------------------------
-local function ungod(plr)
-    if plr ~= client then
-        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    if gods[plr] then
-        gods[plr]:Disconnect()
-        gods[plr] = nil
-        notify("God mode disabled", Color3.fromRGB(255, 140, 0))
-    else
-        notify("⚠️DOES NOT WORK⚠️", Color3.fromRGB(255, 200, 100))
-    end
-end
-------------------------------------------------
--- advanced Invisible
-------------------------------------------------
-local function invisP(plr)
-    if plr ~= client then
-        notify("❌ Invisibility only works on yourself", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    if invis[plr] then 
-        notify("⚠️ Already invisible", Color3.fromRGB(255, 200, 100))
-        return 
-    end
-    local char = plr.Character
-    if char then
-        for _, part in char:GetDescendants() do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                part.Transparency = 1
-            end
-        end
-    end
-    invis[plr] = true
-    notify("Invisible", Color3.fromRGB(180, 100, 255))
-end
-------------------------------------------------
--- advanced Visible
-------------------------------------------------
-local function visP(plr)
-    if plr ~= client then
-        notify("❌ Visibility only works on yourself", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    if not invis[plr] then 
-        notify("⚠️ Already visible", Color3.fromRGB(255, 200, 100))
-        return 
-    end
-    local char = plr.Character
-    if char then
-        for _, part in char:GetDescendants() do
-            if part:IsA("BasePart") then
-                part.Transparency = 0
-            end
-        end
-    end
-    invis[plr] = nil
-    notify("Visible", Color3.fromRGB(100, 180, 255))
-end
-------------------------------------------------
--- advanced Fling/clicktp
+-- Fling/clicktp
 ------------------------------------------------
 
 local TouchFling = {
@@ -3900,7 +3796,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 ------------------------------------------------
--- advanced Rejoin
+-- Rejoin
 ------------------------------------------------
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -3914,7 +3810,7 @@ local function rejoin()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end
 ------------------------------------------------
--- advanced Ping
+-- Ping
 ------------------------------------------------
 local function ping()
     local ping = math.round(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
@@ -3922,7 +3818,7 @@ local function ping()
     notify("📶 Ping: " .. ping .. "ms", color)
 end
 ------------------------------------------------
--- advanced ClickTP
+-- ClickTP
 ------------------------------------------------
 local clickTPconn
 local function clickTP()
@@ -3943,7 +3839,7 @@ local function clickTP()
     end
 end
 ------------------------------------------------
--- advanced FOV
+-- FOV
 ------------------------------------------------
 local function setFov(val)
     local num = tonumber(val)
@@ -3955,7 +3851,7 @@ local function setFov(val)
     end
 end
 ------------------------------------------------
--- advanced kick
+-- kick
 ------------------------------------------------
 local function kick(plr)
     if plr == client then
@@ -3965,7 +3861,7 @@ local function kick(plr)
     end
 end
 ------------------------------------------------
--- advanced ragdoll
+-- ragdoll
 ------------------------------------------------
 local function ragdoll(plr)
     if plr ~= client then
@@ -3991,7 +3887,7 @@ local function ragdoll(plr)
     notify("Ragdolled", Color3.fromRGB(200, 100, 100))
 end
 ------------------------------------------------
--- advanced unragdoll
+-- unragdoll
 ------------------------------------------------
 local function unragdoll(plr)
     if plr ~= client then
@@ -4013,7 +3909,7 @@ local function unragdoll(plr)
     notify("Unragdolled", Color3.fromRGB(100, 200, 100))
 end
 ------------------------------------------------
--- advanced console
+-- console
 ------------------------------------------------
 local function console()
     StarterGui:SetCore("DevConsoleVisible", true)
@@ -4094,7 +3990,7 @@ local function dance(plr, number)
     notify("Dancing " .. number, Color3.fromRGB(255, 100, 255))
 end
 ------------------------------------------------
--- advanced trip
+-- trip
 ------------------------------------------------
 local function trip(plr)
     if plr ~= client then
@@ -4110,7 +4006,7 @@ local function trip(plr)
 end
 
 ------------------------------------
--- advanced explode 
+-- explode 
 ------------------------------------
 
 local function explode(plr)
@@ -4190,25 +4086,9 @@ local function explode(plr)
     
     notify("Exploded! Limbs detached & scattered", Color3.fromRGB(255, 60, 60))
 end
+
 ------------------------------------------------
--- advanced tiny mode
-------------------------------------------------
-local function tiny(plr)
-    if plr ~= client then
-        notify("❌ Tiny only works on yourself", Color3.fromRGB(255, 100, 100))
-        return
-    end
-    local hum = getHum(plr)
-    if hum then
-        for _, scaleName in ipairs({"BodyDepthScale", "BodyHeightScale", "BodyWidthScale", "HeadScale"}) do
-            local scale = hum:FindFirstChild(scaleName)
-            if scale then scale.Value = 0.3 end
-        end
-        notify("🐜 Tiny mode!", Color3.fromRGB(100, 200, 255))
-    end
-end
-------------------------------------------------
--- advanced rainbow
+-- rainbow
 ------------------------------------------------
 local function rainbow(plr)
     if plr ~= client then
@@ -4237,7 +4117,7 @@ local function rainbow(plr)
     notify("Rainbow ON", Color3.fromRGB(255, 100, 255))
 end
 ------------------------------------------------
--- advanced unrainbow
+-- unrainbow
 ------------------------------------------------
 local function unrainbow(plr)
     if plr ~= client then
@@ -4253,7 +4133,7 @@ local function unrainbow(plr)
     end
 end
 ------------------------------------------------
--- advanced fire
+-- fire
 ------------------------------------------------
 local function fire(plr)
     local hrp = getHRP(plr)
@@ -4267,7 +4147,7 @@ local function fire(plr)
     end
 end
 ------------------------------------------------
--- advanced unfire
+-- unfire
 ------------------------------------------------
 local function unfire(plr)
     local hrp = getHRP(plr)
@@ -4282,7 +4162,7 @@ local function unfire(plr)
     end
 end
 ------------------------------------------------
--- advanced first person/thrid person
+-- first person/thrid person
 ------------------------------------------------
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4758,13 +4638,13 @@ function processCmd(msg)
         if args[1] == "all" then 
             enableESPAll()
         else 
-            notify("⚠️ Use !esp all for enhanced ESP", Color3.fromRGB(255, 200, 100))
+            notify("Bleh", Color3.fromRGB(255, 200, 100))
         end
     elseif cmd == "unesp" then
         if args[1] == "all" then 
             disableESPAll()
         else 
-            notify("⚠️ Use !unesp all to disable", Color3.fromRGB(255, 200, 100))
+            notify("I love femboys", Color3.fromRGB(255, 200, 100))
         end
     elseif cmd == "explode" then 
         explode(target)
@@ -4774,7 +4654,7 @@ function processCmd(msg)
         unfire(target)
     elseif cmd == "firstp" then 
         firstp()
-elseif cmd == "fling" then
+	elseif cmd == "fling" then
     TouchFling:CreateGUI()
     StarterGui:SetCore("SendNotification", {
         Title = "Touch Fling", 
@@ -4782,7 +4662,7 @@ elseif cmd == "fling" then
         Duration = 3
     })
 
-elseif cmd == "unfling" then
+	elseif cmd == "unfling" then
     if TouchFling.gui then
         TouchFling.gui:Destroy()
         TouchFling.gui = nil
@@ -4801,45 +4681,11 @@ elseif cmd == "unfling" then
         Text = "GUI Closed", 
         Duration = 3
     })
-   elseif cmd == "fly" then
-    FlyModule:CreateGUI()
-    StarterGui:SetCore("SendNotification", {
-        Title = "Fly", 
-        Text = "GUI Opened", 
-        Duration = 3
-    })
-
-elseif cmd == "unfly" then
-    FlyModule:StopFly()
-    if FlyModule.gui then
-        FlyModule.gui:Destroy()
-        FlyModule.gui = nil
-        FlyModule.mainFrame = nil
-    end
-    StarterGui:SetCore("SendNotification", {
-        Title = "Fly", 
-        Text = "Stopped & GUI Closed", 
-        Duration = 3
-    })
-
-elseif cmd == "flyspeed" or cmd == "fs" then
-    if args[2] then
-        local newSpeed = tonumber(args[2])
-        if newSpeed then
-            FlyModule:SetSpeed(newSpeed)
-            StarterGui:SetCore("SendNotification", {
-                Title = "Fly Speed", 
-                Text = "Set to: " .. FlyModule.speed, 
-                Duration = 3
-            })
-        end
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = "Fly Speed", 
-            Text = "Current: " .. FlyModule.speed, 
-            Duration = 3
-        })
-    end
+	elseif cmd == "fly" then 
+    fly(target, args[2])
+	elseif cmd == "unfly" then 
+    unfly(target)
+    FlySystem:StopFly()
     elseif cmd == "freecam" then 
         enableFreecam()
     elseif cmd == "unfreecam" then 
@@ -4848,20 +4694,6 @@ elseif cmd == "flyspeed" or cmd == "fs" then
         freeze(target)
     elseif cmd == "unfreeze" then 
         unfreeze(target)
-    elseif cmd == "giant" then 
-        giant(target)
-    elseif cmd == "tiny" then 
-        tiny(target)
-    elseif cmd == "god" then 
-        god(target)
-    elseif cmd == "ungod" then 
-        ungod(target)
-    elseif cmd == "heal" then 
-        heal(target)
-    elseif cmd == "invis" then 
-        invisP(target)
-    elseif cmd == "vis" then 
-        visP(target)
     elseif cmd == "joinlogs" then
         createJoinLogsPanel()
     elseif cmd == "jump" then 
@@ -4918,8 +4750,6 @@ elseif cmd == "flyspeed" or cmd == "fs" then
         thirdp()
     elseif cmd == "to" then 
         gotoMe(target)
-    elseif cmd == "tp" then 
-        tp(client, getPlr(args[2] or "me"))
     elseif cmd == "trip" then 
         trip(target)
    elseif cmd == "tracers" then
@@ -5049,13 +4879,12 @@ uiList.SortOrder = Enum.SortOrder.LayoutOrder
 -- Command descriptions for hover tooltips
 local commandDescriptions = {
     ["!aimbot"] = "Opens aimbot control panel with FOV and smoothness settings",
-    ["!bring [plr]"] = "Attempt to bring player to you (client-side limited)",
     ["!clicktp"] = "Toggle click teleport - click anywhere to teleport",
     ["!cmdbar"] = "Toggle command bar with autocomplete",
     ["!console"] = "Opens Roblox developer console",
     ["!dance [plr]"] = "Makes player dance",
     ["!destroyscript"] = "Removes all UI and stops all scripts",
-    ["!disablefalldamage"] = "Disables fall damage on respawn",
+    ["!disablefalldamage"] = "Working on this",
     ["!enable inventory"] = "Toggle backpack visibility",
     ["!enable playerlist"] = "Toggle player list visibility",
     ["!esp all"] = "Enable ESP on all players with team colors and names",
@@ -5073,16 +4902,9 @@ local commandDescriptions = {
     ["!unfreecam"] = "Disables free camera",
     ["!freeze [plr]"] = "Freezes player in place",
     ["!unfreeze [plr]"] = "Unfreezes player",
-    ["!giant [plr]"] = "Makes player giant sized",
-    ["!tiny [plr]"] = "Makes player tiny",
-    ["!god [plr]"] = "Enables god mode (no damage)",
-    ["!ungod [plr]"] = "Disables god mode",
-    ["!heal [plr]"] = "Restores player health to max",
-    ["!invis [plr]"] = "Makes player invisible",
-    ["!vis [plr]"] = "Makes player visible",
     ["!joinlogs"] = "Opens panel showing player joins/leaves",
     ["!jump [power]"] = "Sets jump power",
-    ["!kill [plr/all/me]"] = "Kills specified player(s)",
+    ["!kill [plr/all/me]"] = "You can only kill your character",
     ["!lay"] = "Makes character lay down",
     ["!leave"] = "Force leaves the game",
     ["!logs"] = "Opens chat logs panel",
@@ -5095,7 +4917,6 @@ local commandDescriptions = {
     ["!unrainbow [plr]"] = "Stops rainbow effect",
     ["!rejoin"] = "Rejoins current server",
     ["!removewaypoint"] = "Removes last placed waypoint",
-    ["!resetspeed [plr]"] = "Resets walkspeed to default",
     ["!sit"] = "Makes character sit",
     ["!speed [plr] [num]"] = "Opens speed panel or sets walkspeed",
     ["!spin [speed]"] = "Spins character in place",
@@ -5103,7 +4924,6 @@ local commandDescriptions = {
     ["!stopwatch"] = "Opens stopwatch panel",
     ["!thirdp"] = "Enable third person mode",
     ["!to [plr]"] = "Teleport to player",
-    ["!tp [p1] [p2]"] = "Teleport p1 to p2",
     ["!trip [plr]"] = "Makes player trip",
     ["!tracers"] = "Shows lines to all players",
     ["!untracers"] = "Hides tracers",
@@ -5112,22 +4932,21 @@ local commandDescriptions = {
     ["!unview"] = "Stop spectating",
     ["!waypoint"] = "Creates waypoint at current position",
     ["!fov [1-120]"] = "Sets camera field of view",
-    ["!kick [plr]"] = "Kicks player from game"
+    ["!kick [plr]"] = "You can only kick yourself"
 }
 
 -- Alphabetical command list
 local cmds = {
-    "!aimbot", "!bring [plr]", "!clicktp", "!cmdbar", "!console", "!dance [plr]",
+    "!aimbot", "!clicktp", "!cmdbar", "!console", "!dance [plr]",
     "!destroyscript", "!disablefalldamage", "!enable inventory", "!enable playerlist",
     "!esp all", "!unesp all", "!explode [plr]", "!fire [plr]", "!unfire [plr]",
     "!firstp", "!fling", "!unfling", "!fly", "!unfly", "!flyspeed [num]", "!freecam",
-    "!unfreecam", "!freeze [plr]", "!unfreeze [plr]", "!giant [plr]", "!tiny [plr]",
-    "!god [plr]", "!ungod [plr]", "!heal [plr]", "!invis [plr]", "!vis [plr]",
-    "!joinlogs", "!jump [power]", "!kill [plr/all/me]", "!lay", "!leave", "!logs",
+    "!unfreecam", "!freeze [plr]", "!unfreeze [plr]", "!joinlogs", "!jump [power]",
+	"!kill [plr/all/me]", "!lay", "!leave", "!logs",
     "!noclip [plr]", "!unnoclip [plr]", "!ping", "!ragdoll", "!unragdoll",
     "!rainbow [plr]", "!unrainbow [plr]", "!rejoin", "!removewaypoint",
-    "!resetspeed [plr]", "!sit", "!speed [plr] [num]", "!spin [speed]", "!unspin",
-    "!stopwatch", "!thirdp", "!to [plr]", "!tp [p1] [p2]", "!trip [plr]",
+	"!sit", "!speed [plr] [num]", "!spin [speed]", "!unspin",
+    "!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]",
     "!tracers", "!untracers", "!unlockmouse", "!view [plr]", "!unview", "!waypoint",
     "!fov [1-120]", "!kick [plr]"
 }
