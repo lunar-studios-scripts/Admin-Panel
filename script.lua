@@ -2515,7 +2515,93 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		toggleCmdBar()
 	end
 end)
+-- ============================================
+-- INFINITE JUMP SYSTEM
+-- ============================================
 
+local infJumpData = {
+	enabled = false,
+	connection = nil,
+	charConnection = nil,
+	jumpDebounce = false
+}
+
+-- ============================================
+-- INFINITE JUMP FUNCTIONS
+-- ============================================
+local function enableInfJump()
+	if infJumpData.enabled then
+		notify("⚠️ Infinite jump already enabled", Color3.fromRGB(255, 200, 100))
+		return
+	end
+	
+	infJumpData.enabled = true
+	
+	local function setupJump()
+		local char = client.Character
+		if not char then return end
+		
+		local humanoid = char:WaitForChild("Humanoid", 5)
+		if not humanoid then return end
+		
+		-- Clean up old connection if exists
+		if infJumpData.connection then
+			infJumpData.connection:Disconnect()
+		end
+		
+		-- Smooth infinite jump using JumpRequest
+		infJumpData.connection = UserInputService.JumpRequest:Connect(function()
+			if not infJumpData.enabled then return end
+			if infJumpData.jumpDebounce then return end
+			
+			infJumpData.jumpDebounce = true
+			
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				-- Smooth velocity-based jump (no teleport)
+				local currentVel = hrp.AssemblyLinearVelocity
+				hrp.AssemblyLinearVelocity = Vector3.new(currentVel.X, 50, currentVel.Z)
+			end
+			
+			task.delay(0.1, function()
+				infJumpData.jumpDebounce = false
+			end)
+		end)
+	end
+	
+	-- Setup for current character
+	setupJump()
+	
+	-- Re-setup on respawn (this makes it persist through death)
+	infJumpData.charConnection = client.CharacterAdded:Connect(function(newChar)
+		if not infJumpData.enabled then return end
+		task.wait(0.3) -- Wait for character to load
+		setupJump()
+	end)
+	
+	notify("Infinite jump enabled - Press space to jump infinitely", Color3.fromRGB(0, 255, 100))
+end
+
+local function disableInfJump()
+	if not infJumpData.enabled then
+		notify("⚠️ Infinite jump not enabled", Color3.fromRGB(255, 200, 100))
+		return
+	end
+	
+	infJumpData.enabled = false
+	
+	if infJumpData.connection then
+		infJumpData.connection:Disconnect()
+		infJumpData.connection = nil
+	end
+	
+	if infJumpData.charConnection then
+		infJumpData.charConnection:Disconnect()
+		infJumpData.charConnection = nil
+	end
+	
+	notify("❌ Infinite jump disabled", Color3.fromRGB(255, 100, 100))
+end
 -- =============================================================
 -- AIMBOT SYSTEM
 -- =============================================================
@@ -3372,7 +3458,7 @@ local function toggleMouseUnlock()
 end
 
 -- =============================================================
--- PANEL MANAGEMENT
+-- panel management
 -- =============================================================
 local subPanels = {
 	logs = nil,
@@ -3439,7 +3525,7 @@ local function createSubPanel(name, size, titleText)
 end
 
 -- =============================================================
--- LOGS PANEL
+-- Logs panel
 -- =============================================================
 local logsScroll, logEntries = nil, {}
 
@@ -3523,7 +3609,7 @@ TextChatService.MessageReceived:Connect(function(msg)
 end)
 
 -- =============================================================
--- STOPWATCH PANEL
+-- Stopwatch panel
 -- =============================================================
 local stopwatchData = {
 	running = false,
@@ -3635,7 +3721,7 @@ local function toggleStopwatch()
 end
 
 -- =============================================================
--- REMOVE WAYPOINT
+-- Remove waypoint
 -- =============================================================
 local function removeWaypoint()
 	if #waypoints == 0 then
@@ -5158,6 +5244,10 @@ function processCmd(msg)
 
 	if cmd == "aimbot" then 
 		createAimbotPanel()
+	elseif cmd == "infjump" then
+		enableInfJump()
+	elseif cmd == "uninfjump" then
+		disableInfJump()
 	elseif cmd == "autoexec" then
 		autoexecCommand()
 	elseif cmd == "unautoexec" then
@@ -5486,8 +5576,10 @@ local commandDescriptions = {
 	["!kick [plr]"] = "You can only kick yourself",
 	["!crosshair"] = "Loads the lunar rainbow spinning crosshair with full settings panel",
 	["!uncrosshair"] = "Disables and removes the crosshair completely",
-	["!autoexec"] = "Creates auto-loader in autoexec folder - runs script automatically when rejoining this game",
-	["!unautoexec"] = "Removes the auto-loader from autoexec folder for the current game"
+	["!autoexec"] = "Coming soon",
+	["!unautoexec"] = "Coming soon",
+	["!infjump"] = "Enables smooth infinite jumping - persists through death until disabled",
+	["!uninfjump"] = "Disables infinite jumping"
 }
 
 -- Alphabetical command list
@@ -5503,7 +5595,7 @@ local cmds = {
 	"!sit", "!speed [plr] [num]", "!spin [speed]", "!unspin",
 	"!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]",
 	"!tracers", "!untracers", "!unlockmouse", "!view [plr]", "!unview", "!waypoint",
-	"!fov [1-120]", "!crosshair", "!uncrosshair", "!unautoexec", "!kick [plr]"
+	"!fov [1-120]", "!crosshair", "!uncrosshair", "!unautoexec", "!infjump", "!uninfjump", "!kick [plr]"
 }
 
 for i, cmdStr in ipairs(cmds) do
