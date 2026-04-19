@@ -505,14 +505,14 @@ function LoadLunarCrosshair()
 
 	-- Settings
 	local settings = {
-		VertLength = 16,
-		HorzLength = 16,
-		Width = 3,
+		VertLength = 40,
+		HorzLength = 40,
+		Width = 1,
 		RotationSpeed = 120,
 		RainbowSpeed = 1.5,
 		YOffset = 0,
 		TextGap = 8,
-		Text = "Lunar",
+		Text = "Lunar.gg",
 		Symbol = "",
 		SpinEnabled = true,
 		VFXEnabled = false
@@ -5934,7 +5934,7 @@ task.spawn(function()
 	label.Size = UDim2.new(0, 320, 0, 40)
 	label.Position = UDim2.new(0.5, -160, 0.94, 0)
 	label.BackgroundTransparency = 1
-	label.Text = "Created By @LunarRbxZ"
+	label.Text = "Created By @xlunarxZzrbxx • lunar_rbx discord"
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 24
 	label.TextColor3 = globalConfig.textColor
