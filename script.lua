@@ -2385,15 +2385,14 @@ local function toggleCmdBar()
 	dropdownList.Padding = UDim.new(0, 3)
 
 	local allCommands = {
-		"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!dance", "!destroyscript", 
-		"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!unesp all", 
-		"!explode", "!fire", "!unfire", "!firstp", "!fling", "!fly", "!unfly", "!freecam", 
-		"!unfreecam", "!freeze", "!unfreeze",
-		"!joinlogs", "!jump", "!kill", "!lay", "!leave", "!logs", "!noclip", 
-		"!unnoclip", "!ping", "!ragdoll", "!unragdoll", "!rainbow", "!unrainbow", "!rejoin", 
-		"!removewaypoint", "!resetspeed", "!sit", "!speed", "!spin", "!unspin", "!stopwatch", 
-		"!thirdp", "!to", "!trip", "!tracers", "!untracers", "!view", "!unview", 
-		"!waypoint", "!fov", "!kick", "!crosshair", "!uncrosshair", "!unautoexec", "!unlockmouse"
+	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance", "!destroyscript", 
+	"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!explode", "!fire", 
+	"!firstp", "!fling", "!fly", "!freecam", "!freeze", "!infjump", "!joinlogs", "!jump", "!kill", 
+	"!lay", "!leave", "!logs", "!noclip", "!ping", "!ragdoll", "!rainbow", "!rejoin", "!removewaypoint", 
+	"!resetspeed", "!sit", "!speed", "!spin", "!stopwatch", "!thirdp", "!to", "!trip", "!tracers", 
+	"!uncrosshair", "!unautoexec", "!unesp all", "!unfire", "!unfly", "!unfreecam", "!unfreeze", 
+	"!uninfjump", "!unnoclip", "!unragdoll", "!unrainbow", "!unspin", "!untracers", "!unview", 
+	"!view", "!waypoint", "!fov", "!kick", "!unlockmouse"
 	}
 
 	local function updateDropdown(text)
@@ -5233,68 +5232,69 @@ end
 -- =============================================================
 function processCmd(msg)
 	if not msg or msg:sub(1,1) ~= prefix then return end
+	
 	local args = {}
 	for word in msg:sub(2):gmatch("%S+") do
 		table.insert(args, word)
 	end
+	
 	local cmd = table.remove(args, 1):lower()
-
-	notify(prefix .. cmd, Color3.fromRGB(180, 180, 255))
 	local target = getPlr(args[1] or "me")
 
-	if cmd == "aimbot" then 
+	notify(prefix .. cmd, Color3.fromRGB(180, 180, 255))
+
+	if cmd == "aimbot" then
 		createAimbotPanel()
-	elseif cmd == "infjump" then
-		enableInfJump()
-	elseif cmd == "uninfjump" then
-		disableInfJump()
+		
 	elseif cmd == "autoexec" then
 		autoexecCommand()
-	elseif cmd == "unautoexec" then
-		unautoexecCommand()
-	elseif cmd == "bring" then 
+		
+	elseif cmd == "bring" then
 		bring(target)
-	elseif cmd == "clicktp" then 
+		
+	elseif cmd == "clicktp" then
 		clickTP()
+		
 	elseif cmd == "cmdbar" then
 		toggleCmdBar()
-	elseif cmd == "console" then 
+		
+	elseif cmd == "console" then
 		console()
+		
 	elseif cmd == "crosshair" then
 		LoadLunarCrosshair()
-	elseif cmd == "uncrosshair" then
-		DisableLunarCrosshair()
-	elseif cmd == "dance" then 
+		
+	elseif cmd == "dance" then
 		dance(target)
+		
 	elseif cmd == "destroyscript" then
 		destroyScript()
-	elseif cmd == "disablefalldamage" then 
+		
+	elseif cmd == "disablefalldamage" then
 		disableFallDamage()
+		
 	elseif cmd == "enable" then
 		local what = args[1] or ""
 		if what == "inventory" or what == "playerlist" then
 			enableCore(what)
 		end
+		
 	elseif cmd == "esp" then
 		if args[1] == "all" then 
 			enableESPAll()
 		else 
-			notify("Bleh", Color3.fromRGB(255, 200, 100))
+			notify("Usage: !esp all", Color3.fromRGB(255, 200, 100))
 		end
-	elseif cmd == "unesp" then
-		if args[1] == "all" then 
-			disableESPAll()
-		else 
-			notify("I love femboys", Color3.fromRGB(255, 200, 100))
-		end
-	elseif cmd == "explode" then 
+		
+	elseif cmd == "explode" then
 		explode(target)
-	elseif cmd == "fire" then 
+		
+	elseif cmd == "fire" then
 		fire(target)
-	elseif cmd == "unfire" then 
-		unfire(target)
-	elseif cmd == "firstp" then 
+		
+	elseif cmd == "firstp" then
 		firstp()
+		
 	elseif cmd == "fling" then
 		TouchFling:CreateGUI()
 		StarterGui:SetCore("SendNotification", {
@@ -5302,7 +5302,113 @@ function processCmd(msg)
 			Text = "GUI Opened", 
 			Duration = 3
 		})
-
+		
+	elseif cmd == "fly" then
+		fly(target, args[2])
+		
+	elseif cmd == "freecam" then
+		enableFreecam()
+		
+	elseif cmd == "freeze" then
+		freeze(target)
+		
+	elseif cmd == "infjump" then
+		enableInfJump()
+		
+	elseif cmd == "joinlogs" then
+		createJoinLogsPanel()
+		
+	elseif cmd == "jump" then
+		jump(client, args[1])
+		
+	elseif cmd == "kill" then
+		if args[1] == "all" then 
+			for _, p in ipairs(Players:GetPlayers()) do kill(p) end
+		elseif args[1] == "me" then 
+			kill(client)
+		else 
+			kill(target) 
+		end
+		
+	elseif cmd == "lay" then
+		lay(client)
+		
+	elseif cmd == "leave" then
+		leaveGame()
+		
+	elseif cmd == "logs" then
+		toggleLogs()
+		
+	elseif cmd == "noclip" then
+		noclip(target)
+		
+	elseif cmd == "ping" then
+		ping()
+		
+	elseif cmd == "ragdoll" then
+		ragdoll(client)
+		
+	elseif cmd == "rainbow" then
+		rainbow(target)
+		
+	elseif cmd == "rejoin" then
+		rejoin()
+		
+	elseif cmd == "removewaypoint" then
+		removeWaypoint()
+		
+	elseif cmd == "resetspeed" then
+		resetspeed(target)
+		
+	elseif cmd == "sit" then
+		sit(client)
+		
+	elseif cmd == "speed" then
+		if args[1] == "me" then
+			createSpeedPanel()
+		else
+			setspeed(target, args[2])
+		end
+		
+	elseif cmd == "spin" then
+		spin(client, args[1])
+		
+	elseif cmd == "stopwatch" then
+		toggleStopwatch()
+		
+	elseif cmd == "thirdp" then
+		thirdp()
+		
+	elseif cmd == "to" then
+		gotoMe(target)
+		
+	elseif cmd == "trip" then
+		trip(target)
+		
+	elseif cmd == "tracers" then
+		tracerSystem:Enable()
+		StarterGui:SetCore("SendNotification", {
+			Title = "Tracers", 
+			Text = "Enabled - Thin neon tracers active", 
+			Duration = 3
+		})
+		
+	elseif cmd == "unautoexec" then
+		unautoexecCommand()
+		
+	elseif cmd == "uncrosshair" then
+		DisableLunarCrosshair()
+		
+	elseif cmd == "unesp" then
+		if args[1] == "all" then 
+			disableESPAll()
+		else 
+			notify("Usage: !unesp all", Color3.fromRGB(255, 200, 100))
+		end
+		
+	elseif cmd == "unfire" then
+		unfire(target)
+		
 	elseif cmd == "unfling" then
 		if TouchFling.gui then
 			TouchFling.gui:Destroy()
@@ -5322,85 +5428,32 @@ function processCmd(msg)
 			Text = "GUI Closed", 
 			Duration = 3
 		})
-	elseif cmd == "fly" then 
-		fly(target, args[2])
-	elseif cmd == "unfly" then 
+		
+	elseif cmd == "unfly" then
 		unfly(target)
 		FlySystem:StopFly()
-	elseif cmd == "freecam" then 
-		enableFreecam()
-	elseif cmd == "unfreecam" then 
+		
+	elseif cmd == "unfreecam" then
 		disableFreecam()
-	elseif cmd == "freeze" then 
-		freeze(target)
-	elseif cmd == "unfreeze" then 
+		
+	elseif cmd == "unfreeze" then
 		unfreeze(target)
-	elseif cmd == "joinlogs" then
-		createJoinLogsPanel()
-	elseif cmd == "jump" then 
-		jump(client, args[1])
-	elseif cmd == "kill" then
-		if args[1] == "all" then 
-			for _, p in ipairs(Players:GetPlayers()) do kill(p) end
-		elseif args[1] == "me" then 
-			kill(client)
-		else 
-			kill(target) 
-		end
-	elseif cmd == "lay" then 
-		lay(client)
-	elseif cmd == "leave" then
-		leaveGame()
-	elseif cmd == "logs" then 
-		toggleLogs()
-	elseif cmd == "noclip" then 
-		noclip(target)
-	elseif cmd == "unnoclip" then 
+		
+	elseif cmd == "uninfjump" then
+		disableInfJump()
+		
+	elseif cmd == "unnoclip" then
 		unnoclip(target)
-	elseif cmd == "ping" then 
-		ping()
-	elseif cmd == "ragdoll" then 
-		ragdoll(client)
-	elseif cmd == "unragdoll" then 
+		
+	elseif cmd == "unragdoll" then
 		unragdoll(client)
-	elseif cmd == "rainbow" then 
-		rainbow(target)
-	elseif cmd == "unrainbow" then 
+		
+	elseif cmd == "unrainbow" then
 		unrainbow(target)
-	elseif cmd == "rejoin" then 
-		rejoin()
-	elseif cmd == "removewaypoint" then 
-		removeWaypoint()
-	elseif cmd == "resetspeed" then 
-		resetspeed(target)
-	elseif cmd == "sit" then 
-		sit(client)
-	elseif cmd == "speed" then 
-		if args[1] == "me" then
-			createSpeedPanel()
-		else
-			setspeed(target, args[2])
-		end
-	elseif cmd == "spin" then 
-		spin(client, args[1])
-	elseif cmd == "unspin" then 
+		
+	elseif cmd == "unspin" then
 		unspin(client)
-	elseif cmd == "stopwatch" then 
-		toggleStopwatch()
-	elseif cmd == "thirdp" then 
-		thirdp()
-	elseif cmd == "to" then 
-		gotoMe(target)
-	elseif cmd == "trip" then 
-		trip(target)
-	elseif cmd == "tracers" then
-		tracerSystem:Enable()
-		StarterGui:SetCore("SendNotification", {
-			Title = "Tracers", 
-			Text = "Enabled - Thin neon tracers active", 
-			Duration = 3
-		})
-
+		
 	elseif cmd == "untracers" then
 		tracerSystem:Disable()
 		StarterGui:SetCore("SendNotification", {
@@ -5408,23 +5461,29 @@ function processCmd(msg)
 			Text = "Disabled - All tracers cleared", 
 			Duration = 3
 		})
-	elseif cmd == "view" then 
-		view(target)
-	elseif cmd == "unview" then 
+		
+	elseif cmd == "unview" then
 		unview()
-	elseif cmd == "waypoint" then 
+		
+	elseif cmd == "view" then
+		view(target)
+		
+	elseif cmd == "waypoint" then
 		waypoint()
-	elseif cmd == "fov" then 
+		
+	elseif cmd == "fov" then
 		setFov(args[1])
-	elseif cmd == "kick" then 
+		
+	elseif cmd == "kick" then
 		kick(target)
+		
 	elseif cmd == "unlockmouse" then
 		toggleMouseUnlock()
+		
 	else
 		notify("❌ Unknown command: " .. cmd, Color3.fromRGB(255, 100, 100))
 	end
 end
-
 -- =============================================================
 -- MAIN GUI - SOLID TEXT
 -- =============================================================
@@ -5519,83 +5578,82 @@ uiList.SortOrder = Enum.SortOrder.LayoutOrder
 
 -- Command descriptions for hover tooltips
 local commandDescriptions = {
-	["!aimbot"] = "Opens aimbot control panel with FOV and smoothness settings",
-	["!clicktp"] = "Toggle click teleport - click anywhere to teleport",
-	["!cmdbar"] = "Toggle command bar with autocomplete",
-	["!console"] = "Opens Roblox developer console",
-	["!dance [plr]"] = "Makes player dance",
-	["!destroyscript"] = "Removes all UI and stops all scripts",
-	["!disablefalldamage"] = "Working on this",
-	["!enable inventory"] = "Toggle backpack visibility",
-	["!enable playerlist"] = "Toggle player list visibility",
-	["!esp all"] = "Enable ESP on all players with team colors and names",
-	["!unesp all"] = "Disable ESP on all players",
-	["!explode [plr]"] = "Creates explosion at player position",
-	["!fire [plr]"] = "Sets player on fire",
-	["!unfire [plr]"] = "Extinguishes player",
-	["!firstp"] = "Enable first person mode",
-	["!fling"] = "Summons the Touch Fling GUI",
-	["!unfling"] = "Destroys the Touch Fling GUI and resets all features",
-	["!fly"] = "Opens Advanced Fly control panel",
-	["!unfly"] = "Stops flying and closes GUI",
-	["!flyspeed [num]"] = "Set fly speed (1-10000)",
-	["!freecam"] = "Enables free camera mouse control",
-	["!unfreecam"] = "Disables free camera",
-	["!freeze [plr]"] = "Freezes player in place",
-	["!unfreeze [plr]"] = "Unfreezes player",
-	["!joinlogs"] = "Opens panel showing player joins/leaves",
-	["!jump [power]"] = "Sets jump power",
-	["!kill [plr/all/me]"] = "You can only kill your character",
-	["!lay"] = "Makes character lay down",
-	["!leave"] = "Force leaves the game",
-	["!logs"] = "Opens chat logs panel",
-	["!noclip [plr]"] = "Enables walking through walls",
-	["!unnoclip [plr]"] = "Disables noclip",
-	["!ping"] = "Shows current ping",
-	["!ragdoll"] = "Makes character ragdoll",
-	["!unragdoll"] = "Stops ragdoll",
-	["!rainbow [plr]"] = "Makes player cycle through colors",
-	["!unrainbow [plr]"] = "Stops rainbow effect",
-	["!rejoin"] = "Rejoins current server",
-	["!removewaypoint"] = "Removes last placed waypoint",
-	["!sit"] = "Makes character sit",
-	["!speed [plr] [num]"] = "Opens speed panel or sets walkspeed",
-	["!spin [speed]"] = "Spins character in place",
-	["!unspin"] = "Stops spinning",
-	["!stopwatch"] = "Opens stopwatch panel",
-	["!thirdp"] = "Enable third person mode",
-	["!to [plr]"] = "Teleport to player",
-	["!trip [plr]"] = "Makes player trip",
-	["!tracers"] = "Shows lines to all players",
-	["!untracers"] = "Hides tracers",
-	["!unlockmouse"] = "Toggle F key to unlock/lock mouse in FPS games",
-	["!view [plr]"] = "Spectate player (free look enabled)",
-	["!unview"] = "Stop spectating",
-	["!waypoint"] = "Creates waypoint at current position",
-	["!fov [1-120]"] = "Sets camera field of view",
-	["!kick [plr]"] = "You can only kick yourself",
-	["!crosshair"] = "Loads the lunar rainbow spinning crosshair with full settings panel",
-	["!uncrosshair"] = "Disables and removes the crosshair completely",
-	["!autoexec"] = "Coming soon",
-	["!unautoexec"] = "Coming soon",
-	["!infjump"] = "Enables smooth infinite jumping - persists through death until disabled",
-	["!uninfjump"] = "Disables infinite jumping"
+["!aimbot"] = "Opens aimbot control panel",
+["!autoexec"] = "Enables auto-run on join",
+["!clicktp"] = "Click to teleport",
+["!cmdbar"] = "Toggle command bar",
+["!console"] = "Opens dev console",
+["!crosshair"] = "Loads custom crosshair",
+["!dance [plr]"] = "Makes player dance",
+["!destroyscript"] = "Removes all UI/scripts",
+["!disablefalldamage"] = "WIP",
+["!enable inventory"] = "Toggle backpack",
+["!enable playerlist"] = "Toggle player list",
+["!esp all"] = "Enable player ESP",
+["!explode [plr]"] = "Explodes player",
+["!fire [plr]"] = "Sets player on fire",
+["!firstp"] = "First person mode",
+["!fling"] = "Opens fling GUI",
+["!fly"] = "Opens fly panel",
+["!flyspeed [num]"] = "Set fly speed",
+["!freecam"] = "Free camera mode",
+["!freeze [plr]"] = "Freezes player",
+["!infjump"] = "Infinite jump toggle",
+["!joinlogs"] = "Show join/leave logs",
+["!jump [power]"] = "Set jump power",
+["!kill [plr/all/me]"] = "Kill player/self/all",
+["!lay"] = "Makes character lay down",
+["!leave"] = "Leave game",
+["!logs"] = "Open chat logs",
+["!noclip [plr]"] = "Walk through walls",
+["!ping"] = "Show ping",
+["!ragdoll"] = "Ragdoll character",
+["!rainbow [plr]"] = "Rainbow color cycle",
+["!rejoin"] = "Rejoin server",
+["!removewaypoint"] = "Remove last waypoint",
+["!sit"] = "Makes character sit",
+["!speed [plr] [num]"] = "Set walkspeed",
+["!spin [speed]"] = "Spin character",
+["!stopwatch"] = "Open stopwatch",
+["!thirdp"] = "Third person mode",
+["!to [plr]"] = "Teleport to player",
+["!trip [plr]"] = "Makes player trip",
+["!tracers"] = "Show player tracers",
+["!uncrosshair"] = "Remove crosshair",
+["!unautoexec"] = "Disables auto-run",
+["!unesp all"] = "Disable ESP",
+["!unfire [plr]"] = "Extinguish player",
+["!unfling"] = "Close fling GUI",
+["!unfly"] = "Stop flying",
+["!unfreecam"] = "Disable freecam",
+["!unfreeze [plr]"] = "Unfreeze player",
+["!uninfjump"] = "Disable infinite jump",
+["!unnoclip [plr]"] = "Disable noclip",
+["!unragdoll"] = "Stop ragdoll",
+["!unrainbow [plr]"] = "Stop rainbow",
+["!unspin"] = "Stop spinning",
+["!untracers"] = "Hide tracers",
+["!unview"] = "Stop spectating",
+["!view [plr]"] = "Spectate player",
+["!waypoint"] = "Create waypoint",
+["!fov [1-120]"] = "Set camera FOV",
+["!kick [plr]"] = "Kick yourself",
+["!unlockmouse"] = "Toggle mouse lock"
 }
 
 -- Alphabetical command list
 local cmds = {
-	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!dance [plr]",
+	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance [plr]",
 	"!destroyscript", "!disablefalldamage", "!enable inventory", "!enable playerlist",
-	"!esp all", "!unesp all", "!explode [plr]", "!fire [plr]", "!unfire [plr]",
-	"!firstp", "!fling", "!unfling", "!fly", "!unfly", "!flyspeed [num]", "!freecam",
-	"!unfreecam", "!freeze [plr]", "!unfreeze [plr]", "!joinlogs", "!jump [power]",
-	"!kill [plr/all/me]", "!lay", "!leave", "!logs",
-	"!noclip [plr]", "!unnoclip [plr]", "!ping", "!ragdoll", "!unragdoll",
-	"!rainbow [plr]", "!unrainbow [plr]", "!rejoin", "!removewaypoint",
-	"!sit", "!speed [plr] [num]", "!spin [speed]", "!unspin",
-	"!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]",
-	"!tracers", "!untracers", "!unlockmouse", "!view [plr]", "!unview", "!waypoint",
-	"!fov [1-120]", "!crosshair", "!uncrosshair", "!unautoexec", "!infjump", "!uninfjump", "!kick [plr]"
+	"!esp all", "!explode [plr]", "!fire [plr]", "!firstp", "!fling", "!fly",
+	"!flyspeed [num]", "!freecam", "!freeze [plr]", "!infjump", "!joinlogs", "!jump [power]",
+	"!kill [plr/all/me]", "!lay", "!leave", "!logs", "!noclip [plr]", "!ping", "!ragdoll",
+	"!rainbow [plr]", "!rejoin", "!removewaypoint", "!sit", "!speed [plr] [num]",
+	"!spin [speed]", "!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]", "!tracers",
+	"!uncrosshair", "!unautoexec", "!unesp all", "!unfire [plr]", "!unfling", "!unfly",
+	"!unfreecam", "!unfreeze [plr]", "!uninfjump", "!unnoclip [plr]", "!unragdoll",
+	"!unrainbow [plr]", "!unspin", "!untracers", "!unview", "!view [plr]", "!waypoint",
+	"!fov [1-120]", "!kick [plr]", "!unlockmouse"
 }
 
 for i, cmdStr in ipairs(cmds) do
