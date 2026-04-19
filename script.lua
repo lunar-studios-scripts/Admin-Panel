@@ -453,21 +453,21 @@ task.spawn(function()
 	end)
 end)
 -- ============================================
+-- AUTOEXEC COMMANDS
+-- ============================================
+-- work in process or smt :3
+-- ============================================
 -- LUNAR CROSSHAIR COMMAND LOADER
 -- ============================================
-
--- Store crosshair data globally so we can disable it
 _G.LunarCrosshairData = {
 	enabled = false,
 	gui = nil,
 	connection = nil
 }
 
--- Function to load/enable crosshair
 function LoadLunarCrosshair()
 	local data = _G.LunarCrosshairData
 
-	-- If already enabled, just show notification
 	if data.enabled and data.gui then
 		StarterGui:SetCore("SendNotification", {
 			Title = "Crosshair",
@@ -477,7 +477,6 @@ function LoadLunarCrosshair()
 		return
 	end
 
-	-- Disable first if exists (clean restart)
 	if data.gui then
 		data.gui:Destroy()
 	end
@@ -2386,7 +2385,7 @@ local function toggleCmdBar()
 	dropdownList.Padding = UDim.new(0, 3)
 
 	local allCommands = {
-		"!aimbot", "!clicktp", "!cmdbar", "!console", "!dance", "!destroyscript", 
+		"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!dance", "!destroyscript", 
 		"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!unesp all", 
 		"!explode", "!fire", "!unfire", "!firstp", "!fling", "!fly", "!unfly", "!freecam", 
 		"!unfreecam", "!freeze", "!unfreeze",
@@ -2394,7 +2393,7 @@ local function toggleCmdBar()
 		"!unnoclip", "!ping", "!ragdoll", "!unragdoll", "!rainbow", "!unrainbow", "!rejoin", 
 		"!removewaypoint", "!resetspeed", "!sit", "!speed", "!spin", "!unspin", "!stopwatch", 
 		"!thirdp", "!to", "!trip", "!tracers", "!untracers", "!view", "!unview", 
-		"!waypoint", "!fov", "!kick", "!crosshair", "!uncrosshair","!unlockmouse"
+		"!waypoint", "!fov", "!kick", "!crosshair", "!uncrosshair", "!unautoexec", "!unlockmouse"
 	}
 
 	local function updateDropdown(text)
@@ -5159,6 +5158,10 @@ function processCmd(msg)
 
 	if cmd == "aimbot" then 
 		createAimbotPanel()
+	elseif cmd == "autoexec" then
+		autoexecCommand()
+	elseif cmd == "unautoexec" then
+		unautoexecCommand()
 	elseif cmd == "bring" then 
 		bring(target)
 	elseif cmd == "clicktp" then 
@@ -5482,12 +5485,14 @@ local commandDescriptions = {
 	["!fov [1-120]"] = "Sets camera field of view",
 	["!kick [plr]"] = "You can only kick yourself",
 	["!crosshair"] = "Loads the lunar rainbow spinning crosshair with full settings panel",
-	["!uncrosshair"] = "Disables and removes the crosshair completely"
+	["!uncrosshair"] = "Disables and removes the crosshair completely",
+	["!autoexec"] = "Creates auto-loader in autoexec folder - runs script automatically when rejoining this game",
+	["!unautoexec"] = "Removes the auto-loader from autoexec folder for the current game"
 }
 
 -- Alphabetical command list
 local cmds = {
-	"!aimbot", "!clicktp", "!cmdbar", "!console", "!dance [plr]",
+	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!dance [plr]",
 	"!destroyscript", "!disablefalldamage", "!enable inventory", "!enable playerlist",
 	"!esp all", "!unesp all", "!explode [plr]", "!fire [plr]", "!unfire [plr]",
 	"!firstp", "!fling", "!unfling", "!fly", "!unfly", "!flyspeed [num]", "!freecam",
@@ -5498,7 +5503,7 @@ local cmds = {
 	"!sit", "!speed [plr] [num]", "!spin [speed]", "!unspin",
 	"!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]",
 	"!tracers", "!untracers", "!unlockmouse", "!view [plr]", "!unview", "!waypoint",
-	"!fov [1-120]", "!crosshair", "!uncrosshair", "!kick [plr]"
+	"!fov [1-120]", "!crosshair", "!uncrosshair", "!unautoexec", "!kick [plr]"
 }
 
 for i, cmdStr in ipairs(cmds) do
