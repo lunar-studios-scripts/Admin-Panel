@@ -457,7 +457,64 @@ end)
 -- ============================================
 -- work in process or smt :3
 -- ============================================
--- LUNAR CROSSHAIR COMMAND LOADER
+-- Volume changer 
+-- ============================================
+local function Volume(plr, args)
+	local vol = tonumber(args[1])
+	if not vol then
+		notify("Usage: !volume <0-10>", Color3.fromRGB(255, 100, 100))
+		return
+	end
+	
+	vol = math.clamp(vol, 0, 10)
+	local scale = vol / 10
+	
+	-- Set all currently playing sounds in workspace
+	for _, sound in ipairs(workspace:GetDescendants()) do
+		if sound:IsA("Sound") then
+			sound.Volume = scale
+		end
+	end
+	
+	-- Set all sounds in SoundService
+	for _, sound in ipairs(game:GetService("SoundService"):GetDescendants()) do
+		if sound:IsA("Sound") then
+			sound.Volume = scale
+		end
+	end
+	
+	-- Set all sounds in ReplicatedStorage
+	for _, sound in ipairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+		if sound:IsA("Sound") then
+			sound.Volume = scale
+		end
+	end
+	
+	-- Hook new sounds so they also get scaled
+	if not _G.volumeScale then
+		_G.volumeScale = scale
+		
+		workspace.DescendantAdded:Connect(function(desc)
+			if desc:IsA("Sound") then
+				task.wait()
+				desc.Volume = _G.volumeScale
+			end
+		end)
+		
+		game:GetService("SoundService").DescendantAdded:Connect(function(desc)
+			if desc:IsA("Sound") then
+				task.wait()
+				desc.Volume = _G.volumeScale
+			end
+		end)
+	else
+		_G.volumeScale = scale
+	end
+	
+	notify("Volume: " .. vol .. "/10", currentTheme.accent)
+end
+-- ============================================
+-- Crosshair tingy
 -- ============================================
 _G.LunarCrosshairData = {
 	enabled = false,
@@ -2392,7 +2449,7 @@ local function toggleCmdBar()
 	"!resetspeed", "!sit", "!speed", "!spin", "!stopwatch", "!thirdp", "!to", "!trip", "!tracers", 
 	"!uncrosshair", "!unautoexec", "!unesp all", "!unfire", "!unfly", "!unfreecam", "!unfreeze", 
 	"!uninfjump", "!unnoclip", "!unragdoll", "!unrainbow", "!unspin", "!untracers", "!unview", 
-	"!view", "!waypoint", "!fov", "!kick", "!unlockmouse"
+	"!view", "!volume", "!waypoint", "!fov", "!kick", "!unlockmouse"
 	}
 
 	local function updateDropdown(text)
@@ -5467,6 +5524,9 @@ function processCmd(msg)
 		
 	elseif cmd == "view" then
 		view(target)
+
+	elseif cmd == "volume" then
+		Volume(client, args)
 		
 	elseif cmd == "waypoint" then
 		waypoint()
@@ -5635,6 +5695,7 @@ local commandDescriptions = {
 ["!untracers"] = "Hide tracers",
 ["!unview"] = "Stop spectating",
 ["!view [plr]"] = "Spectate player",
+["!volume"] = "Set game volume (0-10)",
 ["!waypoint"] = "Create waypoint",
 ["!fov [1-120]"] = "Set camera FOV",
 ["!kick [plr]"] = "Kick yourself",
@@ -5652,7 +5713,7 @@ local cmds = {
 	"!spin [speed]", "!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]", "!tracers",
 	"!uncrosshair", "!unautoexec", "!unesp all", "!unfire [plr]", "!unfling", "!unfly",
 	"!unfreecam", "!unfreeze [plr]", "!uninfjump", "!unnoclip [plr]", "!unragdoll",
-	"!unrainbow [plr]", "!unspin", "!untracers", "!unview", "!view [plr]", "!waypoint",
+	"!unrainbow [plr]", "!unspin", "!untracers", "!unview", "!view [plr]", "!volume", "!waypoint",
 	"!fov [1-120]", "!kick [plr]", "!unlockmouse"
 }
 
