@@ -2131,21 +2131,18 @@ end
 -- =============================================================
 -- ENHANCED ESP 
 -- =============================================================
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local client = Players.LocalPlayer
-
 local espData = {
 	enabled = false,
 	playerESP = {},
-	connections = {},
+	globalConnections = {},
 	distanceConn = nil,
 	myCharConn = nil,
-	globalEnabled = false -- tracks if "all" is active
+	globalEnabled = false
 }
 
-
+-- ============================================
+-- UTILITY FUNCTIONS
+-- ============================================
 local function getMyHRP()
 	local char = client.Character
 	if not char then return nil end
@@ -2159,45 +2156,60 @@ local function clearPlayerESP(plr)
 	for _, conn in ipairs(data.connections or {}) do
 		if conn then conn:Disconnect() end
 	end
+	data.connections = {}
 
 	for _, obj in ipairs(data.objects or {}) do
 		if obj and obj.Parent then
 			pcall(function() obj:Destroy() end)
 		end
 	end
+	data.objects = {}
+	data.distLabel = nil
 
 	espData.playerESP[plr] = nil
 end
 
+local function clearAllESP()
+	for plr, _ in pairs(espData.playerESP) do
+		clearPlayerESP(plr)
+	end
+	espData.playerESP = {}
+end
+
+-- ============================================
+-- CORE ESP ATTACHMENT
+-- ============================================
 local function attachESP(plr, char)
 	if plr == client then return end
+	if not char then return end
 
-	-- Clear old if exists
+	-- Always clear old first to prevent duplicates
 	clearPlayerESP(plr)
 
 	local data = {
 		connections = {},
 		objects = {},
-		distLabel = nil
+		distLabel = nil,
+		lastChar = char
 	}
 
 	espData.playerESP[plr] = data
 
-	-- Wait for parts
-	local head = char:WaitForChild("Head", 3)
-	local hrp = char:WaitForChild("HumanoidRootPart", 3)
+	-- Wait for parts with timeout
+	local head = char:WaitForChild("Head", 5)
+	local hrp = char:WaitForChild("HumanoidRootPart", 5)
 	local humanoid = char:FindFirstChildOfClass("Humanoid")
 
 	if not head or not hrp then 
-		task.delay(0.5, function()
-			if plr.Character then
+		-- Retry once after short delay
+		task.delay(1, function()
+			if plr.Character and plr.Character ~= char then
 				attachESP(plr, plr.Character)
 			end
 		end)
 		return 
 	end
 
-	-- Team color
 	local teamColor = plr.Team and plr.Team.TeamColor.Color or Color3.fromRGB(255, 80, 80)
 
 	-- HIGHLIGHT (Chams)
@@ -2282,11 +2294,20 @@ local function attachESP(plr, char)
 		end)
 		table.insert(data.connections, healthConn)
 
-		-- Death handler - reattach on respawn
+		-- Death handler - clear old, wait for respawn, reattach
 		local diedConn = humanoid.Died:Connect(function()
-			task.delay(2, function()
-				if plr.Character and (espData.enabled or espData.playerESP[plr]) then
-					attachESP(plr, plr.Character)
+			-- Clear current ESP immediately
+			clearPlayerESP(plr)
+			
+			-- Wait for new character and reattach if still enabled
+			local newCharConn
+			newCharConn = plr.CharacterAdded:Connect(function(newChar)
+				if newCharConn then
+					newCharConn:Disconnect()
+				end
+				if espData.enabled or espData.globalEnabled then
+					task.wait(0.5)
+					attachESP(plr, newChar)
 				end
 			end)
 		end)
@@ -2306,12 +2327,24 @@ local function attachESP(plr, char)
 		end
 	end)
 	table.insert(data.connections, teamConn)
+	
+	-- Character removing handler (for when they reset without dying)
+	local charRemovingConn = char.AncestryChanged:Connect(function()
+		if not char.Parent then
+			-- Character was destroyed, clear ESP
+			task.delay(0.1, function()
+				if not plr.Character or plr.Character ~= char then
+					clearPlayerESP(plr)
+				end
+			end)
+		end
+	end)
+	table.insert(data.connections, charRemovingConn)
 end
 
 -- ============================================
 -- SETUP ESP FOR SINGLE PLAYER
 -- ============================================
-
 local function createPlayerESP(plr)
 	if plr == client then return end
 
@@ -2325,13 +2358,12 @@ local function createPlayerESP(plr)
 	-- Handle their respawns
 	local charConn = plr.CharacterAdded:Connect(function(char)
 		task.wait(0.3)
-		if espData.enabled or espData.playerESP[plr] then
+		if espData.enabled or espData.globalEnabled or espData.playerESP[plr] then
 			clearPlayerESP(plr)
 			attachESP(plr, char)
 		end
 	end)
 
-	-- Store connection
 	if not espData.playerESP[plr] then
 		espData.playerESP[plr] = { connections = { charConn }, objects = {}, distLabel = nil }
 	else
@@ -2340,37 +2372,49 @@ local function createPlayerESP(plr)
 end
 
 -- ============================================
+-- DISTANCE UPDATER (ROBUST)
+-- ============================================
+local function startDistanceUpdater()
+	if espData.distanceConn then return end
+	
+	espData.distanceConn = RunService.RenderStepped:Connect(function()
+		local myHRP = getMyHRP()
+		
+		for plr, data in pairs(espData.playerESP) do
+			-- Skip if player left
+			if not plr or not plr.Parent then
+				clearPlayerESP(plr)
+			else
+				-- Update distance if possible
+				if data.distLabel and data.distLabel.Parent then
+					if myHRP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						local targetHRP = plr.Character.HumanoidRootPart
+						local dist = (targetHRP.Position - myHRP.Position).Magnitude
+						data.distLabel.Text = math.floor(dist) .. " studs"
+					else
+						data.distLabel.Text = "..."
+					end
+				end
+			end
+		end
+	end)
+end
+
+-- ============================================
 -- ENABLE ESP FOR SPECIFIC PLAYER
 -- ============================================
-
 function enableESPPlayer(targetPlr)
 	if not targetPlr then
-		notify("❌ Player not found", Color3.fromRGB(255, 100, 100))
+		notify("Player not found", Color3.fromRGB(255, 100, 100))
 		return
 	end
 
 	if targetPlr == client then
-		notify("⚠️ Can't ESP yourself", Color3.fromRGB(255, 200, 100))
+		notify("Can't ESP yourself", Color3.fromRGB(255, 200, 100))
 		return
 	end
 
-	-- Enable distance updater if not running
-	if not espData.distanceConn then
-		espData.distanceConn = RunService.RenderStepped:Connect(function()
-			local myHRP = getMyHRP()
-			if not myHRP then return end
-
-			for plr, data in pairs(espData.playerESP) do
-				if data.distLabel and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-					local targetHRP = plr.Character.HumanoidRootPart
-					local dist = (targetHRP.Position - myHRP.Position).Magnitude
-					data.distLabel.Text = math.floor(dist) .. " studs"
-				end
-			end
-		end)
-	end
-
-	-- Create ESP for this player
+	startDistanceUpdater()
 	createPlayerESP(targetPlr)
 	notify("ESP enabled for " .. targetPlr.Name, Color3.fromRGB(0, 255, 100))
 end
@@ -2378,10 +2422,9 @@ end
 -- ============================================
 -- DISABLE ESP FOR SPECIFIC PLAYER
 -- ============================================
-
 function disableESPPlayer(targetPlr)
 	if not targetPlr then
-		notify("❌ Player not found", Color3.fromRGB(255, 100, 100))
+		notify("Player not found", Color3.fromRGB(255, 100, 100))
 		return
 	end
 
@@ -2392,7 +2435,6 @@ end
 -- ============================================
 -- ENABLE ESP FOR ALL (GLOBAL)
 -- ============================================
-
 function enableESPAll()
 	if espData.globalEnabled then return end
 	espData.globalEnabled = true
@@ -2406,16 +2448,28 @@ function enableESPAll()
 	-- Auto-apply to NEW players joining
 	local newPlayerConn = Players.PlayerAdded:Connect(function(plr)
 		if espData.globalEnabled then
+			task.wait(0.5)
 			createPlayerESP(plr)
 		end
 	end)
-	table.insert(espData.connections, newPlayerConn)
+	table.insert(espData.globalConnections, newPlayerConn)
+
+	-- Handle players LEAVING
+	local playerRemovingConn = Players.PlayerRemoving:Connect(function(plr)
+		clearPlayerESP(plr)
+	end)
+	table.insert(espData.globalConnections, playerRemovingConn)
 
 	-- Handle MY respawn - reapply all ESP
+	if espData.myCharConn then
+		espData.myCharConn:Disconnect()
+	end
+	
 	espData.myCharConn = client.CharacterAdded:Connect(function()
-		task.wait(0.5)
+		task.wait(0.8)
 		if not espData.globalEnabled then return end
 		
+		-- Clear and reapply all
 		for plr, _ in pairs(espData.playerESP) do
 			clearPlayerESP(plr)
 		end
@@ -2427,32 +2481,16 @@ function enableESPAll()
 		end
 	end)
 
-	-- Enable distance updater if not running
-	if not espData.distanceConn then
-		espData.distanceConn = RunService.RenderStepped:Connect(function()
-			local myHRP = getMyHRP()
-			if not myHRP then return end
-
-			for plr, data in pairs(espData.playerESP) do
-				if data.distLabel and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-					local targetHRP = plr.Character.HumanoidRootPart
-					local dist = (targetHRP.Position - myHRP.Position).Magnitude
-					data.distLabel.Text = math.floor(dist) .. " studs"
-				end
-			end
-		end)
-	end
-
+	startDistanceUpdater()
 	notify("ESP enabled for all players", Color3.fromRGB(0, 255, 100))
 end
 
 -- ============================================
 -- DISABLE ESP FOR ALL (GLOBAL)
 -- ============================================
-
 function disableESPAll()
 	if not espData.globalEnabled and not next(espData.playerESP) then
-		notify("⚠️ ESP not active", Color3.fromRGB(255, 200, 100))
+		notify("ESP not active", Color3.fromRGB(255, 200, 100))
 		return
 	end
 
@@ -2465,18 +2503,16 @@ function disableESPAll()
 		espData.myCharConn = nil
 	end
 
-	for _, conn in ipairs(espData.connections) do
+	for _, conn in ipairs(espData.globalConnections) do
 		if conn then conn:Disconnect() end
 	end
-	espData.connections = {}
+	espData.globalConnections = {}
 
 	-- Clear all player ESP
-	for plr, _ in pairs(espData.playerESP) do
-		clearPlayerESP(plr)
-	end
+	clearAllESP()
 
-	-- Clean up distance conn if no individual ESP left
-	if not next(espData.playerESP) and espData.distanceConn then
+	-- Clean up distance conn
+	if espData.distanceConn then
 		espData.distanceConn:Disconnect()
 		espData.distanceConn = nil
 	end
