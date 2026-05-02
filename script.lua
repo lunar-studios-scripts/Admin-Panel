@@ -1012,8 +1012,172 @@ function LoadLunarCrosshair()
 
 	print("Lunar Crosshair Loaded")
 end
+
 -- =============================================================
---  speed SYSTEM
+--  sun glare
+-- =============================================================
+local sunGlareData = {
+	enabled = false,
+	gui = nil,
+	renderConnection = nil
+}
+
+local function enableSunGlare()
+	if sunGlareData.enabled then
+		notify("⚠️ Sun glare already enabled", Color3.fromRGB(255, 200, 100))
+		return
+	end
+	
+	sunGlareData.enabled = true
+	
+	-- Clean up old GUI if exists
+	if sunGlareData.gui then
+		sunGlareData.gui:Destroy()
+	end
+	if sunGlareData.renderConnection then
+		sunGlareData.renderConnection:Disconnect()
+	end
+	
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "SunGlare"
+	screenGui.ResetOnSpawn = false
+	screenGui.IgnoreGuiInset = true
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	screenGui.DisplayOrder = 10
+	screenGui.Parent = client.PlayerGui
+	sunGlareData.gui = screenGui
+
+	-- ==================== GUI BUILDER ====================
+	local TREE = {
+		className="ScreenGui", name="ScreenGui",
+		props={ Enabled=true, DisplayOrder=0, ResetOnSpawn=true, IgnoreGuiInset=false, ZIndexBehavior=Enum.ZIndexBehavior.Global },
+		children={
+			{ className="TextLabel", name="TextLabel", props={ Visible=true, Text="", BackgroundTransparency=1, Size=UDim2.new(0,500,0,150), Position=UDim2.new(0,10,0,150), TextColor3=Color3.fromRGB(255,255,255), TextSize=18, Font=Enum.Font.Arial } },
+			{
+				className="Frame", name="Flares", props={ Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, BorderSizePixel=0, Visible=true },
+				children={
+					{ className="ImageLabel", name="LensFlare1", props={ Image="http://www.roblox.com/asset/?id=109801097", Size=UDim2.new(0,265,0,265), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
+					{ className="ImageLabel", name="LensFlare2", props={ Image="http://www.roblox.com/asset/?id=109801061", Size=UDim2.new(0,125,0,125), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
+					{ className="ImageLabel", name="LensFlare3", props={ Image="http://www.roblox.com/asset/?id=109801105", Size=UDim2.new(0,110,0,110), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
+					{ className="ImageLabel", name="LensFlare4", props={ Image="http://www.roblox.com/asset/?id=109801051", Size=UDim2.new(0,150,0,150), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
+					{ className="ImageLabel", name="LensFlare5", props={ Image="http://www.roblox.com/asset/?id=109801097", Size=UDim2.new(0,150,0,150), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
+					{ className="ImageLabel", name="LensFlare6", props={ Image="http://www.roblox.com/asset/?id=109801105", Size=UDim2.new(0,50,0,50),  BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
+					{ className="Frame", name="ShineOverlay", props={ Size=UDim2.new(2,0,2,0), Position=UDim2.new(-0.5,0,-0.5,0), BackgroundColor3=Color3.fromRGB(255,255,255), BackgroundTransparency=1, ZIndex=6, BorderSizePixel=0 }},
+				}
+			}
+		}
+	}
+
+	local function applyProps(inst, props)
+		for k, v in pairs(props) do
+			pcall(function() inst[k] = v end)
+		end
+	end
+
+	local function build(node, parent)
+		local inst = Instance.new(node.className)
+		inst.Name = node.name
+		applyProps(inst, node.props or {})
+		if node.children then
+			for _, child in ipairs(node.children) do
+				build(child, inst)
+			end
+		end
+		inst.Parent = parent
+	end
+
+	applyProps(screenGui, TREE.props)
+	for _, child in ipairs(TREE.children) do
+		build(child, screenGui)
+	end
+
+	-- Wait for GUI to fully build
+	task.wait(0.5)
+
+	local host = screenGui:WaitForChild("Flares")
+	local ShineOverlay = host:WaitForChild("ShineOverlay")
+
+	local lFlares = {}
+	for _, w in ipairs(host:GetChildren()) do
+		if w:IsA("ImageLabel") and w.Name:find("LensFlare") then
+			lFlares[w] = tonumber(w.Name:match("%d+")) or 1
+		end
+	end
+
+	local function findFlareCoord(cordFrame, sunPos)
+		local setCoord = cordFrame:PointToObjectSpace(sunPos)
+		local fov = math.atan(math.rad(workspace.CurrentCamera.FieldOfView or 70))
+		local z = -setCoord.Z
+		if z > 0 then
+			local aspect = host.AbsoluteSize.Y / host.AbsoluteSize.X
+			local x = (setCoord.X / fov / 1.2) / (z + 1) * aspect
+			local y = (setCoord.Y / fov / 1.2) / (z + 1) * -1
+			return x, y, true
+		else
+			return 0, 0, false
+		end
+	end
+
+	sunGlareData.renderConnection = RunService.RenderStepped:Connect(function()
+		if not sunGlareData.enabled then return end
+		
+		local camera = workspace.CurrentCamera
+		local Lighting = game:GetService("Lighting")
+		
+		local x, y, z = findFlareCoord(camera.CFrame, camera.CFrame.Position + Lighting:GetSunDirection() * 8)
+
+		local sunRay = Ray.new(camera.CFrame.Position, Lighting:GetSunDirection() * 1000)
+		local hit = workspace:FindPartOnRayWithIgnoreList(sunRay, {client.Character})
+
+		local collision = hit ~= nil
+		local minutes = Lighting:GetMinutesAfterMidnight()
+
+		if z and (minutes > 335 and minutes < 1105) and not collision then
+			for lFlare, basePos in pairs(lFlares) do
+				local spread = basePos * 1.45
+				lFlare:TweenPosition(
+					UDim2.new(0.5 + x * spread, -lFlare.AbsoluteSize.X/2, 0.5 + y * spread, -lFlare.AbsoluteSize.Y/2),
+					"Out", "Quad", 0.08, true
+				)
+				lFlare.Visible = true
+				lFlare.ImageTransparency = 0.3
+			end
+
+			local shine = math.clamp(0.18 - math.abs(x + y) * 0.4, 0, 0.18)
+			ShineOverlay.BackgroundTransparency = 1 - shine
+		else
+			for lFlare in pairs(lFlares) do
+				lFlare.Visible = false
+			end
+			ShineOverlay.BackgroundTransparency = 1
+		end
+	end)
+	
+	notify("Sun glare enabled", Color3.fromRGB(255, 220, 100))
+end
+
+local function disableSunGlare()
+	if not sunGlareData.enabled then
+		notify("⚠️ Sun glare not enabled", Color3.fromRGB(255, 200, 100))
+		return
+	end
+	
+	sunGlareData.enabled = false
+	
+	if sunGlareData.renderConnection then
+		sunGlareData.renderConnection:Disconnect()
+		sunGlareData.renderConnection = nil
+	end
+	
+	if sunGlareData.gui then
+		sunGlareData.gui:Destroy()
+		sunGlareData.gui = nil
+	end
+	
+	notify("Sun glare disabled", Color3.fromRGB(255, 100, 100))
+end
+-- =============================================================
+--  speed system
 -- =============================================================
 local speedPanelData = {
 	panel = nil,
@@ -2582,8 +2746,8 @@ local function toggleCmdBar()
 	"!lay", "!leave", "!logs", "!noclip", "!ping", "!ragdoll", "!rainbow", "!rejoin", "!removewaypoint", 
 	"!resetspeed", "!sit", "!speed", "!spin", "!stopwatch", "!thirdp", "!to", "!trip", "!tracers", 
 	"!uncrosshair", "!unautoexec", "!unesp all", "!unfire", "!unfly", "!unfreecam", "!unfreeze", 
-	"!uninfjump", "!unnoclip", "!unragdoll", "!unrainbow", "!unspin", "!untracers", "!unview", 
-	"!view", "!volume", "!waypoint", "!fov", "!kick", "!unlockmouse"
+	"!sunglare", "!unsunglare", "!uninfjump", "!unnoclip", "!unragdoll", "!unrainbow", "!unspin", 
+	"!untracers", "!unview", "!view", "!volume", "!waypoint", "!fov", "!kick", "!unlockmouse"
 	}
 
 	local function updateDropdown(text)
@@ -5686,6 +5850,12 @@ function processCmd(msg)
 		
 	elseif cmd == "unfreecam" then
 		disableFreecam()
+
+	elseif cmd == "sunglare" then
+		enableSunGlare()
+		
+	elseif cmd == "unsunglare" then
+		disableSunGlare()
 		
 	elseif cmd == "unfreeze" then
 		unfreeze(target)
@@ -5865,6 +6035,7 @@ local commandDescriptions = {
 ["!rainbow [plr]"] = "Rainbow color cycle",
 ["!rejoin"] = "Rejoin server",
 ["!removewaypoint"] = "Remove last waypoint",
+["!sunglare"] = "Enable sun glare effect",
 ["!sit"] = "Makes character sit",
 ["!speed [plr] [num]"] = "Set walkspeed",
 ["!spin [speed]"] = "Spin character",
@@ -5885,6 +6056,7 @@ local commandDescriptions = {
 ["!unnoclip [plr]"] = "Disable noclip",
 ["!unragdoll"] = "Stop ragdoll",
 ["!unrainbow [plr]"] = "Stop rainbow",
+["!unsunglare"] = "Disable sun glare effect",
 ["!unspin"] = "Stop spinning",
 ["!untracers"] = "Hide tracers",
 ["!unview"] = "Stop spectating",
@@ -5905,7 +6077,7 @@ local cmds = {
 	"!kill [plr/all/me]", "!lay", "!leave", "!logs", "!noclip [plr]", "!ping", "!ragdoll",
 	"!rainbow [plr]", "!rejoin", "!removewaypoint", "!sit", "!speed [plr] [num]",
 	"!spin [speed]", "!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]", "!tracers",
-	"!uncrosshair", "!unautoexec", "!unesp all", "!unfire [plr]", "!unfling", "!unfly",
+	"!sunglare", "!unsunglare", "!uncrosshair", "!unautoexec", "!unesp all", "!unfire [plr]", "!unfling", "!unfly",
 	"!unfreecam", "!unfreeze [plr]", "!uninfjump", "!unnoclip [plr]", "!unragdoll",
 	"!unrainbow [plr]", "!unspin", "!untracers", "!unview", "!view [plr]", "!volume", "!waypoint",
 	"!fov [1-120]", "!kick [plr]", "!unlockmouse"
