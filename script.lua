@@ -2131,13 +2131,25 @@ end
 -- =============================================================
 -- ENHANCED ESP 
 -- =============================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local client = Players.LocalPlayer
+
+-- ============================================
+-- ESP DATA - PERSISTENT TRACKING
+-- ============================================
 local espData = {
 	enabled = false,
 	playerESP = {},
 	globalConnections = {},
 	distanceConn = nil,
 	myCharConn = nil,
-	globalEnabled = false
+	globalEnabled = false,
+	-- NEW: Track players by UserId so ESP persists through rejoins
+	trackedUserIds = {},
+	-- NEW: Track individual player ESP targets (for !esp playername)
+	individualTargets = {}
 }
 
 -- ============================================
@@ -2294,19 +2306,21 @@ local function attachESP(plr, char)
 		end)
 		table.insert(data.connections, healthConn)
 
-		-- Death handler - clear old, wait for respawn, reattach
+		-- Death handler - IMMEDIATELY reattach on respawn (NO DELAY)
 		local diedConn = humanoid.Died:Connect(function()
 			-- Clear current ESP immediately
 			clearPlayerESP(plr)
-			
-			-- Wait for new character and reattach if still enabled
+
+			-- Wait for new character and reattach if ESP is still enabled for this player
 			local newCharConn
 			newCharConn = plr.CharacterAdded:Connect(function(newChar)
 				if newCharConn then
 					newCharConn:Disconnect()
 				end
-				if espData.enabled or espData.globalEnabled then
-					task.wait(0.5)
+				-- Check if this player should still have ESP (global or individual)
+				local shouldTrack = espData.globalEnabled or espData.trackedUserIds[plr.UserId] or espData.individualTargets[plr.UserId]
+				if shouldTrack then
+					task.wait(0.3)
 					attachESP(plr, newChar)
 				end
 			end)
@@ -2327,7 +2341,7 @@ local function attachESP(plr, char)
 		end
 	end)
 	table.insert(data.connections, teamConn)
-	
+
 	-- Character removing handler (for when they reset without dying)
 	local charRemovingConn = char.AncestryChanged:Connect(function()
 		if not char.Parent then
@@ -2357,8 +2371,10 @@ local function createPlayerESP(plr)
 
 	-- Handle their respawns
 	local charConn = plr.CharacterAdded:Connect(function(char)
-		task.wait(0.3)
-		if espData.enabled or espData.globalEnabled or espData.playerESP[plr] then
+		-- Check if this player should still have ESP
+		local shouldTrack = espData.globalEnabled or espData.trackedUserIds[plr.UserId] or espData.individualTargets[plr.UserId]
+		if shouldTrack then
+			task.wait(0.3)
 			clearPlayerESP(plr)
 			attachESP(plr, char)
 		end
@@ -2376,10 +2392,10 @@ end
 -- ============================================
 local function startDistanceUpdater()
 	if espData.distanceConn then return end
-	
+
 	espData.distanceConn = RunService.RenderStepped:Connect(function()
 		local myHRP = getMyHRP()
-		
+
 		for plr, data in pairs(espData.playerESP) do
 			-- Skip if player left
 			if not plr or not plr.Parent then
@@ -2414,6 +2430,11 @@ function enableESPPlayer(targetPlr)
 		return
 	end
 
+	-- NEW: Add to persistent tracking
+	espData.individualTargets[targetPlr.UserId] = true
+	-- Also track by UserId for rejoin persistence
+	espData.trackedUserIds[targetPlr.UserId] = true
+
 	startDistanceUpdater()
 	createPlayerESP(targetPlr)
 	notify("ESP enabled for " .. targetPlr.Name, Color3.fromRGB(0, 255, 100))
@@ -2428,6 +2449,10 @@ function disableESPPlayer(targetPlr)
 		return
 	end
 
+	-- NEW: Remove from persistent tracking
+	espData.individualTargets[targetPlr.UserId] = nil
+	espData.trackedUserIds[targetPlr.UserId] = nil
+
 	clearPlayerESP(targetPlr)
 	notify("ESP disabled for " .. targetPlr.Name, Color3.fromRGB(255, 180, 0))
 end
@@ -2440,6 +2465,13 @@ function enableESPAll()
 	espData.globalEnabled = true
 	espData.enabled = true
 
+	-- NEW: Track all current players by UserId
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= client then
+			espData.trackedUserIds[plr.UserId] = true
+		end
+	end
+
 	-- Apply to ALL current players
 	for _, plr in ipairs(Players:GetPlayers()) do
 		createPlayerESP(plr)
@@ -2448,6 +2480,8 @@ function enableESPAll()
 	-- Auto-apply to NEW players joining
 	local newPlayerConn = Players.PlayerAdded:Connect(function(plr)
 		if espData.globalEnabled then
+			-- NEW: Automatically track new players
+			espData.trackedUserIds[plr.UserId] = true
 			task.wait(0.5)
 			createPlayerESP(plr)
 		end
@@ -2457,6 +2491,8 @@ function enableESPAll()
 	-- Handle players LEAVING
 	local playerRemovingConn = Players.PlayerRemoving:Connect(function(plr)
 		clearPlayerESP(plr)
+		-- NEW: Keep them tracked so ESP reapplies if they rejoin
+		-- (don't remove from trackedUserIds - they stay tracked)
 	end)
 	table.insert(espData.globalConnections, playerRemovingConn)
 
@@ -2464,22 +2500,35 @@ function enableESPAll()
 	if espData.myCharConn then
 		espData.myCharConn:Disconnect()
 	end
-	
+
 	espData.myCharConn = client.CharacterAdded:Connect(function()
 		task.wait(0.8)
 		if not espData.globalEnabled then return end
-		
+
 		-- Clear and reapply all
 		for plr, _ in pairs(espData.playerESP) do
 			clearPlayerESP(plr)
 		end
-		
+
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= client then
 				createPlayerESP(plr)
 			end
 		end
 	end)
+
+	-- NEW: Handle rejoins - when a tracked player rejoins, reapply ESP
+	local rejoinConn = Players.PlayerAdded:Connect(function(plr)
+		if espData.trackedUserIds[plr.UserId] then
+			-- This player was previously tracked, reapply ESP
+			task.wait(0.5)
+			if plr.Character then
+				attachESP(plr, plr.Character)
+			end
+			createPlayerESP(plr)
+		end
+	end)
+	table.insert(espData.globalConnections, rejoinConn)
 
 	startDistanceUpdater()
 	notify("ESP enabled for all players", Color3.fromRGB(0, 255, 100))
@@ -2496,6 +2545,10 @@ function disableESPAll()
 
 	espData.globalEnabled = false
 	espData.enabled = false
+
+	-- NEW: Clear ALL tracking
+	espData.trackedUserIds = {}
+	espData.individualTargets = {}
 
 	-- Disconnect global connections
 	if espData.myCharConn then
