@@ -1019,7 +1019,8 @@ end
 local sunGlareData = {
 	enabled = false,
 	gui = nil,
-	renderConnection = nil
+	renderConnection = nil,
+	blur = nil
 }
 
 local function enableSunGlare()
@@ -1030,13 +1031,23 @@ local function enableSunGlare()
 	
 	sunGlareData.enabled = true
 	
-	-- Clean up old GUI if exists
 	if sunGlareData.gui then
 		sunGlareData.gui:Destroy()
 	end
 	if sunGlareData.renderConnection then
 		sunGlareData.renderConnection:Disconnect()
 	end
+	if sunGlareData.blur then
+		sunGlareData.blur:Destroy()
+	end
+	
+	local Lighting = game:GetService("Lighting")
+
+	-- 🎥 Blur effect (depth simulation)
+	local blur = Instance.new("BlurEffect")
+	blur.Size = 0
+	blur.Parent = Lighting
+	sunGlareData.blur = blur
 	
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "SunGlare"
@@ -1047,118 +1058,143 @@ local function enableSunGlare()
 	screenGui.Parent = client.PlayerGui
 	sunGlareData.gui = screenGui
 
-	-- ==================== GUI BUILDER ====================
-	local TREE = {
-		className="ScreenGui", name="ScreenGui",
-		props={ Enabled=true, DisplayOrder=0, ResetOnSpawn=true, IgnoreGuiInset=false, ZIndexBehavior=Enum.ZIndexBehavior.Global },
-		children={
-			{ className="TextLabel", name="TextLabel", props={ Visible=true, Text="", BackgroundTransparency=1, Size=UDim2.new(0,500,0,150), Position=UDim2.new(0,10,0,150), TextColor3=Color3.fromRGB(255,255,255), TextSize=18, Font=Enum.Font.Arial } },
-			{
-				className="Frame", name="Flares", props={ Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, BorderSizePixel=0, Visible=true },
-				children={
-					{ className="ImageLabel", name="LensFlare1", props={ Image="http://www.roblox.com/asset/?id=109801097", Size=UDim2.new(0,265,0,265), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
-					{ className="ImageLabel", name="LensFlare2", props={ Image="http://www.roblox.com/asset/?id=109801061", Size=UDim2.new(0,125,0,125), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
-					{ className="ImageLabel", name="LensFlare3", props={ Image="http://www.roblox.com/asset/?id=109801105", Size=UDim2.new(0,110,0,110), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
-					{ className="ImageLabel", name="LensFlare4", props={ Image="http://www.roblox.com/asset/?id=109801051", Size=UDim2.new(0,150,0,150), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
-					{ className="ImageLabel", name="LensFlare5", props={ Image="http://www.roblox.com/asset/?id=109801097", Size=UDim2.new(0,150,0,150), BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
-					{ className="ImageLabel", name="LensFlare6", props={ Image="http://www.roblox.com/asset/?id=109801105", Size=UDim2.new(0,50,0,50),  BackgroundTransparency=1, ImageTransparency=1, ScaleType=Enum.ScaleType.Stretch } },
-					{ className="Frame", name="ShineOverlay", props={ Size=UDim2.new(2,0,2,0), Position=UDim2.new(-0.5,0,-0.5,0), BackgroundColor3=Color3.fromRGB(255,255,255), BackgroundTransparency=1, ZIndex=6, BorderSizePixel=0 }},
-				}
-			}
-		}
+	local host = Instance.new("Frame")
+	host.Size = UDim2.new(1,0,1,0)
+	host.BackgroundTransparency = 1
+	host.Parent = screenGui
+
+	local ShineOverlay = Instance.new("Frame")
+	ShineOverlay.Size = UDim2.new(2,0,2,0)
+	ShineOverlay.Position = UDim2.new(-0.5,0,-0.5,0)
+	ShineOverlay.BackgroundColor3 = Color3.new(1,1,1)
+	ShineOverlay.BackgroundTransparency = 1
+	ShineOverlay.ZIndex = 6
+	ShineOverlay.Parent = host
+
+	local Haze = Instance.new("Frame")
+	Haze.Size = UDim2.new(2,0,2,0)
+	Haze.Position = UDim2.new(-0.5,0,-0.5,0)
+	Haze.BackgroundColor3 = Color3.new(1,1,1)
+	Haze.BackgroundTransparency = 1
+	Haze.ZIndex = 5
+	Haze.Parent = host
+
+	local flareData = {
+		{id="109801097", size=320},
+		{id="109801061", size=180},
+		{id="109801105", size=160},
+		{id="109801051", size=200},
+		{id="109801097", size=180},
+		{id="109801105", size=90}
 	}
 
-	local function applyProps(inst, props)
-		for k, v in pairs(props) do
-			pcall(function() inst[k] = v end)
-		end
+	local lFlares = {}
+
+	for i,data in ipairs(flareData) do
+		local img = Instance.new("ImageLabel")
+		img.Image = "http://www.roblox.com/asset/?id="..data.id
+		img.Size = UDim2.new(0,data.size,0,data.size)
+		img.BackgroundTransparency = 1
+		img.ImageTransparency = 1
+		img.ScaleType = Enum.ScaleType.Stretch
+		img.Parent = host
+		lFlares[img] = i
 	end
 
-	local function build(node, parent)
-		local inst = Instance.new(node.className)
-		inst.Name = node.name
-		applyProps(inst, node.props or {})
-		if node.children then
-			for _, child in ipairs(node.children) do
-				build(child, inst)
+	local function findFlareCoord(cf, sunPos)
+		local v = cf:PointToObjectSpace(sunPos)
+		local z = -v.Z
+		if z > 0 then
+			return v.X/45, -v.Y/45, true
+		end
+		return 0,0,false
+	end
+
+	local function isSunBlocked(origin, dir)
+		local ignore = {client.Character}
+		for i=1,10 do
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Blacklist
+			params.FilterDescendantsInstances = ignore
+			
+			local r = workspace:Raycast(origin, dir*1000, params)
+			if not r then return false end
+			
+			local h = r.Instance
+			if h.Transparency > 0.05 or h.Material == Enum.Material.Glass then
+				table.insert(ignore,h)
+				origin = r.Position + dir*0.01
+			else
+				return true
 			end
 		end
-		inst.Parent = parent
+		return false
 	end
 
-	applyProps(screenGui, TREE.props)
-	for _, child in ipairs(TREE.children) do
-		build(child, screenGui)
-	end
+	local exposure = 0
 
-	-- Wait for GUI to fully build
-	task.wait(0.5)
-
-	local host = screenGui:WaitForChild("Flares")
-	local ShineOverlay = host:WaitForChild("ShineOverlay")
-
-	local lFlares = {}
-	for _, w in ipairs(host:GetChildren()) do
-		if w:IsA("ImageLabel") and w.Name:find("LensFlare") then
-			lFlares[w] = tonumber(w.Name:match("%d+")) or 1
-		end
-	end
-
-	local function findFlareCoord(cordFrame, sunPos)
-		local setCoord = cordFrame:PointToObjectSpace(sunPos)
-		local fov = math.atan(math.rad(workspace.CurrentCamera.FieldOfView or 70))
-		local z = -setCoord.Z
-		if z > 0 then
-			local aspect = host.AbsoluteSize.Y / host.AbsoluteSize.X
-			local x = (setCoord.X / fov / 1.2) / (z + 1) * aspect
-			local y = (setCoord.Y / fov / 1.2) / (z + 1) * -1
-			return x, y, true
-		else
-			return 0, 0, false
-		end
-	end
-
-	sunGlareData.renderConnection = RunService.RenderStepped:Connect(function()
+	sunGlareData.renderConnection = game:GetService("RunService").RenderStepped:Connect(function(dt)
 		if not sunGlareData.enabled then return end
 		
-		local camera = workspace.CurrentCamera
+		local cam = workspace.CurrentCamera
 		local Lighting = game:GetService("Lighting")
 		
-		local x, y, z = findFlareCoord(camera.CFrame, camera.CFrame.Position + Lighting:GetSunDirection() * 8)
-
-		local sunRay = Ray.new(camera.CFrame.Position, Lighting:GetSunDirection() * 1000)
-		local hit = workspace:FindPartOnRayWithIgnoreList(sunRay, {client.Character})
-
-		local collision = hit ~= nil
+		local x,y,z = findFlareCoord(cam.CFrame, cam.CFrame.Position + Lighting:GetSunDirection()*8)
+		local blocked = isSunBlocked(cam.CFrame.Position, Lighting:GetSunDirection())
 		local minutes = Lighting:GetMinutesAfterMidnight()
 
-		if z and (minutes > 335 and minutes < 1105) and not collision then
-			for lFlare, basePos in pairs(lFlares) do
-				local spread = basePos * 1.45
-				lFlare:TweenPosition(
-					UDim2.new(0.5 + x * spread, -lFlare.AbsoluteSize.X/2, 0.5 + y * spread, -lFlare.AbsoluteSize.Y/2),
-					"Out", "Quad", 0.08, true
+		if z and not blocked and minutes > 335 and minutes < 1105 then
+			local dot = cam.CFrame.LookVector:Dot(Lighting:GetSunDirection())
+			local target = math.clamp((dot - 0.65) * 2.8, 0, 1)
+			target = target * target
+
+			exposure = exposure + (target - exposure) * math.clamp(dt * 2, 0, 1)
+
+			for flare,pos in pairs(lFlares) do
+				local spread = pos*(1.4 + exposure*1.2)
+
+				flare.Position = UDim2.new(
+					0.5 + x*spread,
+					-flare.AbsoluteSize.X/2,
+					0.5 + y*spread,
+					-flare.AbsoluteSize.Y/2
 				)
-				lFlare.Visible = true
-				lFlare.ImageTransparency = 0.3
+
+				flare.Visible = true
+				flare.ImageColor3 = Color3.new(1,1,1)
+				flare.ImageTransparency = 1-(0.6*exposure)
 			end
 
-			local shine = math.clamp(0.18 - math.abs(x + y) * 0.4, 0, 0.18)
-			ShineOverlay.BackgroundTransparency = 1 - shine
+			local centerDist = math.clamp(math.abs(x)+math.abs(y),0,2)
+			local hazeStrength = (1-centerDist) * exposure
+
+			Haze.BackgroundTransparency = 1 - (hazeStrength * 0.25)
+			ShineOverlay.BackgroundTransparency = 1 - (exposure * 0.18)
+
+			-- 🎥 DEPTH-BASED BLUR (cinematic)
+			local blurTarget = exposure * 18
+			blur.Size = blur.Size + (blurTarget - blur.Size) * math.clamp(dt * 3, 0, 1)
+
 		else
-			for lFlare in pairs(lFlares) do
-				lFlare.Visible = false
+			exposure = exposure + (0 - exposure) * math.clamp(dt * 2, 0, 1)
+
+			for flare in pairs(lFlares) do
+				flare.Visible = false
 			end
+
+			Haze.BackgroundTransparency = 1
 			ShineOverlay.BackgroundTransparency = 1
+
+			blur.Size = blur.Size + (0 - blur.Size) * math.clamp(dt * 3, 0, 1)
 		end
 	end)
-	
-	notify("Sun glare enabled", Color3.fromRGB(255, 220, 100))
+
+	notify("Sun glare enabled", Color3.fromRGB(255,220,100))
 end
 
 local function disableSunGlare()
 	if not sunGlareData.enabled then
-		notify("⚠️ Sun glare not enabled", Color3.fromRGB(255, 200, 100))
+		notify("⚠️ Sun glare not enabled", Color3.fromRGB(255,200,100))
 		return
 	end
 	
@@ -1166,15 +1202,17 @@ local function disableSunGlare()
 	
 	if sunGlareData.renderConnection then
 		sunGlareData.renderConnection:Disconnect()
-		sunGlareData.renderConnection = nil
 	end
 	
 	if sunGlareData.gui then
 		sunGlareData.gui:Destroy()
-		sunGlareData.gui = nil
+	end
+
+	if sunGlareData.blur then
+		sunGlareData.blur:Destroy()
 	end
 	
-	notify("Sun glare disabled", Color3.fromRGB(255, 100, 100))
+	notify("Sun glare disabled", Color3.fromRGB(255,100,100))
 end
 -- =============================================================
 --  speed system
