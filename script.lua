@@ -31,7 +31,125 @@ end
 
 client.Chatted:Connect(processCmd)
 
+--------------------------------------------------------------
+---------- loading screen ------------------------------------
+--------------------------------------------------------------
+local function createInstantSplash(imageId)
+	imageId = imageId or "rbxassetid://115041688502921"
 
+	local Players = game:GetService("Players")
+	local TweenService = game:GetService("TweenService")
+	local ContentProvider = game:GetService("ContentProvider")
+	local Lighting = game:GetService("Lighting")
+
+	local player = Players.LocalPlayer
+	if not player then return end
+
+	-- PRELOAD IMAGE
+	local temp = Instance.new("ImageLabel")
+	temp.Image = imageId
+	ContentProvider:PreloadAsync({temp})
+	temp:Destroy()
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "SplashScreen"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 999999
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	-- background
+	local bg = Instance.new("Frame")
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.BackgroundColor3 = Color3.new(0, 0, 0)
+	bg.BackgroundTransparency = 1
+	bg.Parent = gui
+
+	-- center frame
+	local frame = Instance.new("Frame")
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
+	frame.Size = UDim2.fromOffset(340, 340)
+	frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+	frame.BackgroundTransparency = 0.15
+	frame.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 20)
+	corner.Parent = frame
+
+	-- image
+	local image = Instance.new("ImageLabel")
+	image.Size = UDim2.fromScale(0.85, 0.85)
+	image.Position = UDim2.fromScale(0.5, 0.5)
+	image.AnchorPoint = Vector2.new(0.5, 0.5)
+	image.BackgroundTransparency = 1
+	image.Image = imageId
+	image.ImageTransparency = 1
+	image.ScaleType = Enum.ScaleType.Fit
+	image.Parent = frame
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.6
+	scale.Parent = frame
+
+	-- stronger blur
+	local blur = Instance.new("BlurEffect")
+	blur.Size = 0
+	blur.Parent = Lighting
+
+	-- PARTICLES
+	local att = Instance.new("Attachment")
+	att.Parent = frame
+
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = "rbxassetid://243660364"
+	emitter.Rate = 0
+	emitter.Lifetime = NumberRange.new(0.6, 1)
+	emitter.Speed = NumberRange.new(10, 18)
+	emitter.SpreadAngle = Vector2.new(360, 360)
+	emitter.LightEmission = 1
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.4),
+		NumberSequenceKeypoint.new(1, 0)
+	})
+	emitter.Parent = att
+
+	-- intro
+	TweenService:Create(bg, TweenInfo.new(0.35), {BackgroundTransparency = 0.4}):Play()
+	TweenService:Create(blur, TweenInfo.new(0.35), {Size = 28}):Play() -- stronger blur
+
+	TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Scale = 1
+	}):Play()
+
+	TweenService:Create(image, TweenInfo.new(0.35), {
+		ImageTransparency = 0
+	}):Play()
+
+	task.wait(0.25)
+	emitter:Emit(25)
+
+	task.wait(2.2)
+
+	-- (sync fade)
+	task.wait()
+
+	local info = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+
+	TweenService:Create(bg, info, {BackgroundTransparency = 1}):Play()
+	TweenService:Create(image, info, {ImageTransparency = 1}):Play()
+	TweenService:Create(scale, info, {Scale = 1.2}):Play()
+	TweenService:Create(blur, info, {Size = 0}):Play()
+	TweenService:Create(frame, info, {BackgroundTransparency = 1}):Play()
+
+	task.wait(0.3)
+
+	gui:Destroy()
+	blur:Destroy()
+end
+
+createInstantSplash("rbxassetid://115041688502921")
 -- =============================================================
 -- GLOBAL CONFIGURATION
 -- =============================================================
@@ -186,7 +304,7 @@ local function playClick()
 end
 
 -- =============================================================
--- AUTO APPLY SOUNDS TO ALL BUTTONS
+-- apply sounds to all buttons NOW
 -- =============================================================
 local function applySoundsToAllButtons(parent)
 	for _, obj in ipairs(parent:GetDescendants()) do
@@ -222,7 +340,7 @@ local function setupButtonSounds()
 end
 
 -- =============================================================
--- IMPROVED NOTIFICATION SYSTEM + NON-OVERLAPPING SOUND
+-- better notis
 -- =============================================================
 local notifGui = Instance.new("ScreenGui")
 notifGui.Name = "LunarNotifs"
@@ -370,6 +488,12 @@ end
 -- Lunar Hub watermakr yea
 -- =============================================================
 task.spawn(function()
+	local Players = game:GetService("Players")
+	local RunService = game:GetService("RunService")
+	local UserInputService = game:GetService("UserInputService")
+
+	local client = Players.LocalPlayer
+
 	if client.PlayerGui:FindFirstChild("LunarWatermark") then
 		client.PlayerGui.LunarWatermark:Destroy()
 	end
@@ -382,72 +506,138 @@ task.spawn(function()
 	sg.Parent = client.PlayerGui
 
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0, 380, 0, 34)           -- Slightly wider
-	frame.Position = UDim2.new(1, -3220, 0, 15)       -- Right side, aligned under mic
+	frame.Size = UDim2.new(0, 380, 0, 34)
+	frame.Position = UDim2.new(1, -3220, 0, 15)
 	frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 	frame.BackgroundTransparency = 0.15
 	frame.Parent = sg
 
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
 
-	-- Glows
-	local s1 = Instance.new("UIStroke", frame)
-	s1.Color = Color3.fromRGB(255, 215, 0)
-	s1.Thickness = 2.5
-	s1.Transparency = 0.65
+	local dragTab = Instance.new("Frame")
+	dragTab.Size = UDim2.new(0, 30, 1, 0)
+	dragTab.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	dragTab.BackgroundTransparency = 0.2
+	dragTab.Parent = frame
 
-	local s2 = Instance.new("UIStroke", frame)
-	s2.Color = Color3.fromRGB(60, 60, 60)
-	s2.Thickness = 1
-	s2.Transparency = 0.4
+	Instance.new("UICorner", dragTab).CornerRadius = UDim.new(0, 16)
 
-	-- Moon Icon
+	local tabLabel = Instance.new("TextLabel")
+	tabLabel.Size = UDim2.fromScale(1, 1)
+	tabLabel.BackgroundTransparency = 1
+	tabLabel.Text = "≡"
+	tabLabel.TextSize = 18
+	tabLabel.Font = Enum.Font.GothamBold
+	tabLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tabLabel.Parent = dragTab
+
 	local moon = Instance.new("TextLabel", frame)
 	moon.Size = UDim2.new(0, 32, 1, 0)
-	moon.Position = UDim2.new(0, 12, 0, 0)
+	moon.Position = UDim2.new(0, 42, 0, 0)
 	moon.BackgroundTransparency = 1
 	moon.Text = "🌙"
 	moon.TextColor3 = Color3.fromRGB(255, 215, 0)
 	moon.TextSize = 22
 	moon.Font = Enum.Font.GothamBold
 
-	-- Main Label
 	local label = Instance.new("TextLabel", frame)
 	label.BackgroundTransparency = 1
-	label.Size = UDim2.new(1, -68, 1, 0)
-	label.Position = UDim2.new(0, 52, 0, 0)
+	label.Size = UDim2.new(1, -90, 1, 0)
+	label.Position = UDim2.new(0, 80, 0, 0)
 	label.Font = Enum.Font.GothamSemibold
 	label.TextSize = 16
 	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = "Lunar Hub | Loading..."
 
-	-- FPS + Ping System
-	local fps = 0
-	local frames = 0
-	local last = tick()
+	-- TOGGLE SYSTEM
+	local visible = true
 
-	RunService.RenderStepped:Connect(function()
-		frames += 1
-		if tick() - last >= 1 then
-			fps = frames
-			frames = 0
-			last = tick()
+	UserInputService.InputBegan:Connect(function(input, gp)
+		if gp then return end
+		if input.KeyCode == Enum.KeyCode.RightShift then
+			visible = not visible
+			frame.Visible = visible
 		end
 	end)
 
+	-- dragging
+	local dragging = false
+	local dragStart
+	local startPos
+	local targetPos = frame.Position
+
+	dragTab.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+		end
+	end)
+
+	dragTab.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if not dragging then return end
+
+		if input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch then
+
+			local delta = input.Position - dragStart
+			targetPos = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+
+	RunService.RenderStepped:Connect(function()
+		frame.Position = frame.Position:Lerp(targetPos, 0.25)
+	end)
+
+	local fps = 0
+	local lastTime = tick()
+
+	RunService.RenderStepped:Connect(function()
+		local now = tick()
+		local dt = now - lastTime
+		lastTime = now
+
+		if dt > 0 then
+			local instantFPS = 1 / dt
+			fps = fps + (instantFPS - fps) * 0.1
+		end
+	end)
+
+	local ping = 0
+
 	local function getPing()
-		local ping = 999
+		local p = 0
 		pcall(function()
-			local p = client:GetNetworkPing()
-			if p then ping = math.floor(p * 2000) end
+			p = client:GetNetworkPing() * 1000
 		end)
-		return ping
+		return p
 	end
 
 	task.spawn(function()
 		while sg.Parent do
-			label.Text = string.format("Lunar Hub | %d FPS | %d ms", fps, getPing())
+			ping = ping + (getPing() - ping) * 0.2
+
+			label.Text = string.format(
+				"Lunar Hub | %d FPS | %d ms",
+				math.floor(fps + 0.5),
+				math.floor(ping + 0.5)
+			)
+
 			task.wait(0.25)
 		end
 	end)
