@@ -5609,9 +5609,6 @@ end
 ------------------------------------------------
 -- advanced tracers
 ------------------------------------------------
--- ============================================
--- TRACER SYSTEM - Improved & Fixed
--- ============================================
 
 local tracerSystem = {
 	enabled = false,
@@ -5689,11 +5686,6 @@ local function createBeam(att0, att1, color)
 	beam.LightInfluence = 0
 	beam.Segments = 1
 	beam.ZOffset = 0
-
-	-- Optional: add texture for better look
-	-- beam.Texture = TRACER_SETTINGS.texture
-	-- beam.TextureLength = TRACER_SETTINGS.textureLength
-	-- beam.TextureMode = TRACER_SETTINGS.textureMode
 
 	beam.Attachment0 = att0
 	beam.Attachment1 = att1
@@ -6135,6 +6127,20 @@ function processCmd(msg)
 	elseif cmd == "unautoexec" then
 		unautoexecCommand()
 		
+	elseif cmd == "add" then
+   	 if args[1] == "all" then
+        addAllFriends()
+   	 else
+        addFriend(args[1])
+    	end
+
+	elseif cmd == "unadd" then
+    if args[1] == "all" then
+        unaddAllFriends()
+    else
+        unaddFriend(args[1])
+    end
+
 	elseif cmd == "uncrosshair" then
 		DisableLunarCrosshair()
 		
