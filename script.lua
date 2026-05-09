@@ -41,109 +41,348 @@ local function createInstantSplash(imageId)
 	local TweenService = game:GetService("TweenService")
 	local ContentProvider = game:GetService("ContentProvider")
 	local Lighting = game:GetService("Lighting")
+	local RunService = game:GetService("RunService")
 
 	local player = Players.LocalPlayer
-	if not player then return end
+	if not player then
+		return
+	end
 
 	-- PRELOAD IMAGE
-	local temp = Instance.new("ImageLabel")
-	temp.Image = imageId
-	ContentProvider:PreloadAsync({temp})
-	temp:Destroy()
+	local preload = Instance.new("ImageLabel")
+	preload.Image = imageId
+	ContentProvider:PreloadAsync({ preload })
+	preload:Destroy()
 
+	-- REMOVE OLD
+	local old = player.PlayerGui:FindFirstChild("LunarSplash")
+	if old then
+		old:Destroy()
+	end
+
+	-- GUI
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "SplashScreen"
+	gui.Name = "LunarSplash"
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 999999
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- background
+	---------------------------------------------------
+	-- BACKGROUND
+	---------------------------------------------------
+
 	local bg = Instance.new("Frame")
 	bg.Size = UDim2.fromScale(1, 1)
-	bg.BackgroundColor3 = Color3.new(0, 0, 0)
+	bg.BackgroundColor3 = Color3.fromRGB(3, 3, 3)
 	bg.BackgroundTransparency = 1
+	bg.BorderSizePixel = 0
 	bg.Parent = gui
 
-	-- center frame
-	local frame = Instance.new("Frame")
-	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.5)
-	frame.Size = UDim2.fromOffset(340, 340)
-	frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-	frame.BackgroundTransparency = 0.15
-	frame.Parent = gui
+	-- animated gradient
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 5, 5)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 20, 20)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 5))
+	})
+	gradient.Rotation = 25
+	gradient.Parent = bg
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 20)
-	corner.Parent = frame
+	---------------------------------------------------
+	-- CINEMATIC BLUR
+	---------------------------------------------------
 
-	-- image
-	local image = Instance.new("ImageLabel")
-	image.Size = UDim2.fromScale(0.85, 0.85)
-	image.Position = UDim2.fromScale(0.5, 0.5)
-	image.AnchorPoint = Vector2.new(0.5, 0.5)
-	image.BackgroundTransparency = 1
-	image.Image = imageId
-	image.ImageTransparency = 1
-	image.ScaleType = Enum.ScaleType.Fit
-	image.Parent = frame
-
-	local scale = Instance.new("UIScale")
-	scale.Scale = 0.6
-	scale.Parent = frame
-
-	-- stronger blur
 	local blur = Instance.new("BlurEffect")
 	blur.Size = 0
 	blur.Parent = Lighting
 
-	-- PARTICLES
-	local att = Instance.new("Attachment")
-	att.Parent = frame
+	---------------------------------------------------
+	-- VIGNETTE
+	---------------------------------------------------
 
-	local emitter = Instance.new("ParticleEmitter")
-	emitter.Texture = "rbxassetid://243660364"
-	emitter.Rate = 0
-	emitter.Lifetime = NumberRange.new(0.6, 1)
-	emitter.Speed = NumberRange.new(10, 18)
-	emitter.SpreadAngle = Vector2.new(360, 360)
-	emitter.LightEmission = 1
-	emitter.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.4),
+	local vignette = Instance.new("ImageLabel")
+	vignette.Size = UDim2.fromScale(1.2, 1.2)
+	vignette.Position = UDim2.fromScale(-0.1, -0.1)
+	vignette.BackgroundTransparency = 1
+	vignette.Image = "rbxassetid://4576475446"
+	vignette.ImageTransparency = 1
+	vignette.ScaleType = Enum.ScaleType.Stretch
+	vignette.ZIndex = 2
+	vignette.Parent = gui
+
+	---------------------------------------------------
+	-- MAIN FRAME
+	---------------------------------------------------
+
+	local frame = Instance.new("Frame")
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
+	frame.Size = UDim2.fromOffset(420, 420)
+	frame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+	frame.BackgroundTransparency = 0.2
+	frame.BorderSizePixel = 0
+	frame.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 28)
+	corner.Parent = frame
+
+	-- glass stroke
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 1.5
+	stroke.Transparency = 0.4
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	stroke.Parent = frame
+
+	-- glow
+	local glow = Instance.new("ImageLabel")
+	glow.AnchorPoint = Vector2.new(0.5, 0.5)
+	glow.Position = UDim2.fromScale(0.5, 0.5)
+	glow.Size = UDim2.fromScale(1.8, 1.8)
+	glow.BackgroundTransparency = 1
+	glow.Image = "rbxassetid://5028857084"
+	glow.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	glow.ImageTransparency = 1
+	glow.ZIndex = 0
+	glow.Parent = frame
+
+	---------------------------------------------------
+	-- IMAGE
+	---------------------------------------------------
+
+	local image = Instance.new("ImageLabel")
+	image.AnchorPoint = Vector2.new(0.5, 0.5)
+	image.Position = UDim2.fromScale(0.5, 0.5)
+	image.Size = UDim2.fromScale(0.78, 0.78)
+	image.BackgroundTransparency = 1
+	image.Image = imageId
+	image.ImageTransparency = 1
+	image.ScaleType = Enum.ScaleType.Fit
+	image.ZIndex = 3
+	image.Parent = frame
+
+	---------------------------------------------------
+-- CINEMATIC LIGHT SWEEP
+---------------------------------------------------
+
+local shineHolder = Instance.new("Frame")
+shineHolder.Size = UDim2.fromScale(1, 1)
+shineHolder.BackgroundTransparency = 1
+shineHolder.ClipsDescendants = true
+shineHolder.ZIndex = 4
+shineHolder.Parent = frame
+
+local shine = Instance.new("ImageLabel")
+shine.AnchorPoint = Vector2.new(0.5, 0.5)
+shine.Position = UDim2.fromScale(-0.6, 0.5)
+shine.Size = UDim2.fromScale(0.45, 1.8)
+shine.BackgroundTransparency = 1
+shine.Image = "rbxassetid://8992230677"
+shine.ImageTransparency = 0.92
+shine.ImageColor3 = Color3.fromRGB(255,255,255)
+shine.Rotation = 18
+shine.ScaleType = Enum.ScaleType.Stretch
+shine.ZIndex = 4
+shine.Parent = shineHolder
+
+	---------------------------------------------------
+	-- SCALE
+	---------------------------------------------------
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.45
+	scale.Parent = frame
+
+	---------------------------------------------------
+	-- LOADING TEXT
+	---------------------------------------------------
+
+	local text = Instance.new("TextLabel")
+	text.AnchorPoint = Vector2.new(0.5, 0)
+	text.Position = UDim2.fromScale(0.5, 0.87)
+	text.Size = UDim2.fromOffset(300, 40)
+	text.BackgroundTransparency = 1
+	text.Text = "LOADING"
+	text.TextColor3 = Color3.fromRGB(255, 255, 255)
+	text.TextTransparency = 1
+	text.Font = Enum.Font.GothamBlack
+	text.TextScaled = true
+	text.ZIndex = 5
+	text.Parent = frame
+
+	---------------------------------------------------
+	-- PARTICLES
+	---------------------------------------------------
+
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = frame
+
+	local particles = Instance.new("ParticleEmitter")
+	particles.Texture = "rbxassetid://243660364"
+	particles.Rate = 0
+	particles.Lifetime = NumberRange.new(1, 1.5)
+	particles.Speed = NumberRange.new(18, 26)
+	particles.SpreadAngle = Vector2.new(360, 360)
+	particles.LightEmission = 1
+	particles.Drag = 2
+	particles.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.5),
 		NumberSequenceKeypoint.new(1, 0)
 	})
-	emitter.Parent = att
+	particles.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(1, 1)
+	})
+	particles.Parent = attachment
 
-	-- intro
-	TweenService:Create(bg, TweenInfo.new(0.35), {BackgroundTransparency = 0.4}):Play()
-	TweenService:Create(blur, TweenInfo.new(0.35), {Size = 28}):Play() -- stronger blur
+	---------------------------------------------------
+	-- INTRO ANIMATION
+	---------------------------------------------------
 
-	TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+	TweenService:Create(bg, TweenInfo.new(0.4), {
+		BackgroundTransparency = 0.15
+	}):Play()
+
+	TweenService:Create(blur, TweenInfo.new(0.45), {
+		Size = 36
+	}):Play()
+
+	TweenService:Create(vignette, TweenInfo.new(0.5), {
+		ImageTransparency = 0.35
+	}):Play()
+
+	TweenService:Create(scale, TweenInfo.new(
+		0.7,
+		Enum.EasingStyle.Back,
+		Enum.EasingDirection.Out
+	), {
 		Scale = 1
 	}):Play()
 
-	TweenService:Create(image, TweenInfo.new(0.35), {
+	TweenService:Create(image, TweenInfo.new(0.45), {
 		ImageTransparency = 0
 	}):Play()
 
-	task.wait(0.25)
-	emitter:Emit(25)
+	TweenService:Create(text, TweenInfo.new(0.45), {
+		TextTransparency = 0
+	}):Play()
 
-	task.wait(2.2)
+	TweenService:Create(glow, TweenInfo.new(0.5), {
+		ImageTransparency = 0.45
+	}):Play()
 
-	-- (sync fade)
-	task.wait()
+	task.wait(0.2)
 
-	local info = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	particles:Emit(40)
 
-	TweenService:Create(bg, info, {BackgroundTransparency = 1}):Play()
-	TweenService:Create(image, info, {ImageTransparency = 1}):Play()
-	TweenService:Create(scale, info, {Scale = 1.2}):Play()
-	TweenService:Create(blur, info, {Size = 0}):Play()
-	TweenService:Create(frame, info, {BackgroundTransparency = 1}):Play()
+	---------------------------------------------------
+-- LIGHT SWEEP ANIMATION
+---------------------------------------------------
 
-	task.wait(0.3)
+task.spawn(function()
+	while gui.Parent do
+		shine.Position = UDim2.fromScale(-0.6, 0.5)
+
+		local tween = TweenService:Create(
+			shine,
+			TweenInfo.new(
+				1.8,
+				Enum.EasingStyle.Sine,
+				Enum.EasingDirection.InOut
+			),
+			{
+				Position = UDim2.fromScale(1.6, 0.5)
+			}
+		)
+
+		tween:Play()
+
+		task.wait(3.5)
+	end
+end)
+
+	---------------------------------------------------
+	-- FLOATING MOTION
+	---------------------------------------------------
+
+	local connection
+	local start = tick()
+
+	connection = RunService.RenderStepped:Connect(function()
+		if not frame.Parent then
+			connection:Disconnect()
+			return
+		end
+
+		local t = tick() - start
+
+		frame.Position = UDim2.fromScale(
+			0.5,
+			0.5 + math.sin(t * 1.5) * 0.008
+		)
+
+		glow.Rotation += 0.08
+	end)
+
+	---------------------------------------------------
+	-- HOLD
+	---------------------------------------------------
+
+	task.wait(3)
+
+	---------------------------------------------------
+	-- OUTRO
+	---------------------------------------------------
+
+	local outro = TweenInfo.new(
+		0.45,
+		Enum.EasingStyle.Quint,
+		Enum.EasingDirection.In
+	)
+
+	TweenService:Create(bg, outro, {
+		BackgroundTransparency = 1
+	}):Play()
+
+	TweenService:Create(blur, outro, {
+		Size = 0
+	}):Play()
+
+	TweenService:Create(vignette, outro, {
+		ImageTransparency = 1
+	}):Play()
+
+	TweenService:Create(frame, outro, {
+		BackgroundTransparency = 1
+	}):Play()
+
+	TweenService:Create(stroke, outro, {
+		Transparency = 1
+	}):Play()
+
+	TweenService:Create(image, outro, {
+		ImageTransparency = 1
+	}):Play()
+
+	TweenService:Create(text, outro, {
+		TextTransparency = 1
+	}):Play()
+
+	TweenService:Create(glow, outro, {
+		ImageTransparency = 1
+	}):Play()
+
+	TweenService:Create(scale, outro, {
+		Scale = 1.25
+	}):Play()
+
+	task.wait(0.5)
+
+	if connection then
+		connection:Disconnect()
+	end
 
 	gui:Destroy()
 	blur:Destroy()
