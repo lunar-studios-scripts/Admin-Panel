@@ -31,8 +31,7 @@ end
 
 client.Chatted:Connect(processCmd)
 -- =============================================================
--- MOBILE UI AUTO-RESIZE SYSTEM - FIXED
--- Paste this anywhere in your script (best near the top)
+-- MOBILE UI AUTO-RESIZE - STRICT VERSION
 -- =============================================================
 
 local UserInputService = game:GetService("UserInputService")
@@ -41,6 +40,27 @@ local client = Players.LocalPlayer
 
 -- CONFIG: Adjust this if mobile UI is still too big/small
 local MOBILE_SCALE = 0.55
+
+-- EXACT list of your admin UI names - add more if you create new ones
+local LUNAR_UI_NAMES = {
+    ["LunarGui"] = true,
+    ["LunarNotifs"] = true,
+    ["LunarWatermark"] = true,
+    ["LunarSplash"] = true,
+    ["LunarHubGUI"] = true,
+    ["AimbotPanel"] = true,
+    ["FlySystemPanel"] = true,
+    ["SpeedPanel"] = true,
+    ["JoinLogsPanel"] = true,
+    ["logsPanel"] = true,
+    ["stopwatchPanel"] = true,
+    ["CmdBarGui"] = true,
+    ["SpeedPanel"] = true,
+    ["LunarTouchFling"] = true,
+    ["LunarCrosshairCMD"] = true,
+    ["SunGlare"] = true,
+    ["SpectateGui"] = true,
+}
 
 -- Detect mobile device
 local function isMobile()
@@ -62,9 +82,10 @@ local function isMobile()
     return false
 end
 
--- Apply UIScale to a ScreenGui (simple, no position hacks)
+-- Apply UIScale only to whitelisted Lunar UIs
 local function applyMobileScale(screenGui)
     if not screenGui or not screenGui:IsA("ScreenGui") then return end
+    if not LUNAR_UI_NAMES[screenGui.Name] then return end
     if screenGui:FindFirstChild("MobileUIScale") then return end
     
     local scale = Instance.new("UIScale")
@@ -75,37 +96,36 @@ end
 
 -- Main setup
 local function setupMobileResize()
-    if not isMobile() then return end -- PC stays untouched
+    if not isMobile() then return end -- PC stays untouched completely
     
     local playerGui = client:WaitForChild("PlayerGui")
     
-    -- Scale existing GUIs
+    -- Scale existing Lunar UIs only
     for _, gui in ipairs(playerGui:GetChildren()) do
         if gui:IsA("ScreenGui") then
-            if gui.Name:find("Lunar") or gui.Name:find("Panel") or gui.Name:find("Gui") then
-                applyMobileScale(gui)
-            end
+            applyMobileScale(gui)
         end
     end
     
-    -- Auto-scale new GUIs
+    -- Auto-scale new Lunar UIs as they're created
     playerGui.ChildAdded:Connect(function(child)
         if child:IsA("ScreenGui") then
             task.wait()
-            if child.Name:find("Lunar") or child.Name:find("Panel") or child.Name:find("Gui") then
-                applyMobileScale(child)
-            end
+            applyMobileScale(child)
         end
     end)
 end
 
--- Run
+-- Run immediately
 setupMobileResize()
+
+-- Re-run on respawn (some executors reload)
 client.CharacterAdded:Connect(function()
     task.wait(1)
     setupMobileResize()
 end)
 
+-- Export for manual use if needed
 _G.ApplyMobileUIScale = applyMobileScale
 --------------------------------------------------------------
 ---------- loading screen ------------------------------------
