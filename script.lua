@@ -890,7 +890,7 @@ task.spawn(function()
 
 	UserInputService.InputBegan:Connect(function(input, gp)
 		if gp then return end
-		if input.KeyCode == Enum.KeyCode.RightShift then
+		if input.KeyCode == Enum.KeyCode.P then
 			visible = not visible
 			frame.Visible = visible
 		end
