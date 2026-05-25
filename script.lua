@@ -1048,6 +1048,16 @@ _G.LunarCrosshairData = {
 }
 
 function LoadLunarCrosshair()
+	local Players = game:GetService("Players")
+	local UserInputService = game:GetService("UserInputService")
+	local RunService = game:GetService("RunService")
+	local TweenService = game:GetService("TweenService")
+	local StarterGui = game:GetService("StarterGui")
+	local CoreGui = game:GetService("CoreGui")
+
+	local client = Players.LocalPlayer
+	local mouse = client:GetMouse()
+
 	local data = _G.LunarCrosshairData
 
 	if data.enabled and data.gui then
@@ -1068,20 +1078,15 @@ function LoadLunarCrosshair()
 
 	data.enabled = true
 
-	-- Hide default mouse
-	pcall(function()
-		UserInputService.MouseIconEnabled = false
-		if mouse then mouse.Icon = "" end
-	end)
-
-	-- Create GUI
+	-- ================= GUI (CoreGui — highest possible layer) =================
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "LunarCrosshairCMD"
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-	gui.DisplayOrder = 999999
-	gui.Parent = client:WaitForChild("PlayerGui")
+	gui.DisplayOrder = 2147483647 -- MAX display order, above everything
+	gui.ScreenInsets = Enum.ScreenInsets.None -- full screen, no safe area padding
+	gui.Parent = CoreGui -- PARENT TO COREGUI so it's above all player UI + CoreGui elements
 	data.gui = gui
 
 	-- Settings
@@ -1102,24 +1107,24 @@ function LoadLunarCrosshair()
 	-- Store settings in data
 	data.settings = settings
 
-	-- Crosshair center
+	-- ================= CROSSHAIR =================
 	local center = Instance.new("Frame")
 	center.BackgroundTransparency = 1
 	center.Size = UDim2.fromOffset(1, 1)
 	center.AnchorPoint = Vector2.new(0.5, 0.5)
-	center.ZIndex = 999
+	center.ZIndex = 2147483647 -- max ZIndex
 	center.Parent = gui
 
 	-- Vertical line
 	local vertical = Instance.new("Frame")
 	vertical.BorderSizePixel = 0
-	vertical.ZIndex = 999
+	vertical.ZIndex = 2147483647
 	vertical.Parent = center
 
 	-- Horizontal line
 	local horizontal = Instance.new("Frame")
 	horizontal.BorderSizePixel = 0
-	horizontal.ZIndex = 999
+	horizontal.ZIndex = 2147483647
 	horizontal.Parent = center
 
 	-- Symbol
@@ -1131,7 +1136,7 @@ function LoadLunarCrosshair()
 	symbol.Font = Enum.Font.GothamBold
 	symbol.TextStrokeTransparency = 0.5
 	symbol.TextStrokeColor3 = Color3.new(0, 0, 0)
-	symbol.ZIndex = 999
+	symbol.ZIndex = 2147483647
 	symbol.Parent = center
 	symbol.Visible = false
 
@@ -1142,20 +1147,20 @@ function LoadLunarCrosshair()
 	text.TextSize = 18
 	text.BackgroundTransparency = 1
 	text.AnchorPoint = Vector2.new(0.5, 0)
-	text.ZIndex = 999
+	text.ZIndex = 2147483647
 	text.TextStrokeTransparency = 0.5
 	text.TextStrokeColor3 = Color3.new(0, 0, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Center
 	text.Parent = gui
 
-	-- Settings Panel
+	-- ================= SETTINGS PANEL =================
 	local panel = Instance.new("Frame")
 	panel.Size = UDim2.fromOffset(240, 540)
 	panel.Position = UDim2.fromOffset(30, 200)
 	panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	panel.BorderSizePixel = 0
 	panel.Visible = true
-	panel.ZIndex = 500
+	panel.ZIndex = 2147483646 -- just below crosshair elements
 	panel.Parent = gui
 
 	local corner = Instance.new("UICorner")
@@ -1169,7 +1174,7 @@ function LoadLunarCrosshair()
 	title.Font = Enum.Font.GothamBold
 	title.TextSize = 14
 	title.TextColor3 = Color3.new(1, 1, 1)
-	title.ZIndex = 501
+	title.ZIndex = 2147483646
 	title.Parent = panel
 
 	-- Dragging
@@ -1198,7 +1203,7 @@ function LoadLunarCrosshair()
 		end
 	end)
 
-	-- Input maker functions
+	-- ================= INPUT MAKER FUNCTIONS =================
 	local function makeInput(name, yOffset, key, minVal, maxVal)
 		local label = Instance.new("TextLabel")
 		label.Text = name
@@ -1209,7 +1214,7 @@ function LoadLunarCrosshair()
 		label.TextSize = 12
 		label.TextColor3 = Color3.new(0.9, 0.9, 0.9)
 		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.ZIndex = 501
+		label.ZIndex = 2147483646
 		label.Parent = panel
 
 		local box = Instance.new("TextBox")
@@ -1222,7 +1227,7 @@ function LoadLunarCrosshair()
 		box.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 		box.TextColor3 = Color3.new(1, 1, 1)
 		box.BorderSizePixel = 0
-		box.ZIndex = 501
+		box.ZIndex = 2147483646
 		box.Parent = panel
 
 		local boxCorner = Instance.new("UICorner")
@@ -1257,7 +1262,7 @@ function LoadLunarCrosshair()
 		label.TextSize = 12
 		label.TextColor3 = Color3.new(0.9, 0.9, 0.9)
 		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.ZIndex = 501
+		label.ZIndex = 2147483646
 		label.Parent = panel
 
 		local box = Instance.new("TextBox")
@@ -1270,7 +1275,7 @@ function LoadLunarCrosshair()
 		box.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 		box.TextColor3 = Color3.new(1, 1, 1)
 		box.BorderSizePixel = 0
-		box.ZIndex = 501
+		box.ZIndex = 2147483646
 		box.Parent = panel
 
 		local boxCorner = Instance.new("UICorner")
@@ -1294,7 +1299,7 @@ function LoadLunarCrosshair()
 		label.TextSize = 12
 		label.TextColor3 = Color3.new(0.9, 0.9, 0.9)
 		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.ZIndex = 501
+		label.ZIndex = 2147483646
 		label.Parent = panel
 
 		local button = Instance.new("TextButton")
@@ -1306,7 +1311,7 @@ function LoadLunarCrosshair()
 		button.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 		button.TextColor3 = Color3.new(1, 1, 1)
 		button.BorderSizePixel = 0
-		button.ZIndex = 501
+		button.ZIndex = 2147483646
 		button.Parent = panel
 
 		local btnCorner = Instance.new("UICorner")
@@ -1341,7 +1346,7 @@ function LoadLunarCrosshair()
 	listLabel.TextSize = 12
 	listLabel.TextColor3 = Color3.new(0.9, 0.9, 0.9)
 	listLabel.TextXAlignment = Enum.TextXAlignment.Left
-	listLabel.ZIndex = 501
+	listLabel.ZIndex = 2147483646
 	listLabel.Parent = panel
 
 	local symbolList = Instance.new("ScrollingFrame")
@@ -1350,7 +1355,7 @@ function LoadLunarCrosshair()
 	symbolList.BackgroundTransparency = 1
 	symbolList.CanvasSize = UDim2.new(0, 0, 0, 0)
 	symbolList.ScrollBarThickness = 4
-	symbolList.ZIndex = 501
+	symbolList.ZIndex = 2147483646
 	symbolList.Parent = panel
 
 	local grid = Instance.new("UIGridLayout")
@@ -1359,7 +1364,7 @@ function LoadLunarCrosshair()
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = symbolList
 
-	local symbols = {"卐","+","-","×","÷","*","•","○","□","△","▽","♡","♥","★","☆","!","@","#","$","%","^","&","(",")","[","]","{","}","<",">","/","\\","|","~"}
+	local symbols = {"卐","+","-","×","÷","*","•","○","□","△","▽","♡","♥","★","☆","!","@","#","$","%","^","&","(",")","[","]","{","}","<<",">","/","\\","|","~"}
 	for _, sym in ipairs(symbols) do
 		local btn = Instance.new("TextButton")
 		btn.Text = sym
@@ -1368,7 +1373,7 @@ function LoadLunarCrosshair()
 		btn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 		btn.TextColor3 = Color3.new(1, 1, 1)
 		btn.BorderSizePixel = 0
-		btn.ZIndex = 501
+		btn.ZIndex = 2147483646
 
 		local symCorner = Instance.new("UICorner")
 		symCorner.CornerRadius = UDim.new(0, 6)
@@ -1397,7 +1402,7 @@ function LoadLunarCrosshair()
 	discordButton.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
 	discordButton.TextColor3 = Color3.new(1, 1, 1)
 	discordButton.BorderSizePixel = 0
-	discordButton.ZIndex = 501
+	discordButton.ZIndex = 2147483646
 	discordButton.Parent = panel
 
 	local dbCorner = Instance.new("UICorner")
@@ -1430,7 +1435,7 @@ function LoadLunarCrosshair()
 		end
 	end)
 
-	-- Particle spawn function
+	-- ================= PARTICLE SPAWN =================
 	local function spawnParticle(color)
 		local p = Instance.new("Frame")
 		p.Size = UDim2.fromOffset(settings.Width * 2, settings.Width * 2)
@@ -1439,7 +1444,7 @@ function LoadLunarCrosshair()
 		p.AnchorPoint = Vector2.new(0.5, 0.5)
 		p.Position = UDim2.fromOffset(0, 0)
 		p.BorderSizePixel = 0
-		p.ZIndex = 998
+		p.ZIndex = 2147483645
 		p.Parent = center
 
 		local pCorner = Instance.new("UICorner")
@@ -1460,12 +1465,20 @@ function LoadLunarCrosshair()
 		end)
 	end
 
-	-- Main loop
+	-- ================= MAIN LOOP =================
 	local hue = 0
 	local rotation = 0
 
 	data.connection = RunService.RenderStepped:Connect(function(dt)
 		if not data.enabled then return end
+
+		-- FORCE HIDE MOUSE EVERY FRAME (overrides shiftlock cursor)
+		if UserInputService.MouseIconEnabled then
+			UserInputService.MouseIconEnabled = false
+		end
+		if mouse.Icon ~= "" then
+			mouse.Icon = ""
+		end
 
 		local mousePos = UserInputService:GetMouseLocation()
 		local baseY = mousePos.Y + settings.YOffset
@@ -1535,7 +1548,7 @@ function LoadLunarCrosshair()
 		Duration = 3
 	})
 
-	print("Lunar Crosshair Loaded")
+	print("Lunar Crosshair Loaded | CoreGui overlay | Shiftlock cursor override")
 end
 
 -- =============================================================
