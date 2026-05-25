@@ -826,25 +826,32 @@ task.spawn(function()
 	local Players = game:GetService("Players")
 	local RunService = game:GetService("RunService")
 	local UserInputService = game:GetService("UserInputService")
+	local Stats = game:GetService("Stats")
+	local CoreGui = game:GetService("CoreGui")
 
 	local client = Players.LocalPlayer
 
-	if client.PlayerGui:FindFirstChild("LunarWatermark") then
-		client.PlayerGui.LunarWatermark:Destroy()
+	-- Clean up old from CoreGui
+	if CoreGui:FindFirstChild("LunarWatermark") then
+		CoreGui.LunarWatermark:Destroy()
 	end
 
+	-- ================= GUI (CoreGui — highest possible layer) =================
 	local sg = Instance.new("ScreenGui")
 	sg.Name = "LunarWatermark"
 	sg.ResetOnSpawn = false
 	sg.IgnoreGuiInset = true
-	sg.DisplayOrder = 999999
-	sg.Parent = client.PlayerGui
+	sg.DisplayOrder = 2147483647 -- MAX display order
+	sg.ScreenInsets = Enum.ScreenInsets.None
+	sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	sg.Parent = CoreGui
 
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(0, 380, 0, 34)
-	frame.Position = UDim2.new(1, -3220, 0, 15)
+	frame.Position = UDim2.new(1, -3220, 0, 15) -- YOUR ORIGINAL POSITION, UNCHANGED
 	frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 	frame.BackgroundTransparency = 0.15
+	frame.ZIndex = 2147483647
 	frame.Parent = sg
 
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
@@ -853,6 +860,7 @@ task.spawn(function()
 	dragTab.Size = UDim2.new(0, 30, 1, 0)
 	dragTab.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 	dragTab.BackgroundTransparency = 0.2
+	dragTab.ZIndex = 2147483647
 	dragTab.Parent = frame
 
 	Instance.new("UICorner", dragTab).CornerRadius = UDim.new(0, 16)
@@ -864,6 +872,7 @@ task.spawn(function()
 	tabLabel.TextSize = 18
 	tabLabel.Font = Enum.Font.GothamBold
 	tabLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tabLabel.ZIndex = 2147483647
 	tabLabel.Parent = dragTab
 
 	local moon = Instance.new("TextLabel", frame)
@@ -874,6 +883,7 @@ task.spawn(function()
 	moon.TextColor3 = Color3.fromRGB(255, 215, 0)
 	moon.TextSize = 22
 	moon.Font = Enum.Font.GothamBold
+	moon.ZIndex = 2147483647
 
 	local label = Instance.new("TextLabel", frame)
 	label.BackgroundTransparency = 1
@@ -884,6 +894,7 @@ task.spawn(function()
 	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = "Lunar Hub | Loading..."
+	label.ZIndex = 2147483647
 
 	-- TOGGLE SYSTEM
 	local visible = true
@@ -939,33 +950,51 @@ task.spawn(function()
 		frame.Position = frame.Position:Lerp(targetPos, 0.25)
 	end)
 
-	local fps = 0
-	local lastTime = tick()
+	-- ================= MORE ACCURATE FPS =================
+	local fps = 60
+	local frameCount = 0
+	local fpsTimer = 0
+	local fpsUpdateInterval = 0.5
 
-	RunService.RenderStepped:Connect(function()
-		local now = tick()
-		local dt = now - lastTime
-		lastTime = now
+	RunService.RenderStepped:Connect(function(dt)
+		frameCount += 1
+		fpsTimer += dt
 
-		if dt > 0 then
-			local instantFPS = 1 / dt
-			fps = fps + (instantFPS - fps) * 0.1
+		if fpsTimer >= fpsUpdateInterval then
+			local measuredFPS = frameCount / fpsTimer
+			fps = fps + (measuredFPS - fps) * 0.3
+			frameCount = 0
+			fpsTimer = 0
 		end
 	end)
 
+	-- ================= MORE ACCURATE PING =================
 	local ping = 0
-
-	local function getPing()
-		local p = 0
-		pcall(function()
-			p = client:GetNetworkPing() * 1000
-		end)
-		return p
-	end
 
 	task.spawn(function()
 		while sg.Parent do
-			ping = ping + (getPing() - ping) * 0.2
+			local rawPing = 0
+
+			-- Try Stats.PerformanceStats.Ping first (most accurate)
+			pcall(function()
+				local perfStats = Stats.PerformanceStats
+				if perfStats then
+					local pingStat = perfStats:FindFirstChild("Ping")
+					if pingStat then
+						rawPing = pingStat:GetValue()
+					end
+				end
+			end)
+
+			-- Fallback to GetNetworkPing if Stats ping unavailable
+			if rawPing <= 0 then
+				pcall(function()
+					rawPing = client:GetNetworkPing() * 1000
+				end)
+			end
+
+			-- Smooth the ping value
+			ping = ping + (rawPing - ping) * 0.2
 
 			label.Text = string.format(
 				"Lunar Hub | %d FPS | %d ms",
