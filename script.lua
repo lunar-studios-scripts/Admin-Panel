@@ -6583,8 +6583,6 @@ mainFrame.Position = UDim2.new(1, -420, 0.5, -300)
 mainFrame.BackgroundColor3 = currentTheme.glass
 mainFrame.Active = true
 mainFrame.Draggable = true
-applyGlassEffect(mainFrame, globalConfig.uiTransparency, globalConfig.strokeTransparency)
-
 local title = Instance.new("TextLabel", mainFrame)
 title.Size = UDim2.new(1, 0, 0, 60)
 title.BackgroundTransparency = 1
@@ -6612,8 +6610,6 @@ cmdTab.TextColor3 = Color3.new(0,0,0)
 cmdTab.TextTransparency = 0 -- SOLID
 cmdTab.TextStrokeTransparency = 0.5
 cmdTab.TextStrokeColor3 = Color3.new(1,1,1)
-applyGlassEffect(cmdTab, 0.2, 0.4)
-
 local settingsTab = Instance.new("TextButton", tabBar)
 settingsTab.Size = UDim2.new(0.5, -5, 1, 0)
 settingsTab.Position = UDim2.new(0.5, 5, 0, 0)
@@ -6625,8 +6621,6 @@ settingsTab.TextColor3 = globalConfig.textColor
 settingsTab.TextTransparency = 0 -- SOLID
 settingsTab.TextStrokeTransparency = 0.5
 settingsTab.TextStrokeColor3 = Color3.new(0,0,0)
-applyGlassEffect(settingsTab, 0.2, 0.5)
-
 -- Commands tab
 local cmdFrame = Instance.new("Frame", mainFrame)
 cmdFrame.Size = UDim2.new(1, -20, 1, -130)
@@ -6643,17 +6637,13 @@ search.TextColor3 = globalConfig.textColor
 search.TextTransparency = 0 -- SOLID
 search.TextStrokeTransparency = 0.5
 search.TextStrokeColor3 = Color3.new(0,0,0)
-applyGlassEffect(search, 0.3, 0.6)
-
 local scroll = Instance.new("ScrollingFrame", cmdFrame)
 scroll.Size = UDim2.new(1, 0, 1, -50)
 scroll.Position = UDim2.new(0, 0, 0, 50)
-scroll.BackgroundTransparency = 0.3
+scroll.BackgroundTransparency = 0.1
 scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 scroll.ScrollBarThickness = 8
 scroll.ScrollBarImageColor3 = currentTheme.accent
-applyGlassEffect(scroll, 0.4, 0.7)
-
 local uiList = Instance.new("UIListLayout", scroll)
 uiList.Padding = UDim.new(0, 8)
 uiList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -6745,7 +6735,7 @@ for i, cmdStr in ipairs(cmds) do
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, -10, 0, 44)
 	btn.BackgroundColor3 = currentTheme.list
-	btn.BackgroundTransparency = 0.2
+	btn.BackgroundTransparency = 0.1
 	btn.Text = " " .. cmdStr
 	btn.Font = Enum.Font.GothamSemibold
 	btn.TextSize = 15
@@ -6754,7 +6744,6 @@ for i, cmdStr in ipairs(cmds) do
 	btn.TextTransparency = 0 -- SOLID
 	btn.TextStrokeTransparency = 0.5
 	btn.TextStrokeColor3 = Color3.new(0,0,0)
-	applyGlassEffect(btn, 0.4, 0.7)
 	btn.Parent = scroll
 	btn.LayoutOrder = i
 
@@ -6797,12 +6786,10 @@ settingsFrame.Visible = false
 
 local settingsScroll = Instance.new("ScrollingFrame", settingsFrame)
 settingsScroll.Size = UDim2.new(1, 0, 1, 0)
-settingsScroll.BackgroundTransparency = 0.3
+settingsScroll.BackgroundTransparency = 0.1
 settingsScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 settingsScroll.ScrollBarThickness = 8
 settingsScroll.ScrollBarImageColor3 = currentTheme.accent
-applyGlassEffect(settingsScroll, 0.4, 0.7)
-
 local settingsList = Instance.new("UIListLayout", settingsScroll)
 settingsList.Padding = UDim.new(0, 15)
 settingsList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -6811,9 +6798,7 @@ settingsList.SortOrder = Enum.SortOrder.LayoutOrder
 local prefixSection = Instance.new("Frame", settingsScroll)
 prefixSection.Size = UDim2.new(1, -20, 0, 100)
 prefixSection.BackgroundColor3 = currentTheme.btn
-prefixSection.BackgroundTransparency = 0.3
-applyGlassEffect(prefixSection, 0.3, 0.6)
-
+prefixSection.BackgroundTransparency = 0.1
 local prefixTitle = Instance.new("TextLabel", prefixSection)
 prefixTitle.Size = UDim2.new(1, 0, 0, 30)
 prefixTitle.Position = UDim2.new(0, 0, 0, 5)
@@ -6837,8 +6822,6 @@ prefixInput.TextColor3 = globalConfig.textColor
 prefixInput.TextTransparency = 0 -- SOLID
 prefixInput.TextStrokeTransparency = 0.5
 prefixInput.TextStrokeColor3 = Color3.new(0,0,0)
-applyGlassEffect(prefixInput, 0.25, 0.5)
-
 prefixInput.FocusLost:Connect(function(enter)
 	if enter then
 		prefix = prefixInput.Text ~= "" and prefixInput.Text or "!"
@@ -6850,9 +6833,7 @@ end)
 local colorSection = Instance.new("Frame", settingsScroll)
 colorSection.Size = UDim2.new(1, -20, 0, 150)
 colorSection.BackgroundColor3 = currentTheme.btn
-colorSection.BackgroundTransparency = 0.3
-applyGlassEffect(colorSection, 0.3, 0.6)
-
+colorSection.BackgroundTransparency = 0.1
 local colorTitle = Instance.new("TextLabel", colorSection)
 colorTitle.Size = UDim2.new(1, 0, 0, 30)
 colorTitle.Position = UDim2.new(0, 0, 0, 5)
@@ -6876,45 +6857,31 @@ colorDisplay.TextColor3 = Color3.new(0,0,0)
 colorDisplay.TextTransparency = 0 -- SOLID
 colorDisplay.TextStrokeTransparency = 0.5
 colorDisplay.TextStrokeColor3 = Color3.new(1,1,1)
-applyGlassEffect(colorDisplay, 0, 0.4)
-
 -- RGB Sliders
 local rSlider = Instance.new("Frame", colorSection)
 rSlider.Size = UDim2.new(0.8, 0, 0, 8)
 rSlider.Position = UDim2.new(0.1, 0, 0, 80)
 rSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-applyGlassEffect(rSlider, 0.3, 0.7)
-
 local rFill = Instance.new("Frame", rSlider)
 rFill.Size = UDim2.new(globalConfig.textColor.R, 0, 1, 0)
 rFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 rFill.BorderSizePixel = 0
-Instance.new("UICorner", rFill).CornerRadius = UDim.new(0, 4)
-
 local gSlider = Instance.new("Frame", colorSection)
 gSlider.Size = UDim2.new(0.8, 0, 0, 8)
 gSlider.Position = UDim2.new(0.1, 0, 0, 95)
 gSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-applyGlassEffect(gSlider, 0.3, 0.7)
-
 local gFill = Instance.new("Frame", gSlider)
 gFill.Size = UDim2.new(globalConfig.textColor.G, 0, 1, 0)
 gFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 gFill.BorderSizePixel = 0
-Instance.new("UICorner", gFill).CornerRadius = UDim.new(0, 4)
-
 local bSlider = Instance.new("Frame", colorSection)
 bSlider.Size = UDim2.new(0.8, 0, 0, 8)
 bSlider.Position = UDim2.new(0.1, 0, 0, 110)
 bSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-applyGlassEffect(bSlider, 0.3, 0.7)
-
 local bFill = Instance.new("Frame", bSlider)
 bFill.Size = UDim2.new(globalConfig.textColor.B, 0, 1, 0)
 bFill.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
 bFill.BorderSizePixel = 0
-Instance.new("UICorner", bFill).CornerRadius = UDim.new(0, 4)
-
 local function setupColorSlider(slider, fill, colorComponent)
 	local dragging = false
 	slider.InputBegan:Connect(function(input)
@@ -6960,9 +6927,7 @@ setupColorSlider(bSlider, bFill, "B")
 local transSection = Instance.new("Frame", settingsScroll)
 transSection.Size = UDim2.new(1, -20, 0, 100)
 transSection.BackgroundColor3 = currentTheme.btn
-transSection.BackgroundTransparency = 0.3
-applyGlassEffect(transSection, 0.3, 0.6)
-
+transSection.BackgroundTransparency = 0.1
 local transTitle = Instance.new("TextLabel", transSection)
 transTitle.Size = UDim2.new(1, 0, 0, 30)
 transTitle.Position = UDim2.new(0, 0, 0, 5)
@@ -6991,21 +6956,15 @@ local transSlider = Instance.new("Frame", transSection)
 transSlider.Size = UDim2.new(0.8, 0, 0, 12)
 transSlider.Position = UDim2.new(0.1, 0, 0, 65)
 transSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-applyGlassEffect(transSlider, 0.3, 0.7)
-
 local transFill = Instance.new("Frame", transSlider)
 transFill.Size = UDim2.new(globalConfig.uiTransparency, 0, 1, 0)
 transFill.BackgroundColor3 = currentTheme.accent
 transFill.BorderSizePixel = 0
-Instance.new("UICorner", transFill).CornerRadius = UDim.new(0, 6)
-
 local transDrag = Instance.new("TextButton", transSlider)
 transDrag.Size = UDim2.new(0, 20, 0, 20)
 transDrag.Position = UDim2.new(globalConfig.uiTransparency, -10, 0.5, -10)
 transDrag.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 transDrag.Text = ""
-Instance.new("UICorner", transDrag).CornerRadius = UDim.new(1, 0)
-
 local draggingTrans = false
 transDrag.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -7027,7 +6986,7 @@ UserInputService.InputChanged:Connect(function(input)
 
 		-- Update main frame transparency
 		if mainFrame then
-			mainFrame.BackgroundTransparency = pos
+			mainFrame.BackgroundTransparency = 0.1
 		end
 	end
 end)
@@ -7036,9 +6995,7 @@ end)
 local themeSection = Instance.new("Frame", settingsScroll)
 themeSection.Size = UDim2.new(1, -20, 0, 200)
 themeSection.BackgroundColor3 = currentTheme.btn
-themeSection.BackgroundTransparency = 0.3
-applyGlassEffect(themeSection, 0.3, 0.6)
-
+themeSection.BackgroundTransparency = 0.1
 local themeTitle = Instance.new("TextLabel", themeSection)
 themeTitle.Size = UDim2.new(1, 0, 0, 30)
 themeTitle.Position = UDim2.new(0, 0, 0, 5)
@@ -7070,8 +7027,6 @@ for name, th in pairs(themes) do
 	btn.TextTransparency = 0 -- SOLID
 	btn.TextStrokeTransparency = 0.5
 	btn.TextStrokeColor3 = Color3.new(0,0,0)
-	applyGlassEffect(btn, 0.15, 0.4)
-
 	btn.MouseButton1Click:Connect(function()
 		currentTheme = th
 		mainFrame.BackgroundColor3 = th.glass
@@ -7096,9 +7051,7 @@ end
 local discordSection = Instance.new("Frame", settingsScroll)
 discordSection.Size = UDim2.new(1, -20, 0, 100)
 discordSection.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-discordSection.BackgroundTransparency = 0.2
-applyGlassEffect(discordSection, 0.3, 0.6)
-
+discordSection.BackgroundTransparency = 0.1
 local discordTitle = Instance.new("TextLabel", discordSection)
 discordTitle.Size = UDim2.new(1, 0, 0, 30)
 discordTitle.Position = UDim2.new(0, 0, 0, 5)
@@ -7122,8 +7075,6 @@ discordBtn.TextColor3 = Color3.new(1,1,1)
 discordBtn.TextTransparency = 0 -- SOLID
 discordBtn.TextStrokeTransparency = 0.5
 discordBtn.TextStrokeColor3 = Color3.new(0,0,0)
-applyGlassEffect(discordBtn, 0.15, 0.4)
-
 discordBtn.MouseButton1Click:Connect(function()
 	if setclipboard then
 		setclipboard("https://discord.gg/5GeQAXYYcW")
