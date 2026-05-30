@@ -1281,10 +1281,14 @@ end
 -- ============================================
 -- Crosshair tingy
 -- ============================================
+-- ============================================
+-- Crosshair System (Lunar Crosshair V2)
+-- ============================================
 _G.LunarCrosshairData = {
 	enabled = false,
 	gui = nil,
-	connection = nil
+	connection = nil,
+	settings = nil
 }
 
 function LoadLunarCrosshair()
@@ -1301,11 +1305,7 @@ function LoadLunarCrosshair()
 	local data = _G.LunarCrosshairData
 
 	if data.enabled and data.gui then
-		StarterGui:SetCore("SendNotification", {
-			Title = "Crosshair",
-			Text = "Already enabled! Press [RightShift] for settings",
-			Duration = 3
-		})
+		notify("Crosshair already enabled! Use !uncrosshair to disable", Color3.fromRGB(255, 200, 100))
 		return
 	end
 
@@ -1318,69 +1318,98 @@ function LoadLunarCrosshair()
 
 	data.enabled = true
 
-	-- ================= GUI (CoreGui — highest possible layer) =================
+	-- ================= GUI =================
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "LunarCrosshairCMD"
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-	gui.DisplayOrder = 2147483647 -- MAX display order, above everything
-	gui.ScreenInsets = Enum.ScreenInsets.None -- full screen, no safe area padding
-	gui.Parent = CoreGui -- PARENT TO COREGUI so it's above all player UI + CoreGui elements
+	gui.DisplayOrder = 2147483647
+	gui.ScreenInsets = Enum.ScreenInsets.None
+	gui.Parent = CoreGui
 	data.gui = gui
 
 	-- Settings
 	local settings = {
-		VertLength = 40,
-		HorzLength = 40,
-		Width = 1,
+		VertLength = 16,
+		HorzLength = 16,
+		Width = 3,
 		RotationSpeed = 120,
 		RainbowSpeed = 1.5,
 		YOffset = 0,
 		TextGap = 8,
-		Text = "Lunar.gg",
+		Text = "Lunar",
 		Symbol = "",
 		SpinEnabled = true,
-		VFXEnabled = false
+		VFXEnabled = false,
+		PulseEnabled = true,
+		PulseSpeed = 2,
+		PulseDistance = 3,
+		ActivePreset = "Classic",
+		UseRainbow = true,
+		CustomColor = Color3.fromRGB(255, 255, 255),
+		ColorR = 255,
+		ColorG = 255,
+		ColorB = 255,
+		VFXType = "Particles",
+		VFXIntensity = 5,
+		VFXSize = 3,
+		VFXTrail = false,
+		VFXGlow = false,
+		VFXBloom = false,
+		VFXSparkle = false,
+		VFXRipple = false,
+		VFXOrbit = false,
+		VFXShootingStar = false,
+		VFXHeart = false,
+		VFXLightning = false,
+		VFXGhost = false,
+		VFXConfetti = false,
 	}
-
-	-- Store settings in data
 	data.settings = settings
 
-	-- ================= CROSSHAIR =================
+	-- ================= CROSSHAIR CONTAINER =================
 	local center = Instance.new("Frame")
 	center.BackgroundTransparency = 1
-	center.Size = UDim2.fromOffset(1, 1)
+	center.Size = UDim2.fromOffset(1,1)
 	center.AnchorPoint = Vector2.new(0.5, 0.5)
-	center.ZIndex = 2147483647 -- max ZIndex
+	center.ZIndex = 2147483647
 	center.Parent = gui
 
-	-- Vertical line
-	local vertical = Instance.new("Frame")
-	vertical.BorderSizePixel = 0
-	vertical.ZIndex = 2147483647
-	vertical.Parent = center
+	local crosshairSymbol = Instance.new("TextLabel")
+	crosshairSymbol.BackgroundTransparency = 1
+	crosshairSymbol.Size = UDim2.fromScale(1,1)
+	crosshairSymbol.AnchorPoint = Vector2.new(0.5, 0.5)
+	crosshairSymbol.Position = UDim2.fromScale(0.5, 0.5)
+	crosshairSymbol.TextScaled = false
+	crosshairSymbol.Font = Enum.Font.GothamBold
+	crosshairSymbol.TextStrokeTransparency = 0.5
+	crosshairSymbol.TextStrokeColor3 = Color3.new(0,0,0)
+	crosshairSymbol.ZIndex = 2147483647
+	crosshairSymbol.Parent = center
+	crosshairSymbol.Visible = false
 
-	-- Horizontal line
-	local horizontal = Instance.new("Frame")
-	horizontal.BorderSizePixel = 0
-	horizontal.ZIndex = 2147483647
-	horizontal.Parent = center
+	local crosshairParts = {}
 
-	-- Symbol
-	local symbol = Instance.new("TextLabel")
-	symbol.BackgroundTransparency = 1
-	symbol.Size = UDim2.fromScale(1, 1)
-	symbol.AnchorPoint = Vector2.new(0.5, 0.5)
-	symbol.Position = UDim2.fromScale(0.5, 0.5)
-	symbol.Font = Enum.Font.GothamBold
-	symbol.TextStrokeTransparency = 0.5
-	symbol.TextStrokeColor3 = Color3.new(0, 0, 0)
-	symbol.ZIndex = 2147483647
-	symbol.Parent = center
-	symbol.Visible = false
+	local function clearCrosshairParts()
+		for _, part in pairs(crosshairParts) do
+			if part and part.Parent then
+				part:Destroy()
+			end
+		end
+		crosshairParts = {}
+	end
 
-	-- Text under crosshair
+	local function makeLine(name)
+		local f = Instance.new("Frame")
+		f.Name = name or "Line"
+		f.BorderSizePixel = 0
+		f.ZIndex = 2147483647
+		f.Parent = center
+		table.insert(crosshairParts, f)
+		return f
+	end
+
 	local text = Instance.new("TextLabel")
 	text.Text = settings.Text
 	text.Font = Enum.Font.GothamBold
@@ -1389,46 +1418,815 @@ function LoadLunarCrosshair()
 	text.AnchorPoint = Vector2.new(0.5, 0)
 	text.ZIndex = 2147483647
 	text.TextStrokeTransparency = 0.5
-	text.TextStrokeColor3 = Color3.new(0, 0, 0)
+	text.TextStrokeColor3 = Color3.new(0,0,0)
 	text.TextXAlignment = Enum.TextXAlignment.Center
 	text.Parent = gui
 
+	local function lerp(a, b, t)
+		return a + (b - a) * t
+	end
+
+	local function smoothColor(c1, c2, t)
+		return Color3.new(lerp(c1.R,c2.R,t), lerp(c1.G,c2.G,t), lerp(c1.B,c2.B,t))
+	end
+
+	-- ================= PRESETS =================
+	local presets = {}
+
+	presets["Classic"] = function()
+		clearCrosshairParts()
+		local w, len = settings.Width, settings.VertLength
+		local halfLen, gap = len / 2, 3
+		local top = makeLine("Top")
+		top.Size = UDim2.fromOffset(w, halfLen - gap)
+		top.AnchorPoint = Vector2.new(0.5, 1)
+		top.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		top:SetAttribute("OriginalPos", top.Position)
+		local bottom = makeLine("Bottom")
+		bottom.Size = UDim2.fromOffset(w, halfLen - gap)
+		bottom.AnchorPoint = Vector2.new(0.5, 0)
+		bottom.Position = UDim2.new(0.5, 0, 0.5, gap)
+		bottom:SetAttribute("OriginalPos", bottom.Position)
+		local left = makeLine("Left")
+		left.Size = UDim2.fromOffset(halfLen - gap, w)
+		left.AnchorPoint = Vector2.new(1, 0.5)
+		left.Position = UDim2.new(0.5, -gap, 0.5, 0)
+		left:SetAttribute("OriginalPos", left.Position)
+		local right = makeLine("Right")
+		right.Size = UDim2.fromOffset(halfLen - gap, w)
+		right.AnchorPoint = Vector2.new(0, 0.5)
+		right.Position = UDim2.new(0.5, gap, 0.5, 0)
+		right:SetAttribute("OriginalPos", right.Position)
+		return {top, bottom, left, right}
+	end
+
+	presets["Dot"] = function()
+		clearCrosshairParts()
+		local dot = makeLine("Dot")
+		dot.Size = UDim2.fromOffset(settings.Width + 2, settings.Width + 2)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		return {dot}
+	end
+
+	presets["X"] = function()
+		clearCrosshairParts()
+		local size = math.max(settings.VertLength, settings.HorzLength)
+		local w, gap = settings.Width, 4
+		local tl = makeLine("TL")
+		tl.Size = UDim2.fromOffset(w, size/2 - gap)
+		tl.AnchorPoint = Vector2.new(0.5, 1)
+		tl.Position = UDim2.new(0.5, -gap, 0.5, -gap)
+		tl.Rotation = 45
+		tl:SetAttribute("OriginalPos", tl.Position)
+		local tr = makeLine("TR")
+		tr.Size = UDim2.fromOffset(w, size/2 - gap)
+		tr.AnchorPoint = Vector2.new(0.5, 1)
+		tr.Position = UDim2.new(0.5, gap, 0.5, -gap)
+		tr.Rotation = -45
+		tr:SetAttribute("OriginalPos", tr.Position)
+		local bl = makeLine("BL")
+		bl.Size = UDim2.fromOffset(w, size/2 - gap)
+		bl.AnchorPoint = Vector2.new(0.5, 0)
+		bl.Position = UDim2.new(0.5, -gap, 0.5, gap)
+		bl.Rotation = -45
+		bl:SetAttribute("OriginalPos", bl.Position)
+		local br = makeLine("BR")
+		br.Size = UDim2.fromOffset(w, size/2 - gap)
+		br.AnchorPoint = Vector2.new(0.5, 0)
+		br.Position = UDim2.new(0.5, gap, 0.5, gap)
+		br.Rotation = 45
+		br:SetAttribute("OriginalPos", br.Position)
+		return {tl, tr, bl, br}
+	end
+
+	presets["Plus Dot"] = function()
+		clearCrosshairParts()
+		local w, len = settings.Width, settings.VertLength
+		local halfLen, gap = len / 2, 3
+		local top = makeLine("Top")
+		top.Size = UDim2.fromOffset(w, halfLen - gap)
+		top.AnchorPoint = Vector2.new(0.5, 1)
+		top.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		top:SetAttribute("OriginalPos", top.Position)
+		local bottom = makeLine("Bottom")
+		bottom.Size = UDim2.fromOffset(w, halfLen - gap)
+		bottom.AnchorPoint = Vector2.new(0.5, 0)
+		bottom.Position = UDim2.new(0.5, 0, 0.5, gap)
+		bottom:SetAttribute("OriginalPos", bottom.Position)
+		local left = makeLine("Left")
+		left.Size = UDim2.fromOffset(halfLen - gap, w)
+		left.AnchorPoint = Vector2.new(1, 0.5)
+		left.Position = UDim2.new(0.5, -gap, 0.5, 0)
+		left:SetAttribute("OriginalPos", left.Position)
+		local right = makeLine("Right")
+		right.Size = UDim2.fromOffset(halfLen - gap, w)
+		right.AnchorPoint = Vector2.new(0, 0.5)
+		right.Position = UDim2.new(0.5, gap, 0.5, 0)
+		right:SetAttribute("OriginalPos", right.Position)
+		local dot = makeLine("CenterDot")
+		dot.Size = UDim2.fromOffset(w + 2, w + 2)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		return {top, bottom, left, right, dot}
+	end
+
+	presets["Brackets"] = function()
+		clearCrosshairParts()
+		local len, w, gap = settings.VertLength, settings.Width, 5
+		local tl = makeLine("TL")
+		tl.Size = UDim2.fromOffset(len * 0.5, w)
+		tl.AnchorPoint = Vector2.new(1, 0.5)
+		tl.Position = UDim2.new(0.5, -gap, 0.5, -len * 0.4)
+		tl:SetAttribute("OriginalPos", tl.Position)
+		local bl = makeLine("BL")
+		bl.Size = UDim2.fromOffset(len * 0.5, w)
+		bl.AnchorPoint = Vector2.new(1, 0.5)
+		bl.Position = UDim2.new(0.5, -gap, 0.5, len * 0.4)
+		bl:SetAttribute("OriginalPos", bl.Position)
+		local tr = makeLine("TR")
+		tr.Size = UDim2.fromOffset(len * 0.5, w)
+		tr.AnchorPoint = Vector2.new(0, 0.5)
+		tr.Position = UDim2.new(0.5, gap, 0.5, -len * 0.4)
+		tr:SetAttribute("OriginalPos", tr.Position)
+		local br = makeLine("BR")
+		br.Size = UDim2.fromOffset(len * 0.5, w)
+		br.AnchorPoint = Vector2.new(0, 0.5)
+		br.Position = UDim2.new(0.5, gap, 0.5, len * 0.4)
+		br:SetAttribute("OriginalPos", br.Position)
+		return {tl, bl, tr, br}
+	end
+
+	presets["Circle"] = function()
+		clearCrosshairParts()
+		local ringSize, w = settings.VertLength + 6, settings.Width
+		local ring = makeLine("Ring")
+		ring.Size = UDim2.fromOffset(ringSize, ringSize)
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.fromScale(0.5, 0.5)
+		ring.BackgroundTransparency = 1
+		ring:SetAttribute("OriginalPos", ring.Position)
+		local stroke = Instance.new("UIStroke", ring)
+		stroke.Color = Color3.new(1,1,1)
+		stroke.Thickness = w
+		Instance.new("UICorner", ring).CornerRadius = UDim.new(1, 0)
+		local dot = makeLine("CenterDot")
+		dot.Size = UDim2.fromOffset(w, w)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		return {ring, dot}
+	end
+
+	presets["Chevron"] = function()
+		clearCrosshairParts()
+		local len, w, gap = settings.VertLength, settings.Width, 4
+		local left = makeLine("Left")
+		left.Size = UDim2.fromOffset(w, len * 0.5)
+		left.AnchorPoint = Vector2.new(0.5, 1)
+		left.Position = UDim2.new(0.5, -len * 0.25 - gap, 0.5, -gap)
+		left.Rotation = -25
+		left:SetAttribute("OriginalPos", left.Position)
+		local right = makeLine("Right")
+		right.Size = UDim2.fromOffset(w, len * 0.5)
+		right.AnchorPoint = Vector2.new(0.5, 1)
+		right.Position = UDim2.new(0.5, len * 0.25 + gap, 0.5, -gap)
+		right.Rotation = 25
+		right:SetAttribute("OriginalPos", right.Position)
+		return {left, right}
+	end
+
+	presets["Wings"] = function()
+		clearCrosshairParts()
+		local len, w, gap = settings.VertLength, settings.Width, 3
+		local l1 = makeLine("L1")
+		l1.Size = UDim2.fromOffset(w, len * 0.4)
+		l1.AnchorPoint = Vector2.new(0.5, 1)
+		l1.Position = UDim2.new(0.5, -len * 0.35 - gap, 0.5, -gap)
+		l1.Rotation = 15
+		l1:SetAttribute("OriginalPos", l1.Position)
+		local l2 = makeLine("L2")
+		l2.Size = UDim2.fromOffset(w, len * 0.4)
+		l2.AnchorPoint = Vector2.new(0.5, 0)
+		l2.Position = UDim2.new(0.5, -len * 0.35 - gap, 0.5, gap)
+		l2.Rotation = -15
+		l2:SetAttribute("OriginalPos", l2.Position)
+		local r1 = makeLine("R1")
+		r1.Size = UDim2.fromOffset(w, len * 0.4)
+		r1.AnchorPoint = Vector2.new(0.5, 1)
+		r1.Position = UDim2.new(0.5, len * 0.35 + gap, 0.5, -gap)
+		r1.Rotation = -15
+		r1:SetAttribute("OriginalPos", r1.Position)
+		local r2 = makeLine("R2")
+		r2.Size = UDim2.fromOffset(w, len * 0.4)
+		r2.AnchorPoint = Vector2.new(0.5, 0)
+		r2.Position = UDim2.new(0.5, len * 0.35 + gap, 0.5, gap)
+		r2.Rotation = 15
+		r2:SetAttribute("OriginalPos", r2.Position)
+		return {l1, l2, r1, r2}
+	end
+
+	presets["T-Shape"] = function()
+		clearCrosshairParts()
+		local len, w, gap = settings.VertLength, settings.Width, 3
+		local top = makeLine("Top")
+		top.Size = UDim2.fromOffset(len * 1.2, w)
+		top.AnchorPoint = Vector2.new(0.5, 1)
+		top.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		top:SetAttribute("OriginalPos", top.Position)
+		local drop = makeLine("Drop")
+		drop.Size = UDim2.fromOffset(w, len * 0.6)
+		drop.AnchorPoint = Vector2.new(0.5, 0)
+		drop.Position = UDim2.new(0.5, 0, 0.5, gap)
+		drop:SetAttribute("OriginalPos", drop.Position)
+		return {top, drop}
+	end
+
+	presets["Diamond"] = function()
+		clearCrosshairParts()
+		local len, w, gap = settings.VertLength, settings.Width, 4
+		local t = makeLine("Top")
+		t.Size = UDim2.fromOffset(w, len * 0.35)
+		t.AnchorPoint = Vector2.new(0.5, 1)
+		t.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		t:SetAttribute("OriginalPos", t.Position)
+		local b = makeLine("Bottom")
+		b.Size = UDim2.fromOffset(w, len * 0.35)
+		b.AnchorPoint = Vector2.new(0.5, 0)
+		b.Position = UDim2.new(0.5, 0, 0.5, gap)
+		b:SetAttribute("OriginalPos", b.Position)
+		local l = makeLine("Left")
+		l.Size = UDim2.fromOffset(len * 0.35, w)
+		l.AnchorPoint = Vector2.new(1, 0.5)
+		l.Position = UDim2.new(0.5, -gap, 0.5, 0)
+		l:SetAttribute("OriginalPos", l.Position)
+		local r = makeLine("Right")
+		r.Size = UDim2.fromOffset(len * 0.35, w)
+		r.AnchorPoint = Vector2.new(0, 0.5)
+		r.Position = UDim2.new(0.5, gap, 0.5, 0)
+		r:SetAttribute("OriginalPos", r.Position)
+		return {t, b, l, r}
+	end
+
+	presets["Crosshair 2.0"] = function()
+		clearCrosshairParts()
+		local w, len = settings.Width, settings.VertLength
+		local halfLen, gap = len / 2, 2
+		local top = makeLine("Top")
+		top.Size = UDim2.fromOffset(w, halfLen - gap)
+		top.AnchorPoint = Vector2.new(0.5, 1)
+		top.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		top:SetAttribute("OriginalPos", top.Position)
+		local bottom = makeLine("Bottom")
+		bottom.Size = UDim2.fromOffset(w, halfLen - gap)
+		bottom.AnchorPoint = Vector2.new(0.5, 0)
+		bottom.Position = UDim2.new(0.5, 0, 0.5, gap)
+		bottom:SetAttribute("OriginalPos", bottom.Position)
+		local left = makeLine("Left")
+		left.Size = UDim2.fromOffset(halfLen - gap, w)
+		left.AnchorPoint = Vector2.new(1, 0.5)
+		left.Position = UDim2.new(0.5, -gap, 0.5, 0)
+		left:SetAttribute("OriginalPos", left.Position)
+		local right = makeLine("Right")
+		right.Size = UDim2.fromOffset(halfLen - gap, w)
+		right.AnchorPoint = Vector2.new(0, 0.5)
+		right.Position = UDim2.new(0.5, gap, 0.5, 0)
+		right:SetAttribute("OriginalPos", right.Position)
+		local dot = makeLine("Dot")
+		dot.Size = UDim2.fromOffset(w, w)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		return {top, bottom, left, right, dot}
+	end
+
+	presets["Reticle"] = function()
+		clearCrosshairParts()
+		local ringSize, w, gap = settings.VertLength + 8, settings.Width, 3
+		local ring = makeLine("Ring")
+		ring.Size = UDim2.fromOffset(ringSize, ringSize)
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.fromScale(0.5, 0.5)
+		ring.BackgroundTransparency = 1
+		ring:SetAttribute("OriginalPos", ring.Position)
+		local stroke = Instance.new("UIStroke", ring)
+		stroke.Color = Color3.new(1,1,1)
+		stroke.Thickness = w
+		Instance.new("UICorner", ring).CornerRadius = UDim.new(1, 0)
+		local top = makeLine("Top")
+		top.Size = UDim2.fromOffset(w, ringSize * 0.15)
+		top.AnchorPoint = Vector2.new(0.5, 1)
+		top.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		top:SetAttribute("OriginalPos", top.Position)
+		local bottom = makeLine("Bottom")
+		bottom.Size = UDim2.fromOffset(w, ringSize * 0.15)
+		bottom.AnchorPoint = Vector2.new(0.5, 0)
+		bottom.Position = UDim2.new(0.5, 0, 0.5, gap)
+		bottom:SetAttribute("OriginalPos", bottom.Position)
+		local left = makeLine("Left")
+		left.Size = UDim2.fromOffset(ringSize * 0.15, w)
+		left.AnchorPoint = Vector2.new(1, 0.5)
+		left.Position = UDim2.new(0.5, -gap, 0.5, 0)
+		left:SetAttribute("OriginalPos", left.Position)
+		local right = makeLine("Right")
+		right.Size = UDim2.fromOffset(ringSize * 0.15, w)
+		right.AnchorPoint = Vector2.new(0, 0.5)
+		right.Position = UDim2.new(0.5, gap, 0.5, 0)
+		right:SetAttribute("OriginalPos", right.Position)
+		return {ring, top, bottom, left, right}
+	end
+
+	presets["Arrow"] = function()
+		clearCrosshairParts()
+		local len, w, gap = settings.VertLength, settings.Width, 3
+		local shaft = makeLine("Shaft")
+		shaft.Size = UDim2.fromOffset(w, len * 0.6)
+		shaft.AnchorPoint = Vector2.new(0.5, 1)
+		shaft.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		shaft:SetAttribute("OriginalPos", shaft.Position)
+		local left = makeLine("Left")
+		left.Size = UDim2.fromOffset(w, len * 0.35)
+		left.AnchorPoint = Vector2.new(0.5, 1)
+		left.Position = UDim2.new(0.5, -len * 0.12, 0.5, -gap)
+		left.Rotation = -35
+		left:SetAttribute("OriginalPos", left.Position)
+		local right = makeLine("Right")
+		right.Size = UDim2.fromOffset(w, len * 0.35)
+		right.AnchorPoint = Vector2.new(0.5, 1)
+		right.Position = UDim2.new(0.5, len * 0.12, 0.5, -gap)
+		right.Rotation = 35
+		right:SetAttribute("OriginalPos", right.Position)
+		return {shaft, left, right}
+	end
+
+	presets["Target"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		local outer = makeLine("Outer")
+		outer.Size = UDim2.fromOffset(len + 8, len + 8)
+		outer.AnchorPoint = Vector2.new(0.5, 0.5)
+		outer.Position = UDim2.fromScale(0.5, 0.5)
+		outer.BackgroundTransparency = 1
+		outer:SetAttribute("OriginalPos", outer.Position)
+		local s1 = Instance.new("UIStroke", outer)
+		s1.Color = Color3.new(1,1,1)
+		s1.Thickness = w
+		Instance.new("UICorner", outer).CornerRadius = UDim.new(1, 0)
+		local inner = makeLine("Inner")
+		inner.Size = UDim2.fromOffset(len * 0.5, len * 0.5)
+		inner.AnchorPoint = Vector2.new(0.5, 0.5)
+		inner.Position = UDim2.fromScale(0.5, 0.5)
+		inner.BackgroundTransparency = 1
+		inner:SetAttribute("OriginalPos", inner.Position)
+		local s2 = Instance.new("UIStroke", inner)
+		s2.Color = Color3.new(1,1,1)
+		s2.Thickness = w
+		Instance.new("UICorner", inner).CornerRadius = UDim.new(1, 0)
+		local dot = makeLine("Dot")
+		dot.Size = UDim2.fromOffset(w, w)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		return {outer, inner, dot}
+	end
+
+	presets["Star"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		local gap = 2
+		for i = 0, 4 do
+			local arm = makeLine("Arm" .. i)
+			arm.Size = UDim2.fromOffset(w, len * 0.5)
+			arm.AnchorPoint = Vector2.new(0.5, 1)
+			arm.Position = UDim2.fromScale(0.5, 0.5)
+			arm.Rotation = i * 72
+			arm:SetAttribute("OriginalPos", arm.Position)
+		end
+		return crosshairParts
+	end
+
+	presets["Hexagon"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		for i = 0, 5 do
+			local side = makeLine("Side" .. i)
+			side.Size = UDim2.fromOffset(len * 0.4, w)
+			side.AnchorPoint = Vector2.new(0.5, 0.5)
+			local angle = math.rad(i * 60)
+			side.Position = UDim2.new(0.5, math.cos(angle) * len * 0.3, 0.5, math.sin(angle) * len * 0.3)
+			side.Rotation = i * 60
+			side:SetAttribute("OriginalPos", side.Position)
+		end
+		return crosshairParts
+	end
+
+	presets["Crosshair 3.0"] = function()
+		clearCrosshairParts()
+		local w, len = settings.Width, settings.VertLength
+		local halfLen, gap = len / 2, 4
+		local top = makeLine("Top")
+		top.Size = UDim2.fromOffset(w, halfLen - gap)
+		top.AnchorPoint = Vector2.new(0.5, 1)
+		top.Position = UDim2.new(0.5, 0, 0.5, -gap)
+		top:SetAttribute("OriginalPos", top.Position)
+		local bottom = makeLine("Bottom")
+		bottom.Size = UDim2.fromOffset(w, halfLen - gap)
+		bottom.AnchorPoint = Vector2.new(0.5, 0)
+		bottom.Position = UDim2.new(0.5, 0, 0.5, gap)
+		bottom:SetAttribute("OriginalPos", bottom.Position)
+		local left = makeLine("Left")
+		left.Size = UDim2.fromOffset(halfLen - gap, w)
+		left.AnchorPoint = Vector2.new(1, 0.5)
+		left.Position = UDim2.new(0.5, -gap, 0.5, 0)
+		left:SetAttribute("OriginalPos", left.Position)
+		local right = makeLine("Right")
+		right.Size = UDim2.fromOffset(halfLen - gap, w)
+		right.AnchorPoint = Vector2.new(0, 0.5)
+		right.Position = UDim2.new(0.5, gap, 0.5, 0)
+		right:SetAttribute("OriginalPos", right.Position)
+		local tl = makeLine("TL")
+		tl.Size = UDim2.fromOffset(len * 0.2, w)
+		tl.AnchorPoint = Vector2.new(1, 0.5)
+		tl.Position = UDim2.new(0.5, -gap, 0.5, -len * 0.3)
+		tl:SetAttribute("OriginalPos", tl.Position)
+		local tr = makeLine("TR")
+		tr.Size = UDim2.fromOffset(len * 0.2, w)
+		tr.AnchorPoint = Vector2.new(0, 0.5)
+		tr.Position = UDim2.new(0.5, gap, 0.5, -len * 0.3)
+		tr:SetAttribute("OriginalPos", tr.Position)
+		local bl = makeLine("BL")
+		bl.Size = UDim2.fromOffset(len * 0.2, w)
+		bl.AnchorPoint = Vector2.new(1, 0.5)
+		bl.Position = UDim2.new(0.5, -gap, 0.5, len * 0.3)
+		bl:SetAttribute("OriginalPos", bl.Position)
+		local br = makeLine("BR")
+		br.Size = UDim2.fromOffset(len * 0.2, w)
+		br.AnchorPoint = Vector2.new(0, 0.5)
+		br.Position = UDim2.new(0.5, gap, 0.5, len * 0.3)
+		br:SetAttribute("OriginalPos", br.Position)
+		return {top, bottom, left, right, tl, tr, bl, br}
+	end
+
+	presets["Scope"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		local h = makeLine("H")
+		h.Size = UDim2.fromOffset(len * 2, w)
+		h.AnchorPoint = Vector2.new(0.5, 0.5)
+		h.Position = UDim2.fromScale(0.5, 0.5)
+		h:SetAttribute("OriginalPos", h.Position)
+		local v = makeLine("V")
+		v.Size = UDim2.fromOffset(w, len * 2)
+		v.AnchorPoint = Vector2.new(0.5, 0.5)
+		v.Position = UDim2.fromScale(0.5, 0.5)
+		v:SetAttribute("OriginalPos", v.Position)
+		local dot = makeLine("Dot")
+		dot.Size = UDim2.fromOffset(w + 2, w + 2)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		local tl = makeLine("TL")
+		tl.Size = UDim2.fromOffset(len * 0.3, w)
+		tl.AnchorPoint = Vector2.new(1, 0.5)
+		tl.Position = UDim2.new(0.5, -len * 0.6, 0.5, -len * 0.6)
+		tl:SetAttribute("OriginalPos", tl.Position)
+		local tr = makeLine("TR")
+		tr.Size = UDim2.fromOffset(len * 0.3, w)
+		tr.AnchorPoint = Vector2.new(0, 0.5)
+		tr.Position = UDim2.new(0.5, len * 0.6, 0.5, -len * 0.6)
+		tr:SetAttribute("OriginalPos", tr.Position)
+		local bl = makeLine("BL")
+		bl.Size = UDim2.fromOffset(len * 0.3, w)
+		bl.AnchorPoint = Vector2.new(1, 0.5)
+		bl.Position = UDim2.new(0.5, -len * 0.6, 0.5, len * 0.6)
+		bl:SetAttribute("OriginalPos", bl.Position)
+		local br = makeLine("BR")
+		br.Size = UDim2.fromOffset(len * 0.3, w)
+		br.AnchorPoint = Vector2.new(0, 0.5)
+		br.Position = UDim2.new(0.5, len * 0.6, 0.5, len * 0.6)
+		br:SetAttribute("OriginalPos", br.Position)
+		return {h, v, dot, tl, tr, bl, br}
+	end
+
+	presets["Pixel"] = function()
+		clearCrosshairParts()
+		local w = settings.Width
+		local size = w + 1
+		local positions = {
+			{-1,-1}, {0,-1}, {1,-1},
+			{-1,0},         {1,0},
+			{-1,1}, {0,1}, {1,1}
+		}
+		for i, pos in ipairs(positions) do
+			local p = makeLine("P" .. i)
+			p.Size = UDim2.fromOffset(size, size)
+			p.AnchorPoint = Vector2.new(0.5, 0.5)
+			p.Position = UDim2.new(0.5, pos[1] * size * 2, 0.5, pos[2] * size * 2)
+			p:SetAttribute("OriginalPos", p.Position)
+		end
+		return crosshairParts
+	end
+
+	presets["Box"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		local gap = 4
+		local t = makeLine("T")
+		t.Size = UDim2.fromOffset(len, w)
+		t.AnchorPoint = Vector2.new(0.5, 1)
+		t.Position = UDim2.new(0.5, 0, 0.5, -len/2 - gap)
+		t:SetAttribute("OriginalPos", t.Position)
+		local b = makeLine("B")
+		b.Size = UDim2.fromOffset(len, w)
+		b.AnchorPoint = Vector2.new(0.5, 0)
+		b.Position = UDim2.new(0.5, 0, 0.5, len/2 + gap)
+		b:SetAttribute("OriginalPos", b.Position)
+		local l = makeLine("L")
+		l.Size = UDim2.fromOffset(w, len)
+		l.AnchorPoint = Vector2.new(1, 0.5)
+		l.Position = UDim2.new(0.5, -len/2 - gap, 0.5, 0)
+		l:SetAttribute("OriginalPos", l.Position)
+		local r = makeLine("R")
+		r.Size = UDim2.fromOffset(w, len)
+		r.AnchorPoint = Vector2.new(0, 0.5)
+		r.Position = UDim2.new(0.5, len/2 + gap, 0.5, 0)
+		r:SetAttribute("OriginalPos", r.Position)
+		local dot = makeLine("Dot")
+		dot.Size = UDim2.fromOffset(w+1, w+1)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		return {t, b, l, r, dot}
+	end
+
+	presets["Galaxy"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		for i = 0, 3 do
+			local arm = makeLine("Arm" .. i)
+			arm.Size = UDim2.fromOffset(w, len * 0.6)
+			arm.AnchorPoint = Vector2.new(0.5, 1)
+			arm.Position = UDim2.fromScale(0.5, 0.5)
+			arm.Rotation = i * 90 + 45
+			arm:SetAttribute("OriginalPos", arm.Position)
+		end
+		local ring = makeLine("Ring")
+		ring.Size = UDim2.fromOffset(len * 0.4, len * 0.4)
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.fromScale(0.5, 0.5)
+		ring.BackgroundTransparency = 1
+		ring:SetAttribute("OriginalPos", ring.Position)
+		local stroke = Instance.new("UIStroke", ring)
+		stroke.Color = Color3.new(1,1,1)
+		stroke.Thickness = w
+		Instance.new("UICorner", ring).CornerRadius = UDim.new(1, 0)
+		local dot = makeLine("Dot")
+		dot.Size = UDim2.fromOffset(w+2, w+2)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(0.5, 0.5)
+		dot:SetAttribute("OriginalPos", dot.Position)
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		return crosshairParts
+	end
+
+	presets["Ninja"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		for i = 0, 3 do
+			local blade = makeLine("Blade" .. i)
+			blade.Size = UDim2.fromOffset(w, len * 0.5)
+			blade.AnchorPoint = Vector2.new(0.5, 1)
+			blade.Position = UDim2.fromScale(0.5, 0.5)
+			blade.Rotation = i * 90
+			blade:SetAttribute("OriginalPos", blade.Position)
+			local tip = makeLine("Tip" .. i)
+			tip.Size = UDim2.fromOffset(w, len * 0.2)
+			tip.AnchorPoint = Vector2.new(0.5, 0)
+			tip.Position = UDim2.new(0.5, 0, 0.5, -len * 0.1)
+			tip.Rotation = i * 90 + 30
+			tip:SetAttribute("OriginalPos", tip.Position)
+		end
+		local centerDot = makeLine("Center")
+		centerDot.Size = UDim2.fromOffset(w+2, w+2)
+		centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+		centerDot.Position = UDim2.fromScale(0.5, 0.5)
+		centerDot:SetAttribute("OriginalPos", centerDot.Position)
+		Instance.new("UICorner", centerDot).CornerRadius = UDim.new(1, 0)
+		return crosshairParts
+	end
+
+	presets["Laser"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		local h1 = makeLine("H1")
+		h1.Size = UDim2.fromOffset(len, w)
+		h1.AnchorPoint = Vector2.new(0.5, 0.5)
+		h1.Position = UDim2.new(0.5, 0, 0.5, -len * 0.15)
+		h1:SetAttribute("OriginalPos", h1.Position)
+		local h2 = makeLine("H2")
+		h2.Size = UDim2.fromOffset(len, w)
+		h2.AnchorPoint = Vector2.new(0.5, 0.5)
+		h2.Position = UDim2.new(0.5, 0, 0.5, len * 0.15)
+		h2:SetAttribute("OriginalPos", h2.Position)
+		local v1 = makeLine("V1")
+		v1.Size = UDim2.fromOffset(w, len)
+		v1.AnchorPoint = Vector2.new(0.5, 0.5)
+		v1.Position = UDim2.new(0.5, -len * 0.15, 0.5, 0)
+		v1:SetAttribute("OriginalPos", v1.Position)
+		local v2 = makeLine("V2")
+		v2.Size = UDim2.fromOffset(w, len)
+		v2.AnchorPoint = Vector2.new(0.5, 0.5)
+		v2.Position = UDim2.new(0.5, len * 0.15, 0.5, 0)
+		v2:SetAttribute("OriginalPos", v2.Position)
+		local glow = makeLine("Glow")
+		glow.Size = UDim2.fromOffset(len * 0.3, len * 0.3)
+		glow.AnchorPoint = Vector2.new(0.5, 0.5)
+		glow.Position = UDim2.fromScale(0.5, 0.5)
+		glow.BackgroundTransparency = 0.7
+		glow:SetAttribute("OriginalPos", glow.Position)
+		Instance.new("UICorner", glow).CornerRadius = UDim.new(1, 0)
+		return {h1, h2, v1, v2, glow}
+	end
+
+	presets["Cyber"] = function()
+		clearCrosshairParts()
+		local len, w = settings.VertLength, settings.Width
+		for i = 0, 5 do
+			local side = makeLine("Side" .. i)
+			side.Size = UDim2.fromOffset(len * 0.25, w)
+			side.AnchorPoint = Vector2.new(0.5, 0.5)
+			local angle = math.rad(i * 60)
+			side.Position = UDim2.new(0.5, math.cos(angle) * len * 0.4, 0.5, math.sin(angle) * len * 0.4)
+			side.Rotation = i * 60
+			side:SetAttribute("OriginalPos", side.Position)
+		end
+		local h = makeLine("H")
+		h.Size = UDim2.fromOffset(len * 0.4, w)
+		h.AnchorPoint = Vector2.new(0.5, 0.5)
+		h.Position = UDim2.fromScale(0.5, 0.5)
+		h:SetAttribute("OriginalPos", h.Position)
+		local v = makeLine("V")
+		v.Size = UDim2.fromOffset(w, len * 0.4)
+		v.AnchorPoint = Vector2.new(0.5, 0.5)
+		v.Position = UDim2.fromScale(0.5, 0.5)
+		v:SetAttribute("OriginalPos", v.Position)
+		local core = makeLine("Core")
+		core.Size = UDim2.fromOffset(w+2, w+2)
+		core.AnchorPoint = Vector2.new(0.5, 0.5)
+		core.Position = UDim2.fromScale(0.5, 0.5)
+		core:SetAttribute("OriginalPos", core.Position)
+		Instance.new("UICorner", core).CornerRadius = UDim.new(1, 0)
+		return crosshairParts
+	end
+
+	local currentPresetParts = presets["Classic"]()
+
 	-- ================= SETTINGS PANEL =================
 	local panel = Instance.new("Frame")
-	panel.Size = UDim2.fromOffset(240, 540)
-	panel.Position = UDim2.fromOffset(30, 200)
-	panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	panel.Name = "SettingsPanel"
+	panel.Size = UDim2.fromOffset(280, 0)
+	panel.Position = UDim2.fromOffset(30, 100)
+	panel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	panel.BackgroundTransparency = 0.15
 	panel.BorderSizePixel = 0
 	panel.Visible = true
-	panel.ZIndex = 2147483646 -- just below crosshair elements
+	panel.ZIndex = 2147483646
 	panel.Parent = gui
+	panel.ClipsDescendants = true
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
-	corner.Parent = panel
+	local mainCorner = Instance.new("UICorner", panel)
+	mainCorner.CornerRadius = UDim.new(0, 16)
+
+	local glowStroke = Instance.new("UIStroke", panel)
+	glowStroke.Color = Color3.fromRGB(100, 80, 255)
+	glowStroke.Thickness = 1.5
+
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.Size = UDim2.new(1, 12, 1, 12)
+	shadow.Position = UDim2.new(0, -6, 0, -6)
+	shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	shadow.BackgroundTransparency = 0.6
+	shadow.BorderSizePixel = 0
+	shadow.ZIndex = 2147483645
+	shadow.Parent = panel
+	local shadowCorner = Instance.new("UICorner", shadow)
+	shadowCorner.CornerRadius = UDim.new(0, 20)
+
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 48)
+	header.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+	header.BackgroundTransparency = 0.3
+	header.BorderSizePixel = 0
+	header.ZIndex = 2147483646
+	header.Parent = panel
+
+	local headerCorner = Instance.new("UICorner", header)
+	headerCorner.CornerRadius = UDim.new(0, 16)
+
+	local headerLine = Instance.new("Frame")
+	headerLine.Name = "AccentLine"
+	headerLine.Size = UDim2.new(1, 0, 0, 2)
+	headerLine.Position = UDim2.new(0, 0, 1, -1)
+	headerLine.BackgroundColor3 = Color3.fromRGB(120, 100, 255)
+	headerLine.BackgroundTransparency = 0.3
+	headerLine.BorderSizePixel = 0
+	headerLine.ZIndex = 2147483646
+	headerLine.Parent = header
+
+	local moonIcon = Instance.new("TextLabel")
+	moonIcon.Name = "MoonIcon"
+	moonIcon.Text = ""
+	moonIcon.Size = UDim2.fromOffset(32, 32)
+	moonIcon.Position = UDim2.fromOffset(14, 8)
+	moonIcon.BackgroundTransparency = 1
+	moonIcon.Font = Enum.Font.GothamBold
+	moonIcon.TextSize = 20
+	moonIcon.ZIndex = 2147483646
+	moonIcon.Parent = header
 
 	local title = Instance.new("TextLabel")
-	title.Text = "Lunar Crosshair (Right Shift: Toggle)"
-	title.Size = UDim2.new(1, 0, 0, 30)
+	title.Name = "Title"
+	title.Text = "Lunar Crosshair"
+	title.Size = UDim2.new(1, -60, 0, 24)
+	title.Position = UDim2.fromOffset(48, 6)
 	title.BackgroundTransparency = 1
 	title.Font = Enum.Font.GothamBold
-	title.TextSize = 14
+	title.TextSize = 16
 	title.TextColor3 = Color3.new(1, 1, 1)
+	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.ZIndex = 2147483646
-	title.Parent = panel
+	title.Parent = header
+
+	local subtitle = Instance.new("TextLabel")
+	subtitle.Name = "Subtitle"
+	subtitle.Text = "Right Shift to toggle"
+	subtitle.Size = UDim2.new(1, -60, 0, 16)
+	subtitle.Position = UDim2.fromOffset(48, 26)
+	subtitle.BackgroundTransparency = 1
+	subtitle.Font = Enum.Font.Gotham
+	subtitle.TextSize = 11
+	subtitle.TextColor3 = Color3.fromRGB(160, 160, 180)
+	subtitle.TextXAlignment = Enum.TextXAlignment.Left
+	subtitle.ZIndex = 2147483646
+	subtitle.Parent = header
+
+	local toggleBtn = Instance.new("TextButton")
+	toggleBtn.Name = "ToggleBtn"
+	toggleBtn.Text = "−"
+	toggleBtn.Size = UDim2.fromOffset(28, 28)
+	toggleBtn.Position = UDim2.new(1, -36, 0, 10)
+	toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
+	toggleBtn.Font = Enum.Font.GothamBold
+	toggleBtn.TextSize = 18
+	toggleBtn.BorderSizePixel = 0
+	toggleBtn.ZIndex = 2147483646
+	toggleBtn.Parent = header
+	local toggleBtnCorner = Instance.new("UICorner", toggleBtn)
+	toggleBtnCorner.CornerRadius = UDim.new(0, 8)
+
+	local content = Instance.new("ScrollingFrame")
+	content.Name = "Content"
+	content.Size = UDim2.new(1, -20, 1, -58)
+	content.Position = UDim2.fromOffset(10, 54)
+	content.BackgroundTransparency = 1
+	content.BorderSizePixel = 0
+	content.ScrollBarThickness = 3
+	content.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+	content.CanvasSize = UDim2.new(0, 0, 0, 0)
+	content.ZIndex = 2147483646
+	content.Parent = panel
+
+	local contentLayout = Instance.new("UIListLayout", content)
+	contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	contentLayout.Padding = UDim.new(0, 10)
+
+	local topPad = Instance.new("UIPadding", content)
+	topPad.PaddingTop = UDim.new(0, 4)
+	topPad.PaddingBottom = UDim.new(0, 8)
 
 	-- Dragging
 	local dragging, dragStart, startPos
-	title.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	header.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			dragStart = input.Position
 			startPos = panel.Position
 		end
 	end)
-
 	UserInputService.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 			local delta = input.Position - dragStart
 			panel.Position = UDim2.new(
 				startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -1436,283 +2234,1222 @@ function LoadLunarCrosshair()
 			)
 		end
 	end)
-
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = false
 		end
 	end)
 
-	-- ================= INPUT MAKER FUNCTIONS =================
-	local function makeInput(name, yOffset, key, minVal, maxVal)
-		local label = Instance.new("TextLabel")
-		label.Text = name
-		label.Position = UDim2.fromOffset(10, yOffset)
-		label.Size = UDim2.fromOffset(130, 20)
-		label.BackgroundTransparency = 1
-		label.Font = Enum.Font.Gotham
-		label.TextSize = 12
-		label.TextColor3 = Color3.new(0.9, 0.9, 0.9)
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.ZIndex = 2147483646
-		label.Parent = panel
+	-- Section helper
+	local function createSection(name, parent)
+		local section = Instance.new("Frame")
+		section.Name = name .. "Section"
+		section.Size = UDim2.new(1, 0, 0, 0)
+		section.BackgroundTransparency = 1
+		section.ZIndex = 2147483646
+		section.Parent = parent
+		section.AutomaticSize = Enum.AutomaticSize.Y
 
-		local box = Instance.new("TextBox")
-		box.Text = tostring(settings[key])
-		box.Position = UDim2.fromOffset(150, yOffset)
-		box.Size = UDim2.fromOffset(75, 20)
-		box.ClearTextOnFocus = false
-		box.Font = Enum.Font.Gotham
-		box.TextSize = 12
-		box.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-		box.TextColor3 = Color3.new(1, 1, 1)
-		box.BorderSizePixel = 0
-		box.ZIndex = 2147483646
-		box.Parent = panel
+		local sectionLabel = Instance.new("TextLabel")
+		sectionLabel.Name = "SectionLabel"
+		sectionLabel.Text = name:upper()
+		sectionLabel.Size = UDim2.new(1, 0, 0, 18)
+		sectionLabel.BackgroundTransparency = 1
+		sectionLabel.Font = Enum.Font.GothamBold
+		sectionLabel.TextSize = 10
+		sectionLabel.TextColor3 = Color3.fromRGB(120, 100, 255)
+		sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+		sectionLabel.ZIndex = 2147483646
+		sectionLabel.Parent = section
 
-		local boxCorner = Instance.new("UICorner")
-		boxCorner.CornerRadius = UDim.new(0, 6)
-		boxCorner.Parent = box
+		local sectionLine = Instance.new("Frame")
+		sectionLine.Name = "SectionLine"
+		sectionLine.Size = UDim2.new(1, 0, 0, 1)
+		sectionLine.Position = UDim2.fromOffset(0, 20)
+		sectionLine.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+		sectionLine.BackgroundTransparency = 0.5
+		sectionLine.BorderSizePixel = 0
+		sectionLine.ZIndex = 2147483646
+		sectionLine.Parent = section
 
-		box:GetPropertyChangedSignal("Text"):Connect(function()
-			local num = tonumber(box.Text)
-			if num and num >= minVal and num <= maxVal then
-				settings[key] = num
-			end
-		end)
+		local sectionContent = Instance.new("Frame")
+		sectionContent.Name = "SectionContent"
+		sectionContent.Size = UDim2.new(1, 0, 0, 0)
+		sectionContent.Position = UDim2.fromOffset(0, 28)
+		sectionContent.BackgroundTransparency = 1
+		sectionContent.ZIndex = 2147483646
+		sectionContent.Parent = section
+		sectionContent.AutomaticSize = Enum.AutomaticSize.Y
 
-		box.FocusLost:Connect(function()
-			local num = tonumber(box.Text)
-			if num then
-				settings[key] = math.clamp(num, minVal, maxVal)
-				box.Text = tostring(settings[key])
-			else
-				box.Text = tostring(settings[key])
-			end
-		end)
+		local sectionContentLayout = Instance.new("UIListLayout", sectionContent)
+		sectionContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		sectionContentLayout.Padding = UDim.new(0, 6)
+
+		return section, sectionContent
 	end
 
-	local function makeTextInput(name, yOffset, key)
+	-- Input row helper
+	local function createInputRow(name, key, minVal, maxVal, isText, parent)
+		local row = Instance.new("Frame")
+		row.Name = name .. "Row"
+		row.Size = UDim2.new(1, 0, 0, 32)
+		row.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+		row.BackgroundTransparency = 0.4
+		row.BorderSizePixel = 0
+		row.ZIndex = 2147483646
+		row.Parent = parent
+		row.AutomaticSize = Enum.AutomaticSize.Y
+
+		local rowCorner = Instance.new("UICorner", row)
+		rowCorner.CornerRadius = UDim.new(0, 8)
+
+		local rowStroke = Instance.new("UIStroke", row)
+		rowStroke.Color = Color3.fromRGB(50, 50, 65)
+		rowStroke.Thickness = 1
+
 		local label = Instance.new("TextLabel")
 		label.Text = name
-		label.Position = UDim2.fromOffset(10, yOffset)
-		label.Size = UDim2.fromOffset(80, 20)
+		label.Position = UDim2.fromOffset(10, 0)
+		label.Size = UDim2.new(0.5, -10, 1, 0)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.Gotham
 		label.TextSize = 12
-		label.TextColor3 = Color3.new(0.9, 0.9, 0.9)
+		label.TextColor3 = Color3.fromRGB(200, 200, 220)
 		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextYAlignment = Enum.TextYAlignment.Center
 		label.ZIndex = 2147483646
-		label.Parent = panel
+		label.Parent = row
 
 		local box = Instance.new("TextBox")
-		box.Text = settings[key]
-		box.Position = UDim2.fromOffset(95, yOffset)
-		box.Size = UDim2.fromOffset(140, 20)
+		box.Text = isText and settings[key] or tostring(settings[key])
+		box.Position = UDim2.new(0.5, 4, 0, 4)
+		box.Size = UDim2.new(0.5, -14, 1, -8)
 		box.ClearTextOnFocus = false
 		box.Font = Enum.Font.GothamBold
-		box.TextSize = 13
-		box.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		box.TextSize = 12
+		box.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 		box.TextColor3 = Color3.new(1, 1, 1)
 		box.BorderSizePixel = 0
 		box.ZIndex = 2147483646
-		box.Parent = panel
+		box.Parent = row
+		box.TextXAlignment = Enum.TextXAlignment.Center
+		box.TextYAlignment = Enum.TextYAlignment.Center
 
-		local boxCorner = Instance.new("UICorner")
+		local boxCorner = Instance.new("UICorner", box)
 		boxCorner.CornerRadius = UDim.new(0, 6)
-		boxCorner.Parent = box
 
-		box:GetPropertyChangedSignal("Text"):Connect(function()
-			settings[key] = box.Text
+		local boxStroke = Instance.new("UIStroke", box)
+		boxStroke.Color = Color3.fromRGB(60, 60, 80)
+		boxStroke.Thickness = 1
+
+		if isText then
+			box:GetPropertyChangedSignal("Text"):Connect(function()
+				settings[key] = box.Text
+			end)
+		else
+			box:GetPropertyChangedSignal("Text"):Connect(function()
+				local num = tonumber(box.Text)
+				if num and num >= minVal and num <= maxVal then
+					settings[key] = num
+				end
+			end)
+
+			box.FocusLost:Connect(function()
+				local num = tonumber(box.Text)
+				if num then
+					settings[key] = math.clamp(num, minVal, maxVal)
+					box.Text = tostring(settings[key])
+				else
+					box.Text = tostring(settings[key])
+				end
+			end)
+		end
+
+		row.MouseEnter:Connect(function()
+			TweenService:Create(row, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+			TweenService:Create(rowStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(80, 80, 100)}):Play()
+		end)
+		row.MouseLeave:Connect(function()
+			TweenService:Create(row, TweenInfo.new(0.2), {BackgroundTransparency = 0.4}):Play()
+			TweenService:Create(rowStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(50, 50, 65)}):Play()
 		end)
 
 		return box
 	end
 
-	local function makeToggle(name, yOffset, key)
+	-- Toggle row helper
+	local function createToggleRow(name, key, parent)
+		local row = Instance.new("Frame")
+		row.Name = name .. "ToggleRow"
+		row.Size = UDim2.new(1, 0, 0, 32)
+		row.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+		row.BackgroundTransparency = 0.4
+		row.BorderSizePixel = 0
+		row.ZIndex = 2147483646
+		row.Parent = parent
+
+		local rowCorner = Instance.new("UICorner", row)
+		rowCorner.CornerRadius = UDim.new(0, 8)
+
+		local rowStroke = Instance.new("UIStroke", row)
+		rowStroke.Color = Color3.fromRGB(50, 50, 65)
+		rowStroke.Thickness = 1
+
 		local label = Instance.new("TextLabel")
 		label.Text = name
-		label.Position = UDim2.fromOffset(10, yOffset)
-		label.Size = UDim2.fromOffset(130, 20)
+		label.Position = UDim2.fromOffset(10, 0)
+		label.Size = UDim2.new(0.5, -10, 1, 0)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.Gotham
 		label.TextSize = 12
-		label.TextColor3 = Color3.new(0.9, 0.9, 0.9)
+		label.TextColor3 = Color3.fromRGB(200, 200, 220)
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextYAlignment = Enum.TextYAlignment.Center
+		label.ZIndex = 2147483646
+		label.Parent = row
+
+		local toggleBg = Instance.new("Frame")
+		toggleBg.Name = "ToggleBg"
+		toggleBg.Size = UDim2.fromOffset(44, 22)
+		toggleBg.Position = UDim2.new(1, -54, 0.5, -11)
+		toggleBg.BackgroundColor3 = settings[key] and Color3.fromRGB(120, 100, 255) or Color3.fromRGB(50, 50, 60)
+		toggleBg.BorderSizePixel = 0
+		toggleBg.ZIndex = 2147483646
+		toggleBg.Parent = row
+		local toggleBgCorner = Instance.new("UICorner", toggleBg)
+		toggleBgCorner.CornerRadius = UDim.new(1, 0)
+
+		local knob = Instance.new("Frame")
+		knob.Name = "Knob"
+		knob.Size = UDim2.fromOffset(16, 16)
+		knob.Position = settings[key] and UDim2.new(1, -20, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
+		knob.BackgroundColor3 = Color3.new(1, 1, 1)
+		knob.BorderSizePixel = 0
+		knob.ZIndex = 2147483647
+		knob.Parent = toggleBg
+		local knobCorner = Instance.new("UICorner", knob)
+		knobCorner.CornerRadius = UDim.new(1, 0)
+
+		local toggleBtn = Instance.new("TextButton")
+		toggleBtn.Name = "ToggleBtn"
+		toggleBtn.Text = ""
+		toggleBtn.Size = UDim2.new(1, 0, 1, 0)
+		toggleBtn.BackgroundTransparency = 1
+		toggleBtn.ZIndex = 2147483647
+		toggleBtn.Parent = row
+
+		toggleBtn.MouseButton1Click:Connect(function()
+			settings[key] = not settings[key]
+			local isOn = settings[key]
+
+			TweenService:Create(toggleBg, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				BackgroundColor3 = isOn and Color3.fromRGB(120, 100, 255) or Color3.fromRGB(50, 50, 60)
+			}):Play()
+
+			TweenService:Create(knob, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = isOn and UDim2.new(1, -20, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
+			}):Play()
+		end)
+
+		row.MouseEnter:Connect(function()
+			TweenService:Create(row, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+			TweenService:Create(rowStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(80, 80, 100)}):Play()
+		end)
+		row.MouseLeave:Connect(function()
+			TweenService:Create(row, TweenInfo.new(0.2), {BackgroundTransparency = 0.4}):Play()
+			TweenService:Create(rowStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(50, 50, 65)}):Play()
+		end)
+
+		return toggleBtn
+	end
+
+	-- Color picker
+	local colorPickerOpen = false
+	local colorPreview = nil
+
+	local function createColorPicker(parent)
+		local container = Instance.new("Frame")
+		container.Name = "ColorPickerContainer"
+		container.Size = UDim2.new(1, 0, 0, 0)
+		container.BackgroundTransparency = 1
+		container.ZIndex = 214748364
+		container.Parent = parent
+		container.AutomaticSize = Enum.AutomaticSize.Y
+
+		local rainbowRow = Instance.new("Frame")
+		rainbowRow.Size = UDim2.new(1, 0, 0, 32)
+		rainbowRow.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+		rainbowRow.BackgroundTransparency = 0.4
+		rainbowRow.BorderSizePixel = 0
+		rainbowRow.ZIndex = 2147483646
+		rainbowRow.Parent = container
+		local rrCorner = Instance.new("UICorner", rainbowRow)
+		rrCorner.CornerRadius = UDim.new(0, 8)
+		local rrStroke = Instance.new("UIStroke", rainbowRow)
+		rrStroke.Color = Color3.fromRGB(50, 50, 65)
+		rrStroke.Thickness = 1
+
+		local rrLabel = Instance.new("TextLabel")
+		rrLabel.Text = "Rainbow Mode"
+		rrLabel.Position = UDim2.fromOffset(10, 50)
+		rrLabel.Size = UDim2.new(0.5, -10, 1, 0)
+		rrLabel.BackgroundTransparency = 1
+		rrLabel.Font = Enum.Font.Gotham
+		rrLabel.TextSize = 12
+		rrLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+		rrLabel.TextXAlignment = Enum.TextXAlignment.Left
+		rrLabel.TextYAlignment = Enum.TextYAlignment.Center
+		rrLabel.ZIndex = 2147483646
+		rrLabel.Parent = rainbowRow
+
+		local rrToggleBg = Instance.new("Frame")
+		rrToggleBg.Size = UDim2.fromOffset(44, 22)
+		rrToggleBg.Position = UDim2.new(1, -54, 0.5, -11)
+		rrToggleBg.BackgroundColor3 = settings.UseRainbow and Color3.fromRGB(120, 100, 255) or Color3.fromRGB(50, 50, 60)
+		rrToggleBg.BorderSizePixel = 0
+		rrToggleBg.ZIndex = 2147483646
+		rrToggleBg.Parent = rainbowRow
+		Instance.new("UICorner", rrToggleBg).CornerRadius = UDim.new(1, 0)
+
+		local rrKnob = Instance.new("Frame")
+		rrKnob.Size = UDim2.fromOffset(16, 16)
+		rrKnob.Position = settings.UseRainbow and UDim2.new(1, -20, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
+		rrKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+		rrKnob.BorderSizePixel = 0
+		rrKnob.ZIndex = 2147483647
+		rrKnob.Parent = rrToggleBg
+		Instance.new("UICorner", rrKnob).CornerRadius = UDim.new(1, 0)
+
+		local rrBtn = Instance.new("TextButton")
+		rrBtn.Text = ""
+		rrBtn.Size = UDim2.new(1, 0, 1, 0)
+		rrBtn.BackgroundTransparency = 1
+		rrBtn.ZIndex = 2147483647
+		rrBtn.Parent = rainbowRow
+
+		rrBtn.MouseButton1Click:Connect(function()
+			settings.UseRainbow = not settings.UseRainbow
+			local isOn = settings.UseRainbow
+			TweenService:Create(rrToggleBg, TweenInfo.new(0.25), {BackgroundColor3 = isOn and Color3.fromRGB(120, 100, 255) or Color3.fromRGB(50, 50, 60)}):Play()
+			TweenService:Create(rrKnob, TweenInfo.new(0.25), {Position = isOn and UDim2.new(1, -20, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)}):Play()
+		end)
+
+		rainbowRow.MouseEnter:Connect(function()
+			TweenService:Create(rainbowRow, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+			TweenService:Create(rrStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(80, 80, 100)}):Play()
+		end)
+		rainbowRow.MouseLeave:Connect(function()
+			TweenService:Create(rainbowRow, TweenInfo.new(0.2), {BackgroundTransparency = 0.4}):Play()
+			TweenService:Create(rrStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(50, 50, 65)}):Play()
+		end)
+
+		local colorRow = Instance.new("Frame")
+		colorRow.Name = "ColorRow"
+		colorRow.Size = UDim2.new(1, 0, 0, 40)
+		colorRow.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+		colorRow.BackgroundTransparency = 0.4
+		colorRow.BorderSizePixel = 0
+		colorRow.ZIndex = 2147483646
+		colorRow.Parent = container
+		local crCorner = Instance.new("UICorner", colorRow)
+		crCorner.CornerRadius = UDim.new(0, 8)
+		local crStroke = Instance.new("UIStroke", colorRow)
+		crStroke.Color = Color3.fromRGB(50, 50, 65)
+		crStroke.Thickness = 1
+
+		local crLabel = Instance.new("TextLabel")
+		crLabel.Text = "Custom Color"
+		crLabel.Position = UDim2.fromOffset(10, 0)
+		crLabel.Size = UDim2.new(0.4, -10, 1, 0)
+		crLabel.BackgroundTransparency = 1
+		crLabel.Font = Enum.Font.Gotham
+		crLabel.TextSize = 12
+		crLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+		crLabel.TextXAlignment = Enum.TextXAlignment.Left
+		crLabel.TextYAlignment = Enum.TextYAlignment.Center
+		crLabel.ZIndex = 2147483646
+		crLabel.Parent = colorRow
+
+		colorPreview = Instance.new("Frame")
+		colorPreview.Name = "ColorPreview"
+		colorPreview.Size = UDim2.fromOffset(28, 28)
+		colorPreview.Position = UDim2.new(0.5, -14, 0.5, -14)
+		colorPreview.BackgroundColor3 = settings.CustomColor
+		colorPreview.BorderSizePixel = 0
+		colorPreview.ZIndex = 2147483646
+		colorPreview.Parent = colorRow
+		Instance.new("UICorner", colorPreview).CornerRadius = UDim.new(0, 6)
+		local cpStroke = Instance.new("UIStroke", colorPreview)
+		cpStroke.Color = Color3.fromRGB(200, 200, 220)
+		cpStroke.Thickness = 1
+
+		local openColorBtn = Instance.new("TextButton")
+		openColorBtn.Text = " Open"
+		openColorBtn.Size = UDim2.new(0, 70, 0, 26)
+		openColorBtn.Position = UDim2.new(1, -100, 0.5, -55)
+		openColorBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+		openColorBtn.TextColor3 = Color3.new(1, 1, 1)
+		openColorBtn.Font = Enum.Font.GothamBold
+		openColorBtn.TextSize = 11
+		openColorBtn.BorderSizePixel = 0
+		openColorBtn.ZIndex = 2147483646
+		openColorBtn.Parent = colorRow
+		Instance.new("UICorner", openColorBtn).CornerRadius = UDim.new(0, 6)
+
+		local pickerPopup = Instance.new("Frame")
+		pickerPopup.Name = "ColorPickerPopup"
+		pickerPopup.Size = UDim2.new(1, 0, 0, 150)
+		pickerPopup.Position = UDim2.fromOffset(0, 44)
+		pickerPopup.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+		pickerPopup.BackgroundTransparency = 0.05
+		pickerPopup.BorderSizePixel = 0
+		pickerPopup.ZIndex = 2147483647
+		pickerPopup.Parent = colorRow
+		pickerPopup.Visible = false
+		pickerPopup.ClipsDescendants = true
+		Instance.new("UICorner", pickerPopup).CornerRadius = UDim.new(0, 10)
+		local ppStroke = Instance.new("UIStroke", pickerPopup)
+		ppStroke.Color = Color3.fromRGB(80, 80, 100)
+		ppStroke.Thickness = 1
+
+		local sliderRefs = {}
+
+		local function makeSlider(name, colorKey, yPos, colorValue)
+			local sLabel = Instance.new("TextLabel")
+			sLabel.Text = name
+			sLabel.Position = UDim2.fromOffset(10, yPos)
+			sLabel.Size = UDim2.fromOffset(18, 20)
+						sLabel.BackgroundTransparency = 1
+			sLabel.Font = Enum.Font.GothamBold
+			sLabel.TextSize = 12
+			sLabel.TextColor3 = colorValue
+			sLabel.ZIndex = 2147483647
+			sLabel.Parent = pickerPopup
+
+			local track = Instance.new("Frame")
+			track.Size = UDim2.new(1, -80, 0, 8)
+			track.Position = UDim2.fromOffset(32, yPos + 6)
+			track.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			track.BorderSizePixel = 0
+			track.ZIndex = 2147483647
+			track.Parent = pickerPopup
+			Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+
+			local fill = Instance.new("Frame")
+			fill.Name = "Fill"
+			fill.Size = UDim2.new(settings[colorKey] / 255, 0, 1, 0)
+			fill.BackgroundColor3 = colorValue
+			fill.BorderSizePixel = 0
+			fill.ZIndex = 2147483647
+			fill.Parent = track
+			Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+			local knob = Instance.new("Frame")
+			knob.Size = UDim2.fromOffset(14, 14)
+			knob.Position = UDim2.new(settings[colorKey] / 255, -7, 0.5, -7)
+			knob.BackgroundColor3 = Color3.new(1, 1, 1)
+			knob.BorderSizePixel = 0
+			knob.ZIndex = 2147483648
+			knob.Parent = track
+			Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+			local kStroke = Instance.new("UIStroke", knob)
+			kStroke.Color = Color3.fromRGB(100, 100, 120)
+			kStroke.Thickness = 1
+
+			local valueBox = Instance.new("TextBox")
+			valueBox.Text = tostring(settings[colorKey])
+			valueBox.Size = UDim2.fromOffset(36, 22)
+			valueBox.Position = UDim2.new(1, -42, 0, yPos - 1)
+			valueBox.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+			valueBox.TextColor3 = Color3.new(1, 1, 1)
+			valueBox.Font = Enum.Font.GothamBold
+			valueBox.TextSize = 12
+			valueBox.BorderSizePixel = 0
+			valueBox.ZIndex = 2147483647
+			valueBox.Parent = pickerPopup
+			valueBox.TextXAlignment = Enum.TextXAlignment.Center
+			Instance.new("UICorner", valueBox).CornerRadius = UDim.new(0, 4)
+
+			local draggingSlider = false
+
+			local function updateSlider(inputX)
+				local trackAbs = track.AbsolutePosition.X
+				local trackSize = track.AbsoluteSize.X
+				if trackSize <= 0 then return end
+				local relX = math.clamp(inputX - trackAbs, 0, trackSize)
+				local val = math.clamp(math.round(relX / trackSize * 255), 0, 255)
+				settings[colorKey] = val
+				fill.Size = UDim2.new(val / 255, 0, 1, 0)
+				knob.Position = UDim2.new(val / 255, -7, 0.5, -7)
+				valueBox.Text = tostring(val)
+				settings.CustomColor = Color3.fromRGB(settings.ColorR, settings.ColorG, settings.ColorB)
+				colorPreview.BackgroundColor3 = settings.CustomColor
+			end
+
+			track.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					draggingSlider = true
+					updateSlider(input.Position.X)
+				end
+			end)
+			track.InputChanged:Connect(function(input)
+				if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+					updateSlider(input.Position.X)
+				end
+			end)
+			UserInputService.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					draggingSlider = false
+				end
+			end)
+
+			valueBox.FocusLost:Connect(function()
+				local num = tonumber(valueBox.Text)
+				if num then
+					num = math.clamp(math.round(num), 0, 255)
+					settings[colorKey] = num
+					fill.Size = UDim2.new(num / 255, 0, 1, 0)
+					knob.Position = UDim2.new(num / 255, -7, 0.5, -7)
+					valueBox.Text = tostring(num)
+					settings.CustomColor = Color3.fromRGB(settings.ColorR, settings.ColorG, settings.ColorB)
+					colorPreview.BackgroundColor3 = settings.CustomColor
+				else
+					valueBox.Text = tostring(settings[colorKey])
+				end
+			end)
+
+			sliderRefs[colorKey] = {fill = fill, knob = knob, valueBox = valueBox}
+		end
+
+		makeSlider("R", "ColorR", 8, Color3.fromRGB(255, 80, 80))
+		makeSlider("G", "ColorG", 40, Color3.fromRGB(80, 255, 80))
+		makeSlider("B", "ColorB", 72, Color3.fromRGB(80, 140, 255))
+
+		-- Done button
+		local closePicker = Instance.new("TextButton")
+		closePicker.Text = "✓ Done"
+		closePicker.Size = UDim2.new(1, -20, 0, 26)
+		closePicker.Position = UDim2.fromOffset(10, 108)
+		closePicker.BackgroundColor3 = Color3.fromRGB(120, 100, 255)
+		closePicker.TextColor3 = Color3.new(1, 1, 1)
+		closePicker.Font = Enum.Font.GothamBold
+		closePicker.TextSize = 12
+		closePicker.BorderSizePixel = 0
+		closePicker.ZIndex = 2147483647
+		closePicker.Parent = pickerPopup
+		Instance.new("UICorner", closePicker).CornerRadius = UDim.new(0, 6)
+
+		closePicker.MouseButton1Click:Connect(function()
+			colorPickerOpen = false
+			pickerPopup.Visible = false
+			colorRow.Size = UDim2.new(1, 0, 0, 40)
+		end)
+
+		openColorBtn.MouseButton1Click:Connect(function()
+			colorPickerOpen = not colorPickerOpen
+			pickerPopup.Visible = colorPickerOpen
+			if colorPickerOpen then
+				colorRow.Size = UDim2.new(1, 0, 0, 196)
+				for key, refs in pairs(sliderRefs) do
+					local val = settings[key]
+					refs.fill.Size = UDim2.new(val / 255, 0, 1, 0)
+					refs.knob.Position = UDim2.new(val / 255, -7, 0.5, -7)
+					refs.valueBox.Text = tostring(val)
+				end
+			else
+				colorRow.Size = UDim2.new(1, 0, 0, 40)
+			end
+		end)
+
+		colorRow.MouseEnter:Connect(function()
+			TweenService:Create(colorRow, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+			TweenService:Create(crStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(80, 80, 100)}):Play()
+		end)
+		colorRow.MouseLeave:Connect(function()
+			TweenService:Create(colorRow, TweenInfo.new(0.2), {BackgroundTransparency = 0.4}):Play()
+			TweenService:Create(crStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(50, 50, 65)}):Play()
+		end)
+
+		return container
+	end
+
+	-- ================= PRESET SELECTOR =================
+	local presetNames = {"Classic", "Dot", "X", "Plus Dot", "Brackets", "Circle", "Chevron", "Wings", "T-Shape", "Diamond", "Crosshair 2.0", "Reticle", "Arrow", "Target", "Star", "Hexagon", "Crosshair 3.0", "Scope", "Pixel", "Box", "Galaxy", "Ninja", "Laser", "Cyber"}
+	local selectedPresetBtn = nil
+
+	local function createPresetSelector(parent)
+		local container = Instance.new("Frame")
+		container.Name = "PresetSelector"
+		container.Size = UDim2.new(1, 0, 0, 0)
+		container.BackgroundTransparency = 1
+		container.ZIndex = 2147483646
+		container.Parent = parent
+		container.AutomaticSize = Enum.AutomaticSize.Y
+
+		local label = Instance.new("TextLabel")
+		label.Text = "Choose Preset"
+		label.Size = UDim2.new(1, 0, 0, 18)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Gotham
+		label.TextSize = 12
+		label.TextColor3 = Color3.fromRGB(200, 200, 220)
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		label.ZIndex = 2147483646
-		label.Parent = panel
+		label.Parent = container
 
-		local button = Instance.new("TextButton")
-		button.Text = settings[key] and "On" or "Off"
-		button.Position = UDim2.fromOffset(150, yOffset)
-		button.Size = UDim2.fromOffset(75, 20)
-		button.Font = Enum.Font.Gotham
-		button.TextSize = 12
-		button.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-		button.TextColor3 = Color3.new(1, 1, 1)
-		button.BorderSizePixel = 0
-		button.ZIndex = 2147483646
-		button.Parent = panel
+		local gridFrame = Instance.new("Frame")
+		gridFrame.Size = UDim2.new(1, 0, 0, 0)
+		gridFrame.Position = UDim2.fromOffset(0, 22)
+		gridFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+		gridFrame.BackgroundTransparency = 0.4
+		gridFrame.BorderSizePixel = 0
+		gridFrame.ZIndex = 2147483646
+		gridFrame.Parent = container
+		gridFrame.AutomaticSize = Enum.AutomaticSize.Y
+		Instance.new("UICorner", gridFrame).CornerRadius = UDim.new(0, 10)
+		local gridStroke = Instance.new("UIStroke", gridFrame)
+		gridStroke.Color = Color3.fromRGB(50, 50, 65)
+		gridStroke.Thickness = 1
 
-		local btnCorner = Instance.new("UICorner")
-		btnCorner.CornerRadius = UDim.new(0, 6)
-		btnCorner.Parent = button
+		local gridLayout = Instance.new("UIGridLayout", gridFrame)
+		gridLayout.CellSize = UDim2.fromOffset(72, 28)
+		gridLayout.CellPadding = UDim2.fromOffset(4, 4)
+		gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-		button.MouseButton1Click:Connect(function()
-			settings[key] = not settings[key]
-			button.Text = settings[key] and "On" or "Off"
-		end)
+		local gridPadding = Instance.new("UIPadding", gridFrame)
+		gridPadding.PaddingTop = UDim.new(0, 8)
+		gridPadding.PaddingBottom = UDim.new(0, 8)
+		gridPadding.PaddingLeft = UDim.new(0, 8)
+		gridPadding.PaddingRight = UDim.new(0, 8)
+
+		for _, presetName in ipairs(presetNames) do
+			local btn = Instance.new("TextButton")
+			btn.Text = presetName
+			btn.Font = Enum.Font.GothamBold
+			btn.TextSize = 10
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+			btn.TextColor3 = Color3.fromRGB(220, 220, 240)
+			btn.BorderSizePixel = 0
+			btn.ZIndex = 2147483646
+			btn.Parent = gridFrame
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+			local btnStroke = Instance.new("UIStroke", btn)
+			btnStroke.Color = Color3.fromRGB(60, 60, 80)
+			btnStroke.Thickness = 1
+
+			if presetName == settings.ActivePreset then
+				btn.BackgroundColor3 = Color3.fromRGB(120, 100, 255)
+				selectedPresetBtn = btn
+			end
+
+			btn.MouseEnter:Connect(function()
+				if btn ~= selectedPresetBtn then
+					TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(60, 60, 80)}):Play()
+				end
+			end)
+			btn.MouseLeave:Connect(function()
+				if btn ~= selectedPresetBtn then
+					TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 55)}):Play()
+				end
+			end)
+
+			btn.MouseButton1Click:Connect(function()
+				if selectedPresetBtn then
+					TweenService:Create(selectedPresetBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 55)}):Play()
+				end
+				selectedPresetBtn = btn
+				settings.ActivePreset = presetName
+				settings.Symbol = ""
+				TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(120, 100, 255)}):Play()
+				currentPresetParts = presets[presetName]()
+			end)
+		end
+
+		return container
 	end
 
-	-- Create all inputs
-	makeInput("Vert Length", 40, "VertLength", 1, 10000)
-	makeInput("Horz Length", 70, "HorzLength", 1, 10000)
-	makeInput("Width", 100, "Width", 1, 10000)
-	makeInput("Rotation", 130, "RotationSpeed", 0, 10000)
-	makeInput("Rainbow", 160, "RainbowSpeed", 0, 10000)
-	makeInput("Y Offset", 190, "YOffset", -50, 50)
-	makeInput("Text Gap", 220, "TextGap", 0, 10000)
+	-- ================= SYMBOL SELECTOR =================
+	local function createSymbolSelector(parent)
+		local container = Instance.new("Frame")
+		container.Name = "SymbolSelector"
+		container.Size = UDim2.new(1, 0, 0, 0)
+		container.BackgroundTransparency = 1
+		container.ZIndex = 2147483646
+		container.Parent = parent
+		container.AutomaticSize = Enum.AutomaticSize.Y
 
-	makeTextInput("Text", 255, "Text")
-	local symbolBox = makeTextInput("Symbol", 290, "Symbol")
+		local label = Instance.new("TextLabel")
+		label.Text = "Select Symbol (overrides preset)"
+		label.Size = UDim2.new(1, 0, 0, 18)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Gotham
+		label.TextSize = 12
+		label.TextColor3 = Color3.fromRGB(200, 200, 220)
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.ZIndex = 2147483646
+		label.Parent = container
 
-	-- Symbol list
-	local listLabel = Instance.new("TextLabel")
-	listLabel.Text = "Select Symbol:"
-	listLabel.Position = UDim2.fromOffset(10, 320)
-	listLabel.Size = UDim2.fromOffset(220, 20)
-	listLabel.BackgroundTransparency = 1
-	listLabel.Font = Enum.Font.Gotham
-	listLabel.TextSize = 12
-	listLabel.TextColor3 = Color3.new(0.9, 0.9, 0.9)
-	listLabel.TextXAlignment = Enum.TextXAlignment.Left
-	listLabel.ZIndex = 2147483646
-	listLabel.Parent = panel
+		local gridFrame = Instance.new("Frame")
+		gridFrame.Size = UDim2.new(1, 0, 0, 0)
+		gridFrame.Position = UDim2.fromOffset(0, 22)
+		gridFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+		gridFrame.BackgroundTransparency = 0.4
+		gridFrame.BorderSizePixel = 0
+		gridFrame.ZIndex = 2147483646
+		gridFrame.Parent = container
+		gridFrame.AutomaticSize = Enum.AutomaticSize.Y
+		Instance.new("UICorner", gridFrame).CornerRadius = UDim.new(0, 10)
+		local gridStroke = Instance.new("UIStroke", gridFrame)
+		gridStroke.Color = Color3.fromRGB(50, 50, 65)
+		gridStroke.Thickness = 1
 
-	local symbolList = Instance.new("ScrollingFrame")
-	symbolList.Position = UDim2.fromOffset(10, 340)
-	symbolList.Size = UDim2.fromOffset(220, 100)
-	symbolList.BackgroundTransparency = 1
-	symbolList.CanvasSize = UDim2.new(0, 0, 0, 0)
-	symbolList.ScrollBarThickness = 4
-	symbolList.ZIndex = 2147483646
-	symbolList.Parent = panel
+		local gridLayout = Instance.new("UIGridLayout", gridFrame)
+		gridLayout.CellSize = UDim2.fromOffset(32, 32)
+		gridLayout.CellPadding = UDim2.fromOffset(4, 4)
+		gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(30, 30)
-	grid.CellPadding = UDim2.fromOffset(5, 5)
-	grid.SortOrder = Enum.SortOrder.LayoutOrder
-	grid.Parent = symbolList
+		local gridPadding = Instance.new("UIPadding", gridFrame)
+		gridPadding.PaddingTop = UDim.new(0, 8)
+		gridPadding.PaddingBottom = UDim.new(0, 8)
+		gridPadding.PaddingLeft = UDim.new(0, 8)
+		gridPadding.PaddingRight = UDim.new(0, 8)
 
-	local symbols = {"卐","+","-","×","÷","*","•","○","□","△","▽","♡","♥","★","☆","!","@","#","$","%","^","&","(",")","[","]","{","}","<<",">","/","\\","|","~"}
-	for _, sym in ipairs(symbols) do
+		local symbols = {"卐","+","-","×","÷","*","•","○","□","△","▽","♡","♥","★","☆","!","@","#","$","%","^","&","(",")","[","]","{","}",">","/","\\","|","~"}
+		local selectedSymbolBtn = nil
+
+		for _, sym in ipairs(symbols) do
+			local btn = Instance.new("TextButton")
+			btn.Text = sym
+			btn.Font = Enum.Font.GothamBold
+			btn.TextSize = 16
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+			btn.TextColor3 = Color3.fromRGB(220, 220, 240)
+			btn.BorderSizePixel = 0
+			btn.ZIndex = 2147483646
+			btn.Parent = gridFrame
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+			local btnStroke = Instance.new("UIStroke", btn)
+			btnStroke.Color = Color3.fromRGB(60, 60, 80)
+			btnStroke.Thickness = 1
+
+			if sym == settings.Symbol then
+				btn.BackgroundColor3 = Color3.fromRGB(120, 100, 255)
+				selectedSymbolBtn = btn
+			end
+
+			btn.MouseEnter:Connect(function()
+				if btn ~= selectedSymbolBtn then
+					TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(60, 60, 80)}):Play()
+				end
+			end)
+			btn.MouseLeave:Connect(function()
+				if btn ~= selectedSymbolBtn then
+					TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 55)}):Play()
+				end
+			end)
+
+			btn.MouseButton1Click:Connect(function()
+				if selectedSymbolBtn then
+					TweenService:Create(selectedSymbolBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 55)}):Play()
+				end
+				selectedSymbolBtn = btn
+				settings.Symbol = sym
+				TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(120, 100, 255)}):Play()
+			end)
+		end
+
+		return container
+	end
+
+	-- ================= DISCORD BUTTON =================
+	local function createDiscordButton(parent)
 		local btn = Instance.new("TextButton")
-		btn.Text = sym
-		btn.Font = Enum.Font.GothamBold
-		btn.TextSize = 20
-		btn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		btn.Name = "DiscordBtn"
+		btn.Text = "💬  Join Discord"
+		btn.Size = UDim2.new(1, 0, 0, 38)
+		btn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
 		btn.TextColor3 = Color3.new(1, 1, 1)
+		btn.Font = Enum.Font.GothamBold
+		btn.TextSize = 13
 		btn.BorderSizePixel = 0
 		btn.ZIndex = 2147483646
+		btn.Parent = parent
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
 
-		local symCorner = Instance.new("UICorner")
-		symCorner.CornerRadius = UDim.new(0, 6)
-		symCorner.Parent = btn
+		local btnStroke = Instance.new("UIStroke", btn)
+		btnStroke.Color = Color3.fromRGB(120, 130, 255)
+		btnStroke.Thickness = 1
 
-		btn.Parent = symbolList
+		btn.MouseEnter:Connect(function()
+			TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(110, 120, 255)}):Play()
+			TweenService:Create(btnStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(150, 160, 255)}):Play()
+		end)
+		btn.MouseLeave:Connect(function()
+			TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(88, 101, 242)}):Play()
+			TweenService:Create(btnStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(120, 130, 255)}):Play()
+		end)
+
+		local discordLink = "https://discord.gg/5GeQAXYYcW"
 		btn.MouseButton1Click:Connect(function()
-			settings.Symbol = sym
-			symbolBox.Text = sym
+			if setclipboard then
+				setclipboard(discordLink)
+			elseif toClipboard then
+				toClipboard(discordLink)
+			else
+				pcall(function()
+					StarterGui:SetCore("SendNotification", {
+						Title = "Discord Link",
+						Text = discordLink .. "\n(Copied manually or use setclipboard)",
+						Duration = 8
+					})
+				end)
+				return
+			end
+
+			local originalText = btn.Text
+			btn.Text = "✓  Copied!"
+			TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 180, 80)}):Play()
+
+			task.delay(2, function()
+				btn.Text = originalText
+				TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(88, 101, 242)}):Play()
+			end)
 		end)
+
+		return btn
 	end
 
-	symbolList.CanvasSize = UDim2.new(0, 0, 0, grid.AbsoluteContentSize.Y)
+	-- ================= VFX SYSTEM =================
+	local function spawnVFX(color, dt)
+		if not settings.VFXEnabled then return end
 
-	-- Toggles
-	makeToggle("Spin", 450, "SpinEnabled")
-	makeToggle("VFX", 480, "VFXEnabled")
+		local intensity = settings.VFXIntensity
+		local vfxSize = settings.VFXSize
 
-	-- Discord button
-	local discordButton = Instance.new("TextButton")
-	discordButton.Text = "Join Discord!"
-	discordButton.Position = UDim2.fromOffset(10, 510)
-	discordButton.Size = UDim2.fromOffset(220, 30)
-	discordButton.Font = Enum.Font.GothamBold
-	discordButton.TextSize = 16
-	discordButton.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-	discordButton.TextColor3 = Color3.new(1, 1, 1)
-	discordButton.BorderSizePixel = 0
-	discordButton.ZIndex = 2147483646
-	discordButton.Parent = panel
+		-- Particles
+		if math.random() < 0.3 * intensity / 5 then
+			local p = Instance.new("Frame")
+			p.Size = UDim2.fromOffset(vfxSize * 2, vfxSize * 2)
+			p.BackgroundColor3 = color
+			p.BackgroundTransparency = 0
+			p.AnchorPoint = Vector2.new(0.5, 0.5)
+			p.Position = UDim2.fromOffset(0, 0)
+			p.BorderSizePixel = 0
+			p.ZIndex = 2147483645
+			p.Parent = center
+			Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
 
-	local dbCorner = Instance.new("UICorner")
-	dbCorner.CornerRadius = UDim.new(0, 8)
-	dbCorner.Parent = discordButton
+			local dir = math.random() * math.pi * 2
+			local dist = 30 + math.random() * 80
+			local life = 0.2 + math.random() * 0.4
 
-	discordButton.MouseButton1Click:Connect(function()
-		local link = "https://discord.gg/5GeQAXYYcW"
-		if setclipboard then
-			setclipboard(link)
-			StarterGui:SetCore("SendNotification", {
-				Title = "Discord",
-				Text = "Link copied!",
-				Duration = 3
-			})
-		else
-			StarterGui:SetCore("SendNotification", {
-				Title = "Discord",
-				Text = link,
-				Duration = 5
-			})
+			TweenService:Create(p, TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(math.cos(dir) * dist, math.sin(dir) * dist),
+				BackgroundTransparency = 1,
+				Size = UDim2.fromOffset(vfxSize * 3, vfxSize * 3)
+			}):Play()
+
+			task.delay(life, function()
+				if p and p.Parent then p:Destroy() end
+			end)
 		end
+
+		-- Trail Streaks
+		if settings.VFXTrail and math.random() < 0.5 * intensity / 5 then
+			local trail = Instance.new("Frame")
+			trail.Size = UDim2.fromOffset(vfxSize * 3, vfxSize)
+			trail.BackgroundColor3 = color
+			trail.BackgroundTransparency = 0.3
+			trail.AnchorPoint = Vector2.new(0.5, 0.5)
+			trail.Position = UDim2.fromOffset(math.random(-40, 40), math.random(-40, 40))
+			trail.BorderSizePixel = 0
+			trail.ZIndex = 2147483644
+			trail.Parent = center
+			Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
+
+			local angle = math.random() * math.pi * 2
+			trail.Rotation = math.deg(angle)
+
+			TweenService:Create(trail, TweenInfo.new(0.4 + math.random() * 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(trail.Position.X.Offset + math.cos(angle) * 60, trail.Position.Y.Offset + math.sin(angle) * 60),
+				BackgroundTransparency = 1,
+				Size = UDim2.fromOffset(vfxSize * 6, vfxSize * 0.5)
+			}):Play()
+
+			task.delay(0.7, function()
+				if trail and trail.Parent then trail:Destroy() end
+			end)
+		end
+
+		-- Glow Rings
+		if settings.VFXGlow and math.random() < 0.15 * intensity / 5 then
+			local glow = Instance.new("Frame")
+			glow.Size = UDim2.fromOffset(10, 10)
+			glow.BackgroundColor3 = color
+			glow.BackgroundTransparency = 0.5
+			glow.AnchorPoint = Vector2.new(0.5, 0.5)
+			glow.Position = UDim2.fromScale(0.5, 0.5)
+			glow.BorderSizePixel = 0
+			glow.ZIndex = 2147483643
+			glow.Parent = center
+			Instance.new("UICorner", glow).CornerRadius = UDim.new(1, 0)
+
+			TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.fromOffset(vfxSize * 15, vfxSize * 15),
+				BackgroundTransparency = 1
+			}):Play()
+
+			task.delay(0.6, function()
+				if glow and glow.Parent then glow:Destroy() end
+			end)
+		end
+
+		-- Bloom Burst
+		if settings.VFXBloom and math.random() < 0.2 * intensity / 5 then
+			local bloom = Instance.new("Frame")
+			bloom.Size = UDim2.fromOffset(vfxSize * 4, vfxSize * 4)
+			bloom.BackgroundColor3 = color
+			bloom.BackgroundTransparency = 0.6
+			bloom.AnchorPoint = Vector2.new(0.5, 0.5)
+			bloom.Position = UDim2.fromOffset(math.random(-30, 30), math.random(-30, 30))
+			bloom.BorderSizePixel = 0
+			bloom.ZIndex = 2147483642
+			bloom.Parent = center
+			Instance.new("UICorner", bloom).CornerRadius = UDim.new(1, 0)
+
+			TweenService:Create(bloom, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.fromOffset(vfxSize * 12, vfxSize * 12),
+				BackgroundTransparency = 1
+			}):Play()
+
+			task.delay(0.5, function()
+				if bloom and bloom.Parent then bloom:Destroy() end
+			end)
+		end
+
+		-- Sparkles
+		if settings.VFXSparkle and math.random() < 0.4 * intensity / 5 then
+			local sparkle = Instance.new("TextLabel")
+			sparkle.Text = "✦"
+			sparkle.Size = UDim2.fromOffset(20, 20)
+			sparkle.BackgroundTransparency = 1
+			sparkle.TextColor3 = color
+			sparkle.Font = Enum.Font.GothamBold
+			sparkle.TextSize = vfxSize * 4
+			sparkle.AnchorPoint = Vector2.new(0.5, 0.5)
+			sparkle.Position = UDim2.fromOffset(math.random(-50, 50), math.random(-50, 50))
+			sparkle.ZIndex = 2147483645
+			sparkle.Parent = center
+
+			TweenService:Create(sparkle, TweenInfo.new(0.3 + math.random() * 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(sparkle.Position.X.Offset, sparkle.Position.Y.Offset - 30),
+				TextTransparency = 1,
+				TextSize = vfxSize * 2
+			}):Play()
+
+			task.delay(0.6, function()
+				if sparkle and sparkle.Parent then sparkle:Destroy() end
+			end)
+		end
+
+		-- Ripples
+		if settings.VFXRipple and math.random() < 0.1 * intensity / 5 then
+			local ripple = Instance.new("Frame")
+			ripple.Size = UDim2.fromOffset(10, 10)
+			ripple.BackgroundTransparency = 1
+			ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+			ripple.Position = UDim2.fromScale(0.5, 0.5)
+			ripple.BorderSizePixel = 0
+			ripple.ZIndex = 2147483643
+			ripple.Parent = center
+
+			local stroke = Instance.new("UIStroke", ripple)
+			stroke.Color = color
+			stroke.Thickness = vfxSize * 0.5
+
+			Instance.new("UICorner", ripple).CornerRadius = UDim.new(1, 0)
+
+			TweenService:Create(ripple, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.fromOffset(vfxSize * 20, vfxSize * 20)
+			}):Play()
+			TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Transparency = 1
+			}):Play()
+
+			task.delay(0.8, function()
+				if ripple and ripple.Parent then ripple:Destroy() end
+			end)
+		end
+
+		-- Orbit Dots
+		if settings.VFXOrbit and math.random() < 0.3 * intensity / 5 then
+			local orbit = Instance.new("Frame")
+			orbit.Size = UDim2.fromOffset(vfxSize * 2, vfxSize * 2)
+			orbit.BackgroundColor3 = color
+			orbit.BackgroundTransparency = 0
+			orbit.AnchorPoint = Vector2.new(0.5, 0.5)
+			orbit.Position = UDim2.fromScale(0.5, 0.5)
+			orbit.BorderSizePixel = 0
+			orbit.ZIndex = 2147483645
+			orbit.Parent = center
+			Instance.new("UICorner", orbit).CornerRadius = UDim.new(1, 0)
+
+			local angle = math.random() * math.pi * 2
+			local radius = 25 + math.random() * 30
+			local speed = 1 + math.random() * 2
+			local startTime = tick()
+
+			local conn
+			conn = RunService.RenderStepped:Connect(function()
+				if not orbit or not orbit.Parent then
+					conn:Disconnect()
+					return
+				end
+				local elapsed = tick() - startTime
+				local currentAngle = angle + elapsed * speed
+				orbit.Position = UDim2.fromOffset(math.cos(currentAngle) * radius, math.sin(currentAngle) * radius)
+				orbit.BackgroundTransparency = math.min(1, elapsed / 1.5)
+				if elapsed > 1.5 then
+					conn:Disconnect()
+					if orbit and orbit.Parent then orbit:Destroy() end
+				end
+			end)
+		end
+
+		-- Shooting Stars
+		if settings.VFXShootingStar and math.random() < 0.15 * intensity / 5 then
+			local star = Instance.new("Frame")
+			star.Size = UDim2.fromOffset(vfxSize * 3, vfxSize)
+			star.BackgroundColor3 = color
+			star.BackgroundTransparency = 0
+			star.AnchorPoint = Vector2.new(0.5, 0.5)
+			local startX = math.random(-60, 60)
+			local startY = math.random(-60, 60)
+			star.Position = UDim2.fromOffset(startX, startY)
+			star.BorderSizePixel = 0
+			star.ZIndex = 2147483645
+			star.Parent = center
+			Instance.new("UICorner", star).CornerRadius = UDim.new(1, 0)
+
+			local endX = startX + math.random(-80, 80)
+			local endY = startY + math.random(-80, 80)
+
+			TweenService:Create(star, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(endX, endY),
+				BackgroundTransparency = 1,
+				Size = UDim2.fromOffset(vfxSize, vfxSize * 0.3)
+			}):Play()
+
+			task.delay(0.4, function()
+				if star and star.Parent then star:Destroy() end
+			end)
+		end
+
+		-- Hearts
+		if settings.VFXHeart and math.random() < 0.2 * intensity / 5 then
+			local heart = Instance.new("TextLabel")
+			heart.Text = "♥"
+			heart.Size = UDim2.fromOffset(20, 20)
+			heart.BackgroundTransparency = 1
+			heart.TextColor3 = color
+			heart.Font = Enum.Font.GothamBold
+			heart.TextSize = vfxSize * 5
+			heart.AnchorPoint = Vector2.new(0.5, 0.5)
+			heart.Position = UDim2.fromOffset(math.random(-40, 40), math.random(-40, 40))
+			heart.ZIndex = 2147483645
+			heart.Parent = center
+
+			TweenService:Create(heart, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(heart.Position.X.Offset, heart.Position.Y.Offset - 40),
+				TextTransparency = 1,
+				TextSize = vfxSize * 2
+			}):Play()
+
+			task.delay(0.5, function()
+				if heart and heart.Parent then heart:Destroy() end
+			end)
+		end
+
+		-- Lightning
+		if settings.VFXLightning and math.random() < 0.15 * intensity / 5 then
+			local bolt = Instance.new("Frame")
+			bolt.Size = UDim2.fromOffset(vfxSize, vfxSize * 6)
+			bolt.BackgroundColor3 = Color3.new(1, 1, 1)
+			bolt.BackgroundTransparency = 0
+			bolt.AnchorPoint = Vector2.new(0.5, 0.5)
+			bolt.Position = UDim2.fromOffset(math.random(-30, 30), math.random(-30, 30))
+			bolt.BorderSizePixel = 0
+			bolt.ZIndex = 2147483645
+			bolt.Parent = center
+			bolt.Rotation = math.random(-30, 30)
+
+			TweenService:Create(bolt, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				BackgroundTransparency = 1
+			}):Play()
+
+			task.delay(0.08, function()
+				if bolt and bolt.Parent then bolt:Destroy() end
+			end)
+		end
+
+		-- Ghosts
+		if settings.VFXGhost and math.random() < 0.2 * intensity / 5 then
+			local ghost = Instance.new("TextLabel")
+			ghost.Text = "👻"
+			ghost.Size = UDim2.fromOffset(24, 24)
+			ghost.BackgroundTransparency = 1
+			ghost.TextSize = vfxSize * 5
+			ghost.AnchorPoint = Vector2.new(0.5, 0.5)
+			ghost.Position = UDim2.fromOffset(math.random(-50, 50), math.random(-50, 50))
+			ghost.ZIndex = 2147483645
+			ghost.Parent = center
+
+			TweenService:Create(ghost, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(ghost.Position.X.Offset, ghost.Position.Y.Offset - 50),
+				TextTransparency = 1,
+				TextSize = vfxSize * 2
+			}):Play()
+
+			task.delay(1, function()
+				if ghost and ghost.Parent then ghost:Destroy() end
+			end)
+		end
+
+		-- Confetti
+		if settings.VFXConfetti and math.random() < 0.3 * intensity / 5 then
+			local confetti = Instance.new("Frame")
+			confetti.Size = UDim2.fromOffset(vfxSize * 2, vfxSize * 3)
+			confetti.BackgroundColor3 = color
+			confetti.BackgroundTransparency = 0
+			confetti.AnchorPoint = Vector2.new(0.5, 0.5)
+			confetti.Position = UDim2.fromOffset(math.random(-50, 50), -30)
+			confetti.BorderSizePixel = 0
+			confetti.ZIndex = 2147483645
+			confetti.Parent = center
+			confetti.Rotation = math.random(0, 360)
+
+			TweenService:Create(confetti, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(confetti.Position.X.Offset + math.random(-20, 20), 50),
+				BackgroundTransparency = 1,
+				Rotation = confetti.Rotation + 180
+			}):Play()
+
+			task.delay(0.8, function()
+				if confetti and confetti.Parent then confetti:Destroy() end
+			end)
+		end
+	end
+
+	-- ================= BUILD UI =================
+	local presetSection, presetContent = createSection("Presets", content)
+	createPresetSelector(presetContent)
+
+	local crosshairSection, crosshairContent = createSection("Crosshair Size", content)
+	createInputRow("Vertical Length", "VertLength", 1, 10000, false, crosshairContent)
+	createInputRow("Horizontal Length", "HorzLength", 1, 10000, false, crosshairContent)
+	createInputRow("Width", "Width", 1, 10000, false, crosshairContent)
+
+	local colorSection, colorContent = createSection("Color", content)
+	createColorPicker(colorContent)
+
+	local animSection, animContent = createSection("Animation", content)
+	createToggleRow("Pulse Breathing", "PulseEnabled", animContent)
+	createInputRow("Pulse Speed", "PulseSpeed", 0.1, 20, false, animContent)
+	createInputRow("Pulse Distance", "PulseDistance", 0, 20, false, animContent)
+
+	local vfxSection, vfxContent = createSection("VFX Effects", content)
+	createToggleRow("✨ Enable VFX", "VFXEnabled", vfxContent)
+	createInputRow("VFX Intensity", "VFXIntensity", 1, 20, false, vfxContent)
+	createInputRow("VFX Size", "VFXSize", 1, 20, false, vfxContent)
+	createToggleRow("Trail Streaks", "VFXTrail", vfxContent)
+	createToggleRow("Glow Rings", "VFXGlow", vfxContent)
+	createToggleRow("Bloom Burst", "VFXBloom", vfxContent)
+	createToggleRow("Sparkles", "VFXSparkle", vfxContent)
+	createToggleRow("Ripples", "VFXRipple", vfxContent)
+	createToggleRow("Orbit Dots", "VFXOrbit", vfxContent)
+	createToggleRow("Shooting Stars", "VFXShootingStar", vfxContent)
+	createToggleRow("Hearts", "VFXHeart", vfxContent)
+	createToggleRow("Lightning", "VFXLightning", vfxContent)
+	createToggleRow("Ghosts", "VFXGhost", vfxContent)
+	createToggleRow("Confetti", "VFXConfetti", vfxContent)
+
+	local appearanceSection, appearanceContent = createSection("Appearance", content)
+	createInputRow("Rotation Speed", "RotationSpeed", 0, 10000, false, appearanceContent)
+	createInputRow("Rainbow Speed", "RainbowSpeed", 0, 10000, false, appearanceContent)
+	createInputRow("Y Offset", "YOffset", -50, 50, false, appearanceContent)
+	createInputRow("Text Gap", "TextGap", 0, 10000, false, appearanceContent)
+	createInputRow("Display Text", "Text", nil, nil, true, appearanceContent)
+
+	local symbolSection, symbolContent = createSection("Symbol", content)
+	createSymbolSelector(symbolContent)
+
+	local toggleSection, toggleContent = createSection("Options", content)
+	createToggleRow("Spin Animation", "SpinEnabled", toggleContent)
+
+	local discordBtn = createDiscordButton(content)
+
+	-- Update canvas size
+	contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		content.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 20)
 	end)
 
-	-- Toggle panel with RightShift
-	UserInputService.InputBegan:Connect(function(input, gp)
-		if gp then return end
-		if input.KeyCode == Enum.KeyCode.RightShift then
-			panel.Visible = not panel.Visible
-		end
-	end)
+	local function updatePanelHeight()
+		local contentHeight = math.min(contentLayout.AbsoluteContentSize.Y + 70, 650)
+		panel.Size = UDim2.fromOffset(280, contentHeight)
+	end
 
-	-- ================= PARTICLE SPAWN =================
-	local function spawnParticle(color)
-		local p = Instance.new("Frame")
-		p.Size = UDim2.fromOffset(settings.Width * 2, settings.Width * 2)
-		p.BackgroundColor3 = color
-		p.BackgroundTransparency = 0
-		p.AnchorPoint = Vector2.new(0.5, 0.5)
-		p.Position = UDim2.fromOffset(0, 0)
-		p.BorderSizePixel = 0
-		p.ZIndex = 2147483645
-		p.Parent = center
+	task.delay(0.1, updatePanelHeight)
+	contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updatePanelHeight)
 
-		local pCorner = Instance.new("UICorner")
-		pCorner.CornerRadius = UDim.new(1, 0)
-		pCorner.Parent = p
+	-- ================= COLLAPSE / EXPAND =================
+	local panelExpanded = true
 
-		local direction = math.random() * math.pi * 2
-		local distance = 50 + math.random() * 100
-
-		TweenService:Create(p, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Position = UDim2.fromOffset(math.cos(direction) * distance, math.sin(direction) * distance),
-			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(settings.Width * 3, settings.Width * 3)
+	local function collapsePanel()
+		panelExpanded = false
+		toggleBtn.Text = "+"
+		TweenService:Create(panel, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.fromOffset(280, 48)
 		}):Play()
-
-		task.delay(0.3, function()
-			p:Destroy()
-		end)
 	end
+
+	local function expandPanel()
+		panelExpanded = true
+		toggleBtn.Text = "−"
+		local targetHeight = math.min(contentLayout.AbsoluteContentSize.Y + 70, 650)
+		TweenService:Create(panel, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.fromOffset(280, targetHeight)
+		}):Play()
+	end
+
+	toggleBtn.MouseButton1Click:Connect(function()
+		if panelExpanded then
+			collapsePanel()
+		else
+			expandPanel()
+		end
+	end)
+
+	UserInputService.InputBegan:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.RightShift then
+			if panelExpanded then
+				collapsePanel()
+			else
+				expandPanel()
+			end
+		end
+	end)
 
 	-- ================= MAIN LOOP =================
 	local hue = 0
 	local rotation = 0
+	local pulseTime = 0
 
 	data.connection = RunService.RenderStepped:Connect(function(dt)
 		if not data.enabled then return end
 
-		-- FORCE HIDE MOUSE EVERY FRAME (overrides shiftlock cursor)
+		-- Force hide mouse every frame
 		if UserInputService.MouseIconEnabled then
 			UserInputService.MouseIconEnabled = false
 		end
@@ -1727,39 +3464,67 @@ function LoadLunarCrosshair()
 
 		local crossBottomY
 
+		-- Symbol overrides everything
 		if settings.Symbol ~= "" then
-			vertical.Visible = false
-			horizontal.Visible = false
-			symbol.Visible = true
-
-			symbol.Text = settings.Symbol
-			symbol.TextColor3 = Color3.fromHSV(hue, 1, 1)
-			symbol.TextSize = settings.VertLength
+			for _, part in pairs(crosshairParts) do
+				if part and part.Parent then
+					part.Visible = false
+				end
+			end
+			crosshairSymbol.Visible = true
+			crosshairSymbol.Text = settings.Symbol
+			crosshairSymbol.TextSize = settings.VertLength
 
 			crossBottomY = baseY + (settings.VertLength / 2)
 		else
-			vertical.Visible = true
-			horizontal.Visible = true
-			symbol.Visible = false
+			crosshairSymbol.Visible = false
 
-			vertical.Size = UDim2.fromOffset(settings.Width, settings.VertLength)
-			horizontal.Size = UDim2.fromOffset(settings.HorzLength, settings.Width)
+			if #crosshairParts == 0 then
+				currentPresetParts = presets[settings.ActivePreset]()
+			end
+
+			for _, part in pairs(crosshairParts) do
+				if part and part.Parent then
+					part.Visible = true
+				end
+			end
 
 			crossBottomY = baseY + (settings.VertLength / 2)
 		end
 
-		-- Text under crosshair
+		-- Pulse animation
+		if settings.PulseEnabled and settings.Symbol == "" then
+			pulseTime = pulseTime + dt * settings.PulseSpeed
+			local pulseOffset = math.sin(pulseTime) * settings.PulseDistance
+
+			for _, part in pairs(crosshairParts) do
+				if part and part.Parent then
+					local originalPos = part:GetAttribute("OriginalPos")
+					if originalPos then
+						local ox = originalPos.X.Offset
+						local oy = originalPos.Y.Offset
+						local dist = math.sqrt(ox * ox + oy * oy)
+
+						if dist > 0.001 then
+							local dirX = ox / dist
+							local dirY = oy / dist
+							part.Position = UDim2.new(
+								originalPos.X.Scale,
+								ox + dirX * pulseOffset,
+								originalPos.Y.Scale,
+								oy + dirY * pulseOffset
+							)
+						end
+					end
+				end
+			end
+		end
+
+		-- Text position
 		text.Position = UDim2.fromOffset(mousePos.X, crossBottomY + settings.TextGap)
 		text.Text = settings.Text
-		text.TextColor3 = Color3.fromHSV(hue, 1, 1)
 
-		-- Center lines
-		vertical.AnchorPoint = Vector2.new(0.5, 0.5)
-		horizontal.AnchorPoint = Vector2.new(0.5, 0.5)
-		vertical.Position = UDim2.fromScale(0.5, 0.5)
-		horizontal.Position = UDim2.fromScale(0.5, 0.5)
-
-		-- Rotation
+		-- Spin
 		if settings.SpinEnabled then
 			rotation = rotation + settings.RotationSpeed * dt
 			center.Rotation = rotation % 360
@@ -1767,28 +3532,66 @@ function LoadLunarCrosshair()
 			center.Rotation = 0
 		end
 
-		-- Rainbow color
+		-- Determine color
 		hue = (hue + settings.RainbowSpeed * dt) % 1
-		local color = Color3.fromHSV(hue, 1, 1)
-
-		vertical.BackgroundColor3 = color
-		horizontal.BackgroundColor3 = color
-		title.TextColor3 = color
-		panel.BackgroundColor3 = Color3.fromHSV(hue, 0.7, 0.18)
-
-		-- VFX
-		if settings.VFXEnabled and math.random() < 0.3 then
-			spawnParticle(color)
+		local color
+		if settings.UseRainbow then
+			color = Color3.fromHSV(hue, 1, 1)
+		else
+			color = settings.CustomColor
 		end
+
+		-- Color all parts
+		for _, part in pairs(crosshairParts) do
+			if part and part.Parent then
+				if part:IsA("Frame") then
+					part.BackgroundColor3 = color
+				end
+				for _, child in pairs(part:GetChildren()) do
+					if child:IsA("UIStroke") then
+						child.Color = color
+					end
+				end
+			end
+		end
+
+		crosshairSymbol.TextColor3 = color
+		text.TextColor3 = color
+		title.TextColor3 = color
+		headerLine.BackgroundColor3 = color
+		glowStroke.Color = smoothColor(Color3.fromRGB(100, 80, 255), color, 0.5)
+
+		-- Spawn VFX
+		spawnVFX(color, dt)
 	end)
 
-	StarterGui:SetCore("SendNotification", {
-		Title = "Crosshair",
-		Text = "Enabled! Press [RightShift] for settings",
-		Duration = 3
-	})
+	notify("Crosshair enabled! Press [RightShift] for settings", Color3.fromRGB(120, 100, 255))
+	print("Lunar Crosshair V2 Loaded | CoreGui overlay")
+end
 
-	print("Lunar Crosshair Loaded | CoreGui overlay | Shiftlock cursor override")
+function UnloadLunarCrosshair()
+	local data = _G.LunarCrosshairData
+	local UserInputService = game:GetService("UserInputService")
+	local Players = game:GetService("Players")
+	local mouse = Players.LocalPlayer:GetMouse()
+
+	if data.gui then
+		data.gui:Destroy()
+		data.gui = nil
+	end
+	if data.connection then
+		data.connection:Disconnect()
+		data.connection = nil
+	end
+
+	data.enabled = false
+	data.settings = nil
+
+	-- Restore default mouse
+	UserInputService.MouseIconEnabled = true
+	mouse.Icon = ""
+
+	notify("Crosshair disabled. Default mouse restored.", Color3.fromRGB(255, 80, 80))
 end
 
 -- =============================================================
@@ -6281,6 +8084,9 @@ function processCmd(msg)
 		
 	elseif cmd == "crosshair" then
 		LoadLunarCrosshair()
+
+	elseif cmd == "uncrosshair" then
+		UnloadLunarCrosshair()
 		
 	elseif cmd == "dance" then
 		dance(target)
@@ -6290,8 +8096,7 @@ function processCmd(msg)
 		
 	elseif cmd == "disablefalldamage" then
 		disableFallDamage()
------------------------------------------------------------------  esp	-----------------------------------------------------------------
------------------------------------------------------------------		-----------------------------------------------------------------
+
 	elseif cmd == "enable" then
 		local what = args[1] or ""
 		if what == "inventory" or what == "playerlist" then
@@ -6449,9 +8254,6 @@ function processCmd(msg)
         unaddFriend(args[1])
     end
 
-	elseif cmd == "uncrosshair" then
-		DisableLunarCrosshair()
-		
 	elseif cmd == "unfire" then
 		unfire(target)
 		
