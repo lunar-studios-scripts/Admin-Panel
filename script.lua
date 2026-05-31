@@ -5861,19 +5861,33 @@ local function toggleCmdBar()
 
 	-- Mobile detection: only true for actual mobile devices (not touchscreen PCs)
 	local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+	local screenWidth = workspace.CurrentCamera.ViewportSize.X
 
-	-- Main container - PC uses exact original values, mobile scales
+	-- Size configs
+	local barWidth, barHeight, btnSize, iconSize, fontSize, padding
+	if isMobile then
+		-- Much smaller for mobile
+		barWidth = math.clamp(math.floor(screenWidth * 0.85), 260, 480)
+		barHeight = 42
+		btnSize = 28
+		iconSize = 28
+		fontSize = 14
+		padding = 8
+	else
+		-- PC original values
+		barWidth = 700
+		barHeight = 50
+		btnSize = 34
+		iconSize = 36
+		fontSize = 18
+		padding = 12
+	end
+
+	-- Main container
 	local main = Instance.new("Frame")
 	main.Name = "Main"
-	if isMobile then
-		local screenWidth = workspace.CurrentCamera.ViewportSize.X
-		local barWidth = math.clamp(math.floor(700 * (screenWidth / 800)), 320, screenWidth - 20)
-		main.Size = UDim2.new(0, barWidth, 0, 60)
-		main.Position = UDim2.new(0.5, -barWidth / 2, 0.08, 0)
-	else
-		main.Size = UDim2.new(0, 700, 0, 50)
-		main.Position = UDim2.new(0.5, -350, 0.08, 0)
-	end
+	main.Size = UDim2.new(0, barWidth, 0, barHeight)
+	main.Position = UDim2.new(0.5, -barWidth / 2, 0.08, 0)
 	main.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
 	main.BackgroundTransparency = 0.55
 	main.BorderSizePixel = 0
@@ -5909,26 +5923,28 @@ local function toggleCmdBar()
 	-- Icon
 	local icon = Instance.new("TextLabel")
 	icon.Name = "Icon"
-	icon.Size = UDim2.new(0, 36, 0, 36)
-	icon.Position = UDim2.new(0, 12, 0.5, -18)
+	icon.Size = UDim2.new(0, iconSize, 0, iconSize)
+	icon.Position = UDim2.new(0, padding, 0.5, -iconSize / 2)
 	icon.BackgroundTransparency = 1
 	icon.Text = "PL"
 	icon.Font = Enum.Font.GothamBold
-	icon.TextSize = 22
+	icon.TextSize = isMobile and 18 or 22
 	icon.TextColor3 = Color3.fromRGB(100, 180, 255)
 	icon.Parent = main
 
 	-- Input box
 	local input = Instance.new("TextBox")
 	input.Name = "Input"
-	input.Size = UDim2.new(1, -230, 1, -12)
-	input.Position = UDim2.new(0, 52, 0, 6)
+	-- Input width = total - icon - buttons - padding
+	local inputWidthOffset = isMobile and -180 or -230
+	input.Size = UDim2.new(1, inputWidthOffset, 1, -12)
+	input.Position = UDim2.new(0, iconSize + padding + 4, 0, 6)
 	input.BackgroundTransparency = 1
 	input.Text = ""
 	input.PlaceholderText = "Type command..."
 	input.PlaceholderColor3 = Color3.fromRGB(130, 130, 155)
 	input.Font = Enum.Font.GothamBold
-	input.TextSize = 18
+	input.TextSize = fontSize
 	input.TextColor3 = Color3.fromRGB(245, 245, 255)
 	input.TextTransparency = 0.05
 	input.ClearTextOnFocus = false
@@ -5939,13 +5955,13 @@ local function toggleCmdBar()
 	-- Command List Button
 	local cmdListBtn = Instance.new("TextButton")
 	cmdListBtn.Name = "CmdListBtn"
-	cmdListBtn.Size = UDim2.new(0, 36, 0, 34)
-	cmdListBtn.Position = UDim2.new(1, -120, 0.5, -17)
+	cmdListBtn.Size = UDim2.new(0, btnSize, 0, btnSize)
+	cmdListBtn.Position = UDim2.new(1, isMobile and -100 or -120, 0.5, -btnSize / 2)
 	cmdListBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 	cmdListBtn.BackgroundTransparency = 0.5
 	cmdListBtn.Text = "📋"
 	cmdListBtn.Font = Enum.Font.GothamBold
-	cmdListBtn.TextSize = 18
+	cmdListBtn.TextSize = isMobile and 14 or 18
 	cmdListBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	cmdListBtn.Parent = main
 
@@ -5956,13 +5972,13 @@ local function toggleCmdBar()
 	-- Execute Button
 	local execBtn = Instance.new("TextButton")
 	execBtn.Name = "ExecBtn"
-	execBtn.Size = UDim2.new(0, 36, 0, 34)
-	execBtn.Position = UDim2.new(1, -82, 0.5, -17)
+	execBtn.Size = UDim2.new(0, btnSize, 0, btnSize)
+	execBtn.Position = UDim2.new(1, isMobile and -68 or -82, 0.5, -btnSize / 2)
 	execBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
 	execBtn.BackgroundTransparency = 0.35
 	execBtn.Text = "▶"
 	execBtn.Font = Enum.Font.GothamBlack
-	execBtn.TextSize = 18
+	execBtn.TextSize = isMobile and 14 or 18
 	execBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	execBtn.Parent = main
 
@@ -5973,13 +5989,13 @@ local function toggleCmdBar()
 	-- Minimize Button
 	local minBtn = Instance.new("TextButton")
 	minBtn.Name = "MinBtn"
-	minBtn.Size = UDim2.new(0, 36, 0, 34)
-	minBtn.Position = UDim2.new(1, -40, 0.5, -17)
+	minBtn.Size = UDim2.new(0, btnSize, 0, btnSize)
+	minBtn.Position = UDim2.new(1, isMobile and -36 or -40, 0.5, -btnSize / 2)
 	minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
 	minBtn.BackgroundTransparency = 0.5
 	minBtn.Text = "−"
 	minBtn.Font = Enum.Font.GothamBlack
-	minBtn.TextSize = 22
+	minBtn.TextSize = isMobile and 18 or 22
 	minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	minBtn.Parent = main
 
@@ -5990,13 +6006,14 @@ local function toggleCmdBar()
 	-- Minimized Tab (small floating button when minimized)
 	local tabBtn = Instance.new("TextButton")
 	tabBtn.Name = "TabBtn"
-	tabBtn.Size = UDim2.new(0, 44, 0, 44)
-	tabBtn.Position = UDim2.new(0.5, -22, 0.08, 0)
+	local tabSize = isMobile and 36 or 44
+	tabBtn.Size = UDim2.new(0, tabSize, 0, tabSize)
+	tabBtn.Position = UDim2.new(0.5, -tabSize / 2, 0.08, 0)
 	tabBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
 	tabBtn.BackgroundTransparency = 0.45
 	tabBtn.Text = "PL"
 	tabBtn.Font = Enum.Font.GothamBold
-	tabBtn.TextSize = 22
+	tabBtn.TextSize = isMobile and 16 or 22
 	tabBtn.TextColor3 = Color3.fromRGB(100, 180, 255)
 	tabBtn.Visible = false
 	tabBtn.Active = true
@@ -6025,7 +6042,7 @@ local function toggleCmdBar()
 	-- Dropdown
 	local dropdown = Instance.new("Frame")
 	dropdown.Name = "Dropdown"
-	dropdown.Size = UDim2.new(1, 0, 0, 210)
+	dropdown.Size = UDim2.new(1, 0, 0, isMobile and 160 or 210)
 	dropdown.Position = UDim2.new(0, 0, 1, 6)
 	dropdown.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
 	dropdown.BackgroundTransparency = 0.5
@@ -6049,7 +6066,7 @@ local function toggleCmdBar()
 	dropdownScroll.Size = UDim2.new(1, -16, 1, -12)
 	dropdownScroll.Position = UDim2.new(0, 8, 0, 6)
 	dropdownScroll.BackgroundTransparency = 1
-	dropdownScroll.ScrollBarThickness = 3
+	dropdownScroll.ScrollBarThickness = isMobile and 2 or 3
 	dropdownScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 180, 255)
 	dropdownScroll.Parent = dropdown
 
@@ -6060,7 +6077,9 @@ local function toggleCmdBar()
 	-- Command List Panel
 	local cmdListPanel = Instance.new("Frame")
 	cmdListPanel.Name = "CmdListPanel"
-	cmdListPanel.Size = UDim2.new(0, 300, 0, 380)
+	local panelW = isMobile and math.clamp(math.floor(screenWidth * 0.75), 200, 340) or 300
+	local panelH = isMobile and math.clamp(math.floor(screenWidth * 0.6), 240, 400) or 380
+	cmdListPanel.Size = UDim2.new(0, panelW, 0, panelH)
 	cmdListPanel.Position = UDim2.new(1, 10, 0, 0)
 	cmdListPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 	cmdListPanel.BackgroundTransparency = 0.5
@@ -6081,30 +6100,30 @@ local function toggleCmdBar()
 	listPanelBorder.Parent = cmdListPanel
 
 	local panelTitle = Instance.new("TextLabel")
-	panelTitle.Size = UDim2.new(1, 0, 0, 36)
+	panelTitle.Size = UDim2.new(1, 0, 0, isMobile and 30 or 36)
 	panelTitle.BackgroundTransparency = 1
 	panelTitle.Text = "📋 Commands"
 	panelTitle.Font = Enum.Font.GothamBlack
-	panelTitle.TextSize = 16
+	panelTitle.TextSize = isMobile and 13 or 16
 	panelTitle.TextColor3 = Color3.fromRGB(100, 180, 255)
 	panelTitle.Parent = cmdListPanel
 
 	local panelClose = Instance.new("TextButton")
-	panelClose.Size = UDim2.new(0, 28, 0, 28)
-	panelClose.Position = UDim2.new(1, -32, 0, 4)
+	panelClose.Size = UDim2.new(0, isMobile and 24 or 28, 0, isMobile and 24 or 28)
+	panelClose.Position = UDim2.new(1, isMobile and -28 or -32, 0, 4)
 	panelClose.BackgroundTransparency = 1
 	panelClose.Text = "X"
 	panelClose.Font = Enum.Font.GothamBold
-	panelClose.TextSize = 16
+	panelClose.TextSize = isMobile and 13 or 16
 	panelClose.TextColor3 = Color3.fromRGB(255, 100, 100)
 	panelClose.Parent = cmdListPanel
 
 	local listScroll = Instance.new("ScrollingFrame")
 	listScroll.Name = "ListScroll"
-	listScroll.Size = UDim2.new(1, -16, 1, -48)
-	listScroll.Position = UDim2.new(0, 8, 0, 40)
+	listScroll.Size = UDim2.new(1, -16, 1, isMobile and -40 or -48)
+	listScroll.Position = UDim2.new(0, 8, 0, isMobile and 34 or 40)
 	listScroll.BackgroundTransparency = 1
-	listScroll.ScrollBarThickness = 3
+	listScroll.ScrollBarThickness = isMobile and 2 or 3
 	listScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 180, 255)
 	listScroll.Parent = cmdListPanel
 
@@ -6126,12 +6145,12 @@ local function toggleCmdBar()
 
 	for _, cmd in ipairs(allCommands) do
 		local cmdBtn = Instance.new("TextButton")
-		cmdBtn.Size = UDim2.new(1, 0, 0, 28)
+		cmdBtn.Size = UDim2.new(1, 0, 0, isMobile and 24 or 28)
 		cmdBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 48)
 		cmdBtn.BackgroundTransparency = 0.45
 		cmdBtn.Text = "  " .. cmd
 		cmdBtn.Font = Enum.Font.Gotham
-		cmdBtn.TextSize = 14
+		cmdBtn.TextSize = isMobile and 12 or 14
 		cmdBtn.TextColor3 = Color3.fromRGB(205, 205, 225)
 		cmdBtn.TextXAlignment = Enum.TextXAlignment.Left
 		cmdBtn.Parent = listScroll
@@ -6157,7 +6176,7 @@ local function toggleCmdBar()
 		end)
 	end
 
-	listScroll.CanvasSize = UDim2.new(0, 0, 0, #allCommands * 30)
+	listScroll.CanvasSize = UDim2.new(0, 0, 0, #allCommands * (isMobile and 26 or 30))
 
 	-- Minimize / Restore
 	local function minimize()
@@ -6220,12 +6239,12 @@ local function toggleCmdBar()
 			dropdown.Visible = true
 			for _, match in ipairs(matches) do
 				local btn = Instance.new("TextButton")
-				btn.Size = UDim2.new(1, 0, 0, 30)
+				btn.Size = UDim2.new(1, 0, 0, isMobile and 26 or 30)
 				btn.BackgroundColor3 = Color3.fromRGB(32, 32, 48)
 				btn.BackgroundTransparency = 0.4
 				btn.Text = "  " .. match
 				btn.Font = Enum.Font.Gotham
-				btn.TextSize = 15
+				btn.TextSize = isMobile and 13 or 15
 				btn.TextColor3 = Color3.fromRGB(220, 220, 240)
 				btn.TextXAlignment = Enum.TextXAlignment.Left
 				btn.Parent = dropdownScroll
@@ -6251,7 +6270,7 @@ local function toggleCmdBar()
 					btn.TextColor3 = Color3.fromRGB(220, 220, 240)
 				end)
 			end
-			dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * 33)
+			dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * (isMobile and 29 or 33))
 		else
 			dropdown.Visible = false
 		end
