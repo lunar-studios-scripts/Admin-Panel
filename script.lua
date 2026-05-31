@@ -6388,12 +6388,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 -- ============================================
--- INFINITE JUMP SYSTEM
+-- INFINITE JUMP 
 -- ============================================
 local infJumpData = {
 	enabled = false,
 	beganConnection = nil,
 	endedConnection = nil,
+	jumpRequestConnection = nil,
 	charConnection = nil,
 	heartbeatConnection = nil,
 	holdingJump = false,
@@ -6401,15 +6402,14 @@ local infJumpData = {
 	currentHRP = nil
 }
 
--- ============================================
--- INFINITE JUMP FUNCTIONS - Hold to auto-jump (Velocity-based)
--- ============================================
 local function setupInfJump()
 	local char = client.Character
-	if not char then return end
-	
+	if not char then
+		return
+	end
+
 	infJumpData.currentChar = char
-	
+
 	local hrp = char:WaitForChild("HumanoidRootPart", 5)
 	if hrp then
 		infJumpData.currentHRP = hrp
@@ -6421,69 +6421,107 @@ local function enableInfJump()
 		notify("⚠️ Infinite jump already enabled", Color3.fromRGB(255, 200, 100))
 		return
 	end
-	
+
 	infJumpData.enabled = true
 	infJumpData.holdingJump = false
-	
+
 	setupInfJump()
-	
-	-- Clean up any old connections first
+
+	-- Cleanup old connections
 	if infJumpData.beganConnection then
 		infJumpData.beganConnection:Disconnect()
 	end
+
 	if infJumpData.endedConnection then
 		infJumpData.endedConnection:Disconnect()
 	end
+
+	if infJumpData.jumpRequestConnection then
+		infJumpData.jumpRequestConnection:Disconnect()
+	end
+
 	if infJumpData.heartbeatConnection then
 		infJumpData.heartbeatConnection:Disconnect()
 	end
-	
-	-- InputBegan - detect when space is pressed
+
+	-- PC Space Key
 	infJumpData.beganConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if not infJumpData.enabled then return end
-		if gameProcessed then return end
-		
+		if not infJumpData.enabled then
+			return
+		end
+
+		if gameProcessed then
+			return
+		end
+
 		if input.KeyCode == Enum.KeyCode.Space then
 			infJumpData.holdingJump = true
 		end
 	end)
-	
-	-- InputEnded - detect when space is released
-	infJumpData.endedConnection = UserInputService.InputEnded:Connect(function(input, gameProcessed)
+
+	infJumpData.endedConnection = UserInputService.InputEnded:Connect(function(input)
 		if input.KeyCode == Enum.KeyCode.Space then
 			infJumpData.holdingJump = false
 		end
 	end)
-	
-	-- Heartbeat loop - apply jump velocity while holding
-	infJumpData.heartbeatConnection = RunService.Heartbeat:Connect(function()
-		if not infJumpData.enabled then return end
-		if not infJumpData.holdingJump then return end
-		
+
+	-- Mobile + Controller Jump Button
+	infJumpData.jumpRequestConnection = UserInputService.JumpRequest:Connect(function()
+		if not infJumpData.enabled then
+			return
+		end
+
 		local hrp = infJumpData.currentHRP
+
 		if hrp and hrp.Parent then
 			local vel = hrp.AssemblyLinearVelocity
-			-- Only apply if falling or on ground (not already going up fast)
-			if vel.Y <= 10 then
-				hrp.AssemblyLinearVelocity = Vector3.new(vel.X, math.max(vel.Y + 5, 50), vel.Z)
+			hrp.AssemblyLinearVelocity = Vector3.new(
+				vel.X,
+				math.max(vel.Y + 15, 60),
+				vel.Z
+			)
+		end
+	end)
+
+	-- Hold Space Flight
+	infJumpData.heartbeatConnection = RunService.Heartbeat:Connect(function()
+		if not infJumpData.enabled then
+			return
+		end
+
+		if not infJumpData.holdingJump then
+			return
+		end
+
+		local hrp = infJumpData.currentHRP
+
+		if hrp and hrp.Parent then
+			local vel = hrp.AssemblyLinearVelocity
+
+			if vel.Y <= 25 then
+				hrp.AssemblyLinearVelocity = Vector3.new(
+					vel.X,
+					math.max(vel.Y + 5, 50),
+					vel.Z
+				)
 			end
 		end
 	end)
-	
-	-- Re-setup on respawn
+
+	-- Respawn Support
 	if infJumpData.charConnection then
 		infJumpData.charConnection:Disconnect()
 	end
-	
-	infJumpData.charConnection = client.CharacterAdded:Connect(function(newChar)
-		if not infJumpData.enabled then return end
+
+	infJumpData.charConnection = client.CharacterAdded:Connect(function()
 		task.wait(0.5)
+
 		if infJumpData.enabled then
 			setupInfJump()
 		end
 	end)
-	
-	notify("Infinite jump enabled - Hold space to fly up", Color3.fromRGB(0, 255, 100))
+
+	notify("Infinite jump enabled", Color3.fromRGB(0, 255, 100))
 end
 
 local function disableInfJump()
@@ -6491,37 +6529,42 @@ local function disableInfJump()
 		notify("⚠️ Infinite jump not enabled", Color3.fromRGB(255, 200, 100))
 		return
 	end
-	
+
 	infJumpData.enabled = false
 	infJumpData.holdingJump = false
-	
+
 	if infJumpData.beganConnection then
 		infJumpData.beganConnection:Disconnect()
 		infJumpData.beganConnection = nil
 	end
-	
+
 	if infJumpData.endedConnection then
 		infJumpData.endedConnection:Disconnect()
 		infJumpData.endedConnection = nil
 	end
-	
+
+	if infJumpData.jumpRequestConnection then
+		infJumpData.jumpRequestConnection:Disconnect()
+		infJumpData.jumpRequestConnection = nil
+	end
+
 	if infJumpData.heartbeatConnection then
 		infJumpData.heartbeatConnection:Disconnect()
 		infJumpData.heartbeatConnection = nil
 	end
-	
+
 	if infJumpData.charConnection then
 		infJumpData.charConnection:Disconnect()
 		infJumpData.charConnection = nil
 	end
-	
+
 	infJumpData.currentChar = nil
 	infJumpData.currentHRP = nil
-	
+
 	notify("❌ Infinite jump disabled", Color3.fromRGB(255, 100, 100))
 end
 -- =============================================================
--- AIMBOT SYSTEM
+-- Aimbot
 -- =============================================================
 local aimbotData = {
 	enabled = false,
