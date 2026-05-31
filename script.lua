@@ -9209,15 +9209,12 @@ local smallestSide = math.min(viewport.X, viewport.Y)
 local scale, fontScale
 if isMobile then
 	if smallestSide < 600 then
-		-- Small phone
 		scale = 0.42
 		fontScale = 0.68
 	elseif smallestSide < 800 then
-		-- Large phone / small tablet
 		scale = 0.52
 		fontScale = 0.75
 	else
-		-- Tablet
 		scale = 0.62
 		fontScale = 0.82
 	end
@@ -9452,7 +9449,7 @@ cmdList = Instance.new("UIListLayout", cmdScroll)
 cmdList.Padding = UDim.new(0, math.floor(6 * scale))
 cmdList.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Command data in tables (no locals for each)
+-- Command data in tables
 cmdDesc = {
 	["!aimbot"] = "Opens aimbot control panel", ["!autoexec"] = "Enables auto-run on join",
 	["!clicktp"] = "Click to teleport", ["!cmdbar"] = "Toggle command bar",
@@ -9503,37 +9500,35 @@ cmds = {
 }
 
 for i, cmdStr in ipairs(cmds) do
-	btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, math.floor(-10 * scale), 0, math.floor(42 * scale))
-	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-	btn.Text = "  " .. cmdStr
-	btn.Font = Enum.Font.GothamSemibold
-	btn.TextSize = math.floor(14 * fontScale)
-	btn.TextColor3 = globalConfig.textColor
-	btn.TextXAlignment = Enum.TextXAlignment.Left
-	btn.TextStrokeTransparency = 0.5
-	btn.TextStrokeColor3 = Color3.new(0,0,0)
-	btn.BorderSizePixel = 0
-	btn.Parent = cmdScroll
-	btn.LayoutOrder = i
-	btn.ZIndex = 2147483647
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	local cmdBtn = Instance.new("TextButton")
+	cmdBtn.Size = UDim2.new(1, math.floor(-10 * scale), 0, math.floor(42 * scale))
+	cmdBtn.BackgroundColor3 = currentTheme.list or Color3.fromRGB(40, 40, 48)
+	cmdBtn.Text = "  " .. cmdStr
+	cmdBtn.Font = Enum.Font.GothamSemibold
+	cmdBtn.TextSize = math.floor(14 * fontScale)
+	cmdBtn.TextColor3 = globalConfig.textColor
+	cmdBtn.TextXAlignment = Enum.TextXAlignment.Left
+	cmdBtn.TextStrokeTransparency = 0.5
+	cmdBtn.TextStrokeColor3 = Color3.new(0,0,0)
+	cmdBtn.BorderSizePixel = 0
+	cmdBtn.Parent = cmdScroll
+	cmdBtn.LayoutOrder = i
+	cmdBtn.ZIndex = 2147483647
+	Instance.new("UICorner", cmdBtn).CornerRadius = UDim.new(0, 6)
 
-	desc = cmdDesc[cmdStr]
+	local desc = cmdDesc[cmdStr]
 	if desc then
-		btn.MouseEnter:Connect(function()
-			btn.Text = "  " .. cmdStr .. " — " .. desc
-			btn.TextColor3 = currentTheme.accent
-			btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+		cmdBtn.MouseEnter:Connect(function()
+			cmdBtn.BackgroundColor3 = currentTheme.btn or Color3.fromRGB(50, 50, 60)
+			cmdBtn.TextColor3 = currentTheme.accent
 		end)
-		btn.MouseLeave:Connect(function()
-			btn.Text = "  " .. cmdStr
-			btn.TextColor3 = globalConfig.textColor
-			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+		cmdBtn.MouseLeave:Connect(function()
+			cmdBtn.BackgroundColor3 = currentTheme.list or Color3.fromRGB(40, 40, 48)
+			cmdBtn.TextColor3 = globalConfig.textColor
 		end)
 	end
 
-	btn.MouseButton1Click:Connect(function()
+	cmdBtn.MouseButton1Click:Connect(function()
 		if setclipboard then
 			setclipboard(cmdStr)
 			notify("Copied: " .. cmdStr, Color3.fromRGB(100, 255, 100))
@@ -9542,7 +9537,7 @@ for i, cmdStr in ipairs(cmds) do
 end
 
 searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-	filter = searchBox.Text:lower()
+	local filter = searchBox.Text:lower()
 	for _, child in ipairs(cmdScroll:GetChildren()) do
 		if child:IsA("TextButton") then
 			child.Visible = filter == "" or child.Text:lower():find(filter, 1, true)
@@ -9572,9 +9567,9 @@ setList = Instance.new("UIListLayout", setScroll)
 setList.Padding = UDim.new(0, math.floor(12 * scale))
 setList.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Section creator (function reuses parameter names)
+-- Section creator
 function makeSection(parent, titleText, h)
-	s = Instance.new("Frame", parent)
+	local s = Instance.new("Frame", parent)
 	s.Size = UDim2.new(1, math.floor(-16 * scale), 0, math.floor(h * scale))
 	s.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 	s.BorderSizePixel = 0
@@ -9582,7 +9577,7 @@ function makeSection(parent, titleText, h)
 	s.ZIndex = 2147483647
 	Instance.new("UICorner", s).CornerRadius = UDim.new(0, 8)
 
-	t = Instance.new("TextLabel", s)
+	local t = Instance.new("TextLabel", s)
 	t.Size = UDim2.new(1, math.floor(-20 * scale), 0, math.floor(28 * scale))
 	t.Position = UDim2.new(0, math.floor(10 * scale), 0, math.floor(8 * scale))
 	t.BackgroundTransparency = 1
@@ -9612,18 +9607,18 @@ cDisplay.TextColor3 = Color3.new(0,0,0)
 cDisplay.ZIndex = 2147483647
 Instance.new("UICorner", cDisplay).CornerRadius = UDim.new(0, 6)
 
--- FIX: Each slider now has its own dragging state table instead of shared 'dragging' variable
-local sliderStates = {}
+-- FIXED SLIDER SYSTEM
+local sliders = {}
+local activeSliderComp = nil
 
--- Slider creator (reuses all parameter names, minimal locals)
 function makeSlider(parent, y, color, label, comp)
-	cont = Instance.new("Frame", parent)
+	local cont = Instance.new("Frame", parent)
 	cont.Size = UDim2.new(0.8, 0, 0, math.floor(24 * scale))
 	cont.Position = UDim2.new(0.1, 0, 0, math.floor(y * scale))
 	cont.BackgroundTransparency = 1
 	cont.ZIndex = 2147483647
 
-	lab = Instance.new("TextLabel", cont)
+	local lab = Instance.new("TextLabel", cont)
 	lab.Size = UDim2.new(0, math.floor(30 * scale), 1, 0)
 	lab.BackgroundTransparency = 1
 	lab.Text = label
@@ -9633,7 +9628,7 @@ function makeSlider(parent, y, color, label, comp)
 	lab.TextXAlignment = Enum.TextXAlignment.Left
 	lab.ZIndex = 2147483647
 
-	track = Instance.new("Frame", cont)
+	local track = Instance.new("Frame", cont)
 	track.Size = UDim2.new(1, math.floor(-40 * scale), 0, math.floor(8 * scale))
 	track.Position = UDim2.new(0, math.floor(35 * scale), 0.5, math.floor(-4 * scale))
 	track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
@@ -9641,15 +9636,15 @@ function makeSlider(parent, y, color, label, comp)
 	track.ZIndex = 2147483647
 	Instance.new("UICorner", track).CornerRadius = UDim.new(0, 4)
 
-	fill = Instance.new("Frame", track)
-	val = comp == "R" and globalConfig.textColor.R or comp == "G" and globalConfig.textColor.G or globalConfig.textColor.B
+	local fill = Instance.new("Frame", track)
+	local val = comp == "R" and globalConfig.textColor.R or comp == "G" and globalConfig.textColor.G or globalConfig.textColor.B
 	fill.Size = UDim2.new(val, 0, 1, 0)
 	fill.BackgroundColor3 = color
 	fill.BorderSizePixel = 0
 	fill.ZIndex = 2147483647
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
 
-	knob = Instance.new("Frame", track)
+	local knob = Instance.new("Frame", track)
 	knob.Size = UDim2.new(0, math.floor(14 * scale), 0, math.floor(14 * scale))
 	knob.Position = UDim2.new(val, math.floor(-7 * scale), 0.5, math.floor(-7 * scale))
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -9657,54 +9652,64 @@ function makeSlider(parent, y, color, label, comp)
 	knob.ZIndex = 2147483647
 	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-	-- FIX: Unique dragging state per slider using the track as key
-	sliderStates[track] = false
-
-	function updateSlider(x)
-		pos = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-		fill.Size = UDim2.new(pos, 0, 1, 0)
-		knob.Position = UDim2.new(pos, math.floor(-7 * scale), 0.5, math.floor(-7 * scale))
-
-		newC = Color3.new(
-			comp == "R" and pos or globalConfig.textColor.R,
-			comp == "G" and pos or globalConfig.textColor.G,
-			comp == "B" and pos or globalConfig.textColor.B
-		)
-		globalConfig.textColor = newC
-		cDisplay.BackgroundColor3 = newC
-
-		if lunarGui then
-			for _, obj in ipairs(lunarGui:GetDescendants()) do
-				if (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) and obj.TextColor3 ~= currentTheme.accent then
-					obj.TextColor3 = newC
-				end
-			end
-		end
-	end
+	sliders[comp] = {
+		track = track,
+		fill = fill,
+		knob = knob
+	}
 
 	track.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			sliderStates[track] = true
-			updateSlider(input.Position.X)
+			activeSliderComp = comp
+			local pos = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+			fill.Size = UDim2.new(pos, 0, 1, 0)
+			knob.Position = UDim2.new(pos, math.floor(-7 * scale), 0.5, math.floor(-7 * scale))
+			updateAllColors()
 		end
 	end)
+end
 
-	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			sliderStates[track] = false
-		end
-	end)
+function updateAllColors()
+	local r = sliders.R and sliders.R.fill.Size.X.Scale or globalConfig.textColor.R
+	local g = sliders.G and sliders.G.fill.Size.X.Scale or globalConfig.textColor.G
+	local b = sliders.B and sliders.B.fill.Size.X.Scale or globalConfig.textColor.B
 
-	UserInputService.InputChanged:Connect(function(input)
-		if sliderStates[track] and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			updateSlider(input.Position.X)
+	local newC = Color3.new(r, g, b)
+	globalConfig.textColor = newC
+	cDisplay.BackgroundColor3 = newC
+
+	if lunarGui then
+		for _, obj in ipairs(lunarGui:GetDescendants()) do
+			if (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) and obj.TextColor3 ~= currentTheme.accent then
+				obj.TextColor3 = newC
+			end
 		end
-	end)
+	end
 end
 
 makeSlider(cSection, 78, Color3.fromRGB(255, 80, 80), "R", "R")
 makeSlider(cSection, 106, Color3.fromRGB(80, 255, 80), "G", "G")
 makeSlider(cSection, 134, Color3.fromRGB(80, 140, 255), "B", "B")
+
+-- Global slider input handlers
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		activeSliderComp = nil
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if not activeSliderComp then return end
+	if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+	local s = sliders[activeSliderComp]
+	if not s then return end
+
+	local pos = math.clamp((input.Position.X - s.track.AbsolutePosition.X) / s.track.AbsoluteSize.X, 0, 1)
+	s.fill.Size = UDim2.new(pos, 0, 1, 0)
+	s.knob.Position = UDim2.new(pos, math.floor(-7 * scale), 0.5, math.floor(-7 * scale))
+	updateAllColors()
+end)
 
 -- UI Transparency Section
 tSection = makeSection(setScroll, "UI TRANSPARENCY", 110)
@@ -9742,10 +9747,10 @@ tKnob.BorderSizePixel = 0
 tKnob.ZIndex = 2147483647
 Instance.new("UICorner", tKnob).CornerRadius = UDim.new(1, 0)
 
-tDragging = false
+local tDragging = false
 
-function updateTrans(x)
-	pos = math.clamp((x - tTrack.AbsolutePosition.X) / tTrack.AbsoluteSize.X, 0, 1)
+local function updateTrans(x)
+	local pos = math.clamp((x - tTrack.AbsolutePosition.X) / tTrack.AbsoluteSize.X, 0, 1)
 	tFill.Size = UDim2.new(pos, 0, 1, 0)
 	tKnob.Position = UDim2.new(pos, math.floor(-8 * scale), 0.5, math.floor(-8 * scale))
 	globalConfig.uiTransparency = pos
@@ -9783,9 +9788,9 @@ thCont.Position = UDim2.new(0, math.floor(10 * scale), 0, math.floor(36 * scale)
 thCont.BackgroundTransparency = 1
 thCont.ZIndex = 2147483647
 
-thCount = 0
+local thCount = 0
 for _ in pairs(themes) do thCount = thCount + 1 end
-rows = math.ceil(thCount / 2)
+local rows = math.ceil(thCount / 2)
 thSection.Size = UDim2.new(1, math.floor(-16 * scale), 0, math.floor(36 + rows * 55 + 10) * scale)
 
 thGrid = Instance.new("UIGridLayout", thCont)
@@ -9794,31 +9799,78 @@ thGrid.CellPadding = UDim2.new(0, math.floor(10 * scale), 0, math.floor(10 * sca
 thGrid.SortOrder = Enum.SortOrder.LayoutOrder
 
 for name, th in pairs(themes) do
-	btn = Instance.new("TextButton", thCont)
-	btn.BackgroundColor3 = th.accent
-	btn.Text = name
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = math.floor(14 * fontScale)
-	btn.TextColor3 = th.text
-	btn.BorderSizePixel = 0
-	btn.LayoutOrder = name == "Default" and 1 or 2
-	btn.ZIndex = 2147483647
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	local themeBtn = Instance.new("TextButton", thCont)
+	themeBtn.BackgroundColor3 = th.accent
+	themeBtn.Text = name
+	themeBtn.Font = Enum.Font.GothamBold
+	themeBtn.TextSize = math.floor(14 * fontScale)
+	themeBtn.TextColor3 = th.text
+	themeBtn.BorderSizePixel = 0
+	themeBtn.LayoutOrder = name == "Default" and 1 or 2
+	themeBtn.ZIndex = 2147483647
+	Instance.new("UICorner", themeBtn).CornerRadius = UDim.new(0, 6)
 
-	btn.MouseButton1Click:Connect(function()
+	themeBtn.MouseButton1Click:Connect(function()
+		local oldTheme = currentTheme
 		currentTheme = th
+
 		mainFrame.BackgroundColor3 = th.glass
+		if topBar then topBar.BackgroundColor3 = th.glass end
+
 		titleLabel.TextColor3 = th.accent
+
 		cmdTab.BackgroundColor3 = th.accent
+		cmdTab.TextColor3 = th.text
 		setTab.BackgroundColor3 = th.btn
+		setTab.TextColor3 = globalConfig.textColor
+
 		searchBar.BackgroundColor3 = th.list
 
+		if cmdScroll then cmdScroll.BackgroundColor3 = th.glass end
+		if setScroll then setScroll.BackgroundColor3 = th.glass end
+
 		for _, obj in ipairs(lunarGui:GetDescendants()) do
-			if obj:IsA("TextLabel") and obj.TextColor3 == currentTheme.accent then
-				obj.TextColor3 = th.accent
+			if obj:IsA("TextButton") then
+				if obj.BackgroundColor3 == oldTheme.accent then obj.BackgroundColor3 = th.accent end
+				if obj.BackgroundColor3 == oldTheme.btn then obj.BackgroundColor3 = th.btn end
+				if obj.BackgroundColor3 == oldTheme.glass then obj.BackgroundColor3 = th.glass end
+				if obj.BackgroundColor3 == oldTheme.list then obj.BackgroundColor3 = th.list end
+				if obj.TextColor3 == oldTheme.accent then obj.TextColor3 = th.accent end
+				if obj.TextColor3 == oldTheme.text then obj.TextColor3 = th.text end
+			end
+			if obj:IsA("TextLabel") then
+				if obj.TextColor3 == oldTheme.accent then obj.TextColor3 = th.accent end
+				if obj.TextColor3 == oldTheme.text then obj.TextColor3 = th.text end
+			end
+			if obj:IsA("Frame") then
+				if obj.BackgroundColor3 == oldTheme.glass then obj.BackgroundColor3 = th.glass end
+				if obj.BackgroundColor3 == oldTheme.list then obj.BackgroundColor3 = th.list end
+				if obj.BackgroundColor3 == oldTheme.btn then obj.BackgroundColor3 = th.btn end
 			end
 		end
 
+		for _, s in pairs(sliders) do
+			if s and s.fill and s.fill.BackgroundColor3 == oldTheme.accent then
+				s.fill.BackgroundColor3 = th.accent
+			end
+		end
+		if tFill and tFill.BackgroundColor3 == oldTheme.accent then
+			tFill.BackgroundColor3 = th.accent
+		end
+
+		-- Update command buttons with old hardcoded colors
+		for _, obj in ipairs(cmdScroll:GetChildren()) do
+			if obj:IsA("TextButton") then
+				if obj.BackgroundColor3 == Color3.fromRGB(40, 40, 48) or obj.BackgroundColor3 == (oldTheme.list or Color3.fromRGB(40, 40, 48)) then
+					obj.BackgroundColor3 = th.list or Color3.fromRGB(40, 40, 48)
+				end
+				if obj.BackgroundColor3 == Color3.fromRGB(50, 50, 60) or obj.BackgroundColor3 == (oldTheme.btn or Color3.fromRGB(50, 50, 60)) then
+					obj.BackgroundColor3 = th.btn or Color3.fromRGB(50, 50, 60)
+				end
+			end
+		end
+
+		cDisplay.BackgroundColor3 = globalConfig.textColor
 		notify("Theme changed to " .. name, th.accent)
 	end)
 end
