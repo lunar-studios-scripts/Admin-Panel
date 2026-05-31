@@ -686,6 +686,41 @@ notifGui.ScreenInsets = Enum.ScreenInsets.None
 notifGui.IgnoreGuiInset = true
 notifGui.Parent = game:GetService("CoreGui")
 
+local UserInputService = game:GetService("UserInputService")
+
+local isMobile = UserInputService.TouchEnabled
+
+local notifWidth = 340
+local notifHeight = 76
+local notifSpacing = 12
+local startY = 20
+local notifOffscreen = 120
+local notifTargetX = -360
+
+if isMobile then
+	local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
+	local smallestSide = math.min(viewport.X, viewport.Y)
+
+	-- Phone
+	if smallestSide < 700 then
+		notifWidth = 220
+		notifHeight = 52
+		notifSpacing = 6
+		startY = 8
+		notifOffscreen = 80
+		notifTargetX = -240
+
+	-- Tablet / iPad
+	else
+		notifWidth = 280
+		notifHeight = 62
+		notifSpacing = 8
+		startY = 12
+		notifOffscreen = 100
+		notifTargetX = -300
+	end
+end
+
 local activeNotifications = {}
 local notifHeight = 76
 local notifSpacing = 12
@@ -725,7 +760,7 @@ local function notify(text, col)
 
 	-- Main container
 	local f = Instance.new("Frame")
-	f.Size = UDim2.new(0, 340, 0, notifHeight)
+	f.Size = UDim2.new(0, notifWidth, 0, notifHeight)
 	f.Position = UDim2.new(1, 120, 0, -200) -- start off-screen top-right
 	f.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
 	f.BorderSizePixel = 0
@@ -745,11 +780,11 @@ local function notify(text, col)
 
 	-- Moon emoji
 	local moonIcon = Instance.new("TextLabel")
-	moonIcon.Size = UDim2.new(0, 28, 0, 28)
+	moonIcon.Size = isMobile and UDim2.new(0, 20, 0, 20) or UDim2.new(0, 28, 0, 28)
 	moonIcon.Position = UDim2.new(0, 12, 0, 8)
 	moonIcon.BackgroundTransparency = 1
 	moonIcon.Text = "🌙"
-	moonIcon.TextSize = 22
+	moonIcon.TextSize = isMobile and 16 or 22
 	moonIcon.Font = Enum.Font.GothamBold
 	moonIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
 	moonIcon.TextTransparency = 1
@@ -763,7 +798,7 @@ local function notify(text, col)
 	titleLabel.BackgroundTransparency = 1
 	titleLabel.Text = "Lunar"
 	titleLabel.Font = Enum.Font.GothamBold
-	titleLabel.TextSize = 16
+	titleLabel.TextSize = isMobile and 13 or 16
 	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	titleLabel.TextTransparency = 1
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -777,7 +812,7 @@ local function notify(text, col)
 	msgLabel.BackgroundTransparency = 1
 	msgLabel.Text = text
 	msgLabel.Font = Enum.Font.Gotham
-	msgLabel.TextSize = 14
+	msgLabel.TextSize = isMobile and 11 or 14
 	msgLabel.TextColor3 = Color3.fromRGB(180, 180, 195)
 	msgLabel.TextTransparency = 1
 	msgLabel.TextWrapped = true
@@ -809,7 +844,7 @@ local function notify(text, col)
 
 	-- Entrance Animation
 	TweenService:Create(f, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = UDim2.new(1, -360, 0, targetY),
+		Position = UDim2.new(1, notifTargetX, 0, targetY),
 		BackgroundTransparency = 0.05
 	}):Play()
 
@@ -891,7 +926,7 @@ local function notify(text, col)
 		local old = table.remove(activeNotifications, 1) -- remove first (oldest)
 		if old and old.Parent then
 			TweenService:Create(old, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-				Position = UDim2.new(1, 120, 0, old.Position.Y.Offset),
+				Position = UDim2.new(1, notifOffscreen, 0, old.Position.Y.Offset),
 				BackgroundTransparency = 1
 			}):Play()
 			task.delay(0.4, function()
