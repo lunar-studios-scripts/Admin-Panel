@@ -4463,7 +4463,9 @@ local FlySystem = {
 	bodyVelocity = nil,
 	connection = nil,
 	currentVelocity = Vector3.new(0, 0, 0),
-	lerpFactor = 0.25
+	lerpFactor = 0.25,
+	mobileJumping = false,
+	jumpConnection = nil
 }
 
 function FlySystem:CreatePanel()
@@ -4517,7 +4519,7 @@ function FlySystem:CreatePanel()
 	Title.Size = UDim2.new(0.6, 0, 1, 0)
 	Title.Position = UDim2.new(0, 15, 0, 0)
 	Title.BackgroundTransparency = 1
-	Title.Text = "FLY SYSTEM"
+	Title.Text = "fly around!"
 	Title.Font = Enum.Font.GothamBold
 	Title.TextSize = 20
 	Title.TextColor3 = Color3.fromRGB(100, 200, 255)
@@ -4559,7 +4561,7 @@ function FlySystem:CreatePanel()
 	SpeedLabel.Size = UDim2.new(1, 0, 0, 25)
 	SpeedLabel.Position = UDim2.new(0, 0, 0, 55)
 	SpeedLabel.BackgroundTransparency = 1
-	SpeedLabel.Text = "SPEED (1-10000)"
+	SpeedLabel.Text = "speed (1-10000)"
 	SpeedLabel.Font = Enum.Font.GothamSemibold
 	SpeedLabel.TextSize = 14
 	SpeedLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
@@ -4599,7 +4601,7 @@ function FlySystem:CreatePanel()
 	FlyBtn.Size = UDim2.new(0, 200, 0, 50)
 	FlyBtn.Position = UDim2.new(0.5, -100, 0, 160)
 	FlyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
-	FlyBtn.Text = "▶ START FLY"
+	FlyBtn.Text = "▶ start fly!"
 	FlyBtn.Font = Enum.Font.GothamBlack
 	FlyBtn.TextSize = 20
 	FlyBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -4698,6 +4700,21 @@ function FlySystem:StartFly()
 	self.enabled = true
 	self.currentVelocity = Vector3.new(0, 0, 0)
 
+	-- Mobile detection
+	local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+
+	-- Mobile jump tracking
+	if isMobile then
+		self.mobileJumping = false
+		self.jumpConnection = hum.StateChanged:Connect(function(oldState, newState)
+			if newState == Enum.HumanoidStateType.Jumping then
+				self.mobileJumping = true
+			elseif oldState == Enum.HumanoidStateType.Jumping then
+				self.mobileJumping = false
+			end
+		end)
+	end
+
 	if self.flyBtn then
 		self.flyBtn.Text = "STOP FLY"
 		self.flyBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
@@ -4721,12 +4738,27 @@ function FlySystem:StartFly()
 		self.bodyGyro.CFrame = cam.CFrame
 
 		local moveDir = Vector3.new(0, 0, 0)
-		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += Vector3.new(0, 1, 0) end
-		if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0, 1, 0) end
+
+		if isMobile then
+			-- Mobile: use thumbstick (MoveDirection) + jump button
+			local hum = client.Character:FindFirstChildOfClass("Humanoid")
+			if hum then
+				-- MoveDirection is camera-relative on mobile
+				moveDir = hum.MoveDirection
+				-- Up when jump button held
+				if self.mobileJumping then
+					moveDir += Vector3.new(0, 1, 0)
+				end
+			end
+		else
+			-- PC: keyboard controls
+			if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
+			if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
+			if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
+			if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
+			if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += Vector3.new(0, 1, 0) end
+			if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0, 1, 0) end
+		end
 
 		local targetVel = Vector3.new(0, 0, 0)
 		if moveDir.Magnitude > 0 then
@@ -4745,6 +4777,7 @@ function FlySystem:StopFly()
 	self.enabled = false
 
 	if self.connection then self.connection:Disconnect() self.connection = nil end
+	if self.jumpConnection then self.jumpConnection:Disconnect() self.jumpConnection = nil end
 	if self.bodyGyro then self.bodyGyro:Destroy() self.bodyGyro = nil end
 	if self.bodyVelocity then self.bodyVelocity:Destroy() self.bodyVelocity = nil end
 
@@ -4753,9 +4786,10 @@ function FlySystem:StopFly()
 	if hum then hum.PlatformStand = false hum.AutoRotate = true end
 
 	self.currentVelocity = Vector3.new(0, 0, 0)
+	self.mobileJumping = false
 
 	if self.flyBtn then
-		self.flyBtn.Text = "▶ START FLY"
+		self.flyBtn.Text = "▶ start fly!"
 		self.flyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
 	end
 
@@ -4773,7 +4807,7 @@ client.CharacterAdded:Connect(function()
 	if FlySystem.enabled then
 		FlySystem:StopFly()
 		if FlySystem.gui and FlySystem.flyBtn then
-			FlySystem.flyBtn.Text = "▶ START FLY"
+			FlySystem.flyBtn.Text = "▶ start flying!"
 			FlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
 		end
 	end
@@ -4820,7 +4854,7 @@ local function unfly(plr)
 
 	-- Update button state
 	if FlySystem.flyBtn then
-		FlySystem.flyBtn.Text = "▶ START FLY"
+		FlySystem.flyBtn.Text = "▶ start flying!"
 		FlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
 	end
 end
