@@ -4738,7 +4738,7 @@ function FlySystem:StartFly()
 
 				-- Forward/back uses camera look vector (includes pitch for up/down)
 				-- Left/right uses camera right vector
-				moveDir = (camLook * stick.Z) + (camRight * stick.X)
+				moveDir = (camLook * -stick.Z) + (camRight * stick.X)
 			end
 		else
 			-- PC: keyboard controls
