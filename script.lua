@@ -9203,8 +9203,28 @@ end
 -- =============================================================
 -- Mobile detection at top
 local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
-local scale = isMobile and 0.7 or 1
-local fontScale = isMobile and 0.85 or 1
+local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+local smallestSide = math.min(viewport.X, viewport.Y)
+
+local scale, fontScale
+if isMobile then
+	if smallestSide < 600 then
+		-- Small phone
+		scale = 0.42
+		fontScale = 0.68
+	elseif smallestSide < 800 then
+		-- Large phone / small tablet
+		scale = 0.52
+		fontScale = 0.75
+	else
+		-- Tablet
+		scale = 0.62
+		fontScale = 0.82
+	end
+else
+	scale = 1
+	fontScale = 1
+end
 
 lunarGui = Instance.new("ScreenGui")
 lunarGui.Name = "LunarGui"
