@@ -4463,9 +4463,7 @@ local FlySystem = {
 	bodyVelocity = nil,
 	connection = nil,
 	currentVelocity = Vector3.new(0, 0, 0),
-	lerpFactor = 0.25,
-	mobileJumping = false,
-	jumpConnection = nil
+	lerpFactor = 0.25
 }
 
 function FlySystem:CreatePanel()
@@ -4519,7 +4517,7 @@ function FlySystem:CreatePanel()
 	Title.Size = UDim2.new(0.6, 0, 1, 0)
 	Title.Position = UDim2.new(0, 15, 0, 0)
 	Title.BackgroundTransparency = 1
-	Title.Text = "fly around!"
+	Title.Text = "fly thingy!"
 	Title.Font = Enum.Font.GothamBold
 	Title.TextSize = 20
 	Title.TextColor3 = Color3.fromRGB(100, 200, 255)
@@ -4703,18 +4701,6 @@ function FlySystem:StartFly()
 	-- Mobile detection
 	local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 
-	-- Mobile jump tracking
-	if isMobile then
-		self.mobileJumping = false
-		self.jumpConnection = hum.StateChanged:Connect(function(oldState, newState)
-			if newState == Enum.HumanoidStateType.Jumping then
-				self.mobileJumping = true
-			elseif oldState == Enum.HumanoidStateType.Jumping then
-				self.mobileJumping = false
-			end
-		end)
-	end
-
 	if self.flyBtn then
 		self.flyBtn.Text = "STOP FLY"
 		self.flyBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
@@ -4740,15 +4726,19 @@ function FlySystem:StartFly()
 		local moveDir = Vector3.new(0, 0, 0)
 
 		if isMobile then
-			-- Mobile: use thumbstick (MoveDirection) + jump button
+			-- Mobile: look-to-fly
+			-- Thumbstick controls magnitude/direction, camera controls where you go
 			local hum = client.Character:FindFirstChildOfClass("Humanoid")
 			if hum then
-				-- MoveDirection is camera-relative on mobile
-				moveDir = hum.MoveDirection
-				-- Up when jump button held
-				if self.mobileJumping then
-					moveDir += Vector3.new(0, 1, 0)
-				end
+				local stick = hum.MoveDirection
+				-- MoveDirection is camera-relative: X=left/right, Z=forward/back, Y=0
+				-- We remap it so forward follows camera look (including up/down)
+				local camLook = cam.CFrame.LookVector
+				local camRight = cam.CFrame.RightVector
+
+				-- Forward/back uses camera look vector (includes pitch for up/down)
+				-- Left/right uses camera right vector
+				moveDir = (camLook * stick.Z) + (camRight * stick.X)
 			end
 		else
 			-- PC: keyboard controls
@@ -4777,7 +4767,6 @@ function FlySystem:StopFly()
 	self.enabled = false
 
 	if self.connection then self.connection:Disconnect() self.connection = nil end
-	if self.jumpConnection then self.jumpConnection:Disconnect() self.jumpConnection = nil end
 	if self.bodyGyro then self.bodyGyro:Destroy() self.bodyGyro = nil end
 	if self.bodyVelocity then self.bodyVelocity:Destroy() self.bodyVelocity = nil end
 
@@ -4786,7 +4775,6 @@ function FlySystem:StopFly()
 	if hum then hum.PlatformStand = false hum.AutoRotate = true end
 
 	self.currentVelocity = Vector3.new(0, 0, 0)
-	self.mobileJumping = false
 
 	if self.flyBtn then
 		self.flyBtn.Text = "▶ start fly!"
@@ -4861,7 +4849,6 @@ end
 -- =============================================================
 -- VIEW SYSTEM
 -- =============================================================
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
