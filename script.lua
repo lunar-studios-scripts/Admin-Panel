@@ -3997,7 +3997,458 @@ local function createSpeedPanel()
 	end)
 end
 -- =============================================================
--- FLY SYSTEM
+-- Vehicle fly 
+-- =============================================================
+local VehicleFlySystem = {
+	enabled = false,
+	uiSpeed = 1,
+	actualSpeed = 50,
+	speedMultiplier = 50,
+	gui = nil,
+	mainFrame = nil,
+	flyBtn = nil,
+	speedBox = nil,
+	bodyGyro = nil,
+	bodyVelocity = nil,
+	connection = nil,
+	currentVelocity = Vector3.new(0, 0, 0),
+	lerpFactor = 0.25,
+	vehicleSeat = nil,
+	vehicleModel = nil
+}
+
+function VehicleFlySystem:CreatePanel()
+	if self.gui then return end
+
+	local playerGui = client:WaitForChild("PlayerGui")
+
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name = "VehicleFlySystemPanel"
+	ScreenGui.ResetOnSpawn = false
+	ScreenGui.DisplayOrder = 999999
+	ScreenGui.Parent = playerGui
+	self.gui = ScreenGui
+
+	local MainFrame = Instance.new("Frame")
+	MainFrame.Name = "Main"
+	MainFrame.Size = UDim2.new(0, 320, 0, 220)
+	MainFrame.Position = UDim2.new(0.5, -160, 0.3, 0)
+	MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+	MainFrame.BorderSizePixel = 0
+	MainFrame.Active = true
+	MainFrame.Draggable = true
+	MainFrame.Parent = ScreenGui
+	self.mainFrame = MainFrame
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 12)
+	Corner.Parent = MainFrame
+
+	local Gradient = Instance.new("UIGradient")
+	Gradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 55)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
+	}
+	Gradient.Rotation = 90
+	Gradient.Parent = MainFrame
+
+	-- Top Bar
+	local TopBar = Instance.new("Frame")
+	TopBar.Size = UDim2.new(1, 0, 0, 45)
+	TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+	TopBar.BorderSizePixel = 0
+	TopBar.Parent = MainFrame
+
+	local TopCorner = Instance.new("UICorner")
+	TopCorner.CornerRadius = UDim.new(0, 12)
+	TopCorner.Parent = TopBar
+
+	-- Title
+	local Title = Instance.new("TextLabel")
+	Title.Size = UDim2.new(0.6, 0, 1, 0)
+	Title.Position = UDim2.new(0, 15, 0, 0)
+	Title.BackgroundTransparency = 1
+	Title.Text = "Vehicle fly:3"
+	Title.Font = Enum.Font.GothamBold
+	Title.TextSize = 20
+	Title.TextColor3 = Color3.fromRGB(255, 180, 50)
+	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.Parent = TopBar
+
+	-- Minimize Button
+	local MinBtn = Instance.new("TextButton")
+	MinBtn.Size = UDim2.new(0, 32, 0, 32)
+	MinBtn.Position = UDim2.new(1, -75, 0.5, -16)
+	MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+	MinBtn.Text = "−"
+	MinBtn.Font = Enum.Font.GothamBold
+	MinBtn.TextSize = 24
+	MinBtn.TextColor3 = Color3.new(1, 1, 1)
+	MinBtn.Parent = TopBar
+
+	local MinCorner = Instance.new("UICorner")
+	MinCorner.CornerRadius = UDim.new(0, 8)
+	MinCorner.Parent = MinBtn
+
+	-- Close Button
+	local CloseBtn = Instance.new("TextButton")
+	CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+	CloseBtn.Position = UDim2.new(1, -38, 0.5, -16)
+	CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+	CloseBtn.Text = "×"
+	CloseBtn.Font = Enum.Font.GothamBold
+	CloseBtn.TextSize = 22
+	CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+	CloseBtn.Parent = TopBar
+
+	local CloseCorner = Instance.new("UICorner")
+	CloseCorner.CornerRadius = UDim.new(0, 8)
+	CloseCorner.Parent = CloseBtn
+
+	-- Speed Label
+	local SpeedLabel = Instance.new("TextLabel")
+	SpeedLabel.Size = UDim2.new(1, 0, 0, 25)
+	SpeedLabel.Position = UDim2.new(0, 0, 0, 55)
+	SpeedLabel.BackgroundTransparency = 1
+	SpeedLabel.Text = "speed (1-10000)"
+	SpeedLabel.Font = Enum.Font.GothamSemibold
+	SpeedLabel.TextSize = 14
+	SpeedLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+	SpeedLabel.Parent = MainFrame
+
+	-- Speed Input Box
+	local SpeedInput = Instance.new("TextBox")
+	SpeedInput.Size = UDim2.new(0, 180, 0, 45)
+	SpeedInput.Position = UDim2.new(0.5, -90, 0, 85)
+	SpeedInput.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+	SpeedInput.Text = tostring(self.uiSpeed)
+	SpeedInput.Font = Enum.Font.GothamBold
+	SpeedInput.TextSize = 22
+	SpeedInput.TextColor3 = Color3.fromRGB(255, 200, 100)
+	SpeedInput.ClearTextOnFocus = false
+	SpeedInput.Parent = MainFrame
+
+	local InputCorner = Instance.new("UICorner")
+	InputCorner.CornerRadius = UDim.new(0, 10)
+	InputCorner.Parent = SpeedInput
+
+	self.speedBox = SpeedInput
+
+	-- Stats Label
+	local StatsLabel = Instance.new("TextLabel")
+	StatsLabel.Size = UDim2.new(1, 0, 0, 20)
+	StatsLabel.Position = UDim2.new(0, 0, 0, 135)
+	StatsLabel.BackgroundTransparency = 1
+	StatsLabel.Text = "Actual: 50 studs/sec"
+	StatsLabel.Font = Enum.Font.Gotham
+	StatsLabel.TextSize = 12
+	StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+	StatsLabel.Parent = MainFrame
+
+	-- Fly Toggle Button
+	local FlyBtn = Instance.new("TextButton")
+	FlyBtn.Size = UDim2.new(0, 200, 0, 50)
+	FlyBtn.Position = UDim2.new(0.5, -100, 0, 160)
+	FlyBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 30)
+	FlyBtn.Text = "▶ start flying!"
+	FlyBtn.Font = Enum.Font.GothamBlack
+	FlyBtn.TextSize = 18
+	FlyBtn.TextColor3 = Color3.new(1, 1, 1)
+	FlyBtn.Parent = MainFrame
+
+	local FlyCorner = Instance.new("UICorner")
+	FlyCorner.CornerRadius = UDim.new(0, 12)
+	FlyCorner.Parent = FlyBtn
+
+	self.flyBtn = FlyBtn
+
+	-- Controls Help
+	local HelpLabel = Instance.new("TextLabel")
+	HelpLabel.Size = UDim2.new(1, 0, 0, 20)
+	HelpLabel.Position = UDim2.new(0, 0, 1, -25)
+	HelpLabel.BackgroundTransparency = 1
+	HelpLabel.Text = "WASD | Space ↑ | Shift ↓"
+	HelpLabel.Font = Enum.Font.Gotham
+	HelpLabel.TextSize = 11
+	HelpLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
+	HelpLabel.Parent = MainFrame
+
+	-- Speed Input Handler
+	SpeedInput.FocusLost:Connect(function()
+		local newVal = tonumber(SpeedInput.Text)
+		if newVal then
+			newVal = math.clamp(math.floor(newVal), 1, 10000)
+			self.uiSpeed = newVal
+			self.actualSpeed = newVal * self.speedMultiplier
+			SpeedInput.Text = tostring(newVal)
+			StatsLabel.Text = "Actual: " .. self.actualSpeed .. " studs/sec"
+			if self.enabled then
+				notify("Vehicle fly speed: " .. newVal, Color3.fromRGB(255, 200, 100))
+			end
+		else
+			SpeedInput.Text = tostring(self.uiSpeed)
+		end
+	end)
+
+	-- Fly Button Handler
+	FlyBtn.MouseButton1Click:Connect(function()
+		self:ToggleFly()
+	end)
+
+	-- Minimize Handler
+	local minimized = false
+	MinBtn.MouseButton1Click:Connect(function()
+		minimized = not minimized
+		local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		if minimized then
+			TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, 320, 0, 45)}):Play()
+			MinBtn.Text = "+"
+			for _, obj in pairs(MainFrame:GetDescendants()) do
+				if obj:IsA("GuiObject") and obj ~= TopBar and obj ~= MinBtn and obj ~= CloseBtn and obj.Parent ~= TopBar then
+					obj.Visible = false
+				end
+			end
+		else
+			TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, 320, 0, 220)}):Play()
+			MinBtn.Text = "−"
+			for _, obj in pairs(MainFrame:GetDescendants()) do
+				if obj:IsA("GuiObject") then
+					obj.Visible = true
+				end
+			end
+		end
+	end)
+
+	-- Close Handler - just hides panel, doesn't stop fly
+	CloseBtn.MouseButton1Click:Connect(function()
+		ScreenGui.Enabled = false
+	end)
+end
+
+function VehicleFlySystem:GetVehiclePart()
+	local char = client.Character
+	if not char then return nil end
+
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hum then return nil end
+
+	local seat = hum.SeatPart
+	if not seat then return nil end
+
+	-- Find the vehicle model (parent of the seat)
+	local vehicleModel = seat:FindFirstAncestorOfClass("Model")
+	if not vehicleModel then
+		vehicleModel = seat.Parent
+	end
+
+	-- Get the primary part or a suitable base part
+	local vehiclePart = vehicleModel.PrimaryPart
+	if not vehiclePart then
+		-- Try to find a main chassis part
+		for _, part in pairs(vehicleModel:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name:lower():match("chassis") or part.Name:lower():match("body") or part.Name:lower():match("base") then
+				vehiclePart = part
+				break
+			end
+		end
+	end
+
+	-- Fallback to the seat itself if no other part found
+	if not vehiclePart then
+		vehiclePart = seat
+	end
+
+	self.vehicleSeat = seat
+	self.vehicleModel = vehicleModel
+
+	return vehiclePart
+end
+
+function VehicleFlySystem:StartFly()
+	local vehiclePart = self:GetVehiclePart()
+	if not vehiclePart then
+		notify("You must be in a vehicle seat!", Color3.fromRGB(255, 100, 100))
+		return
+	end
+
+	-- Anchor the vehicle part so physics doesn't fight us
+	vehiclePart.Anchored = false
+
+	-- Create BodyGyro to control rotation
+	self.bodyGyro = Instance.new("BodyGyro")
+	self.bodyGyro.P = 90000
+	self.bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+	self.bodyGyro.CFrame = vehiclePart.CFrame
+	self.bodyGyro.Parent = vehiclePart
+
+	-- Create BodyVelocity for movement
+	self.bodyVelocity = Instance.new("BodyVelocity")
+	self.bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+	self.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+	self.bodyVelocity.Parent = vehiclePart
+
+	self.enabled = true
+	self.currentVelocity = Vector3.new(0, 0, 0)
+
+	if self.flyBtn then
+		self.flyBtn.Text = "stop flying!"
+		self.flyBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+	end
+
+	self.connection = RunService.RenderStepped:Connect(function()
+		if not self.enabled then return end
+
+		local currentVehiclePart = self:GetVehiclePart()
+		if not currentVehiclePart then
+			self:StopFly()
+			return
+		end
+
+		local cam = workspace.CurrentCamera
+
+		if UserInputService:GetFocusedTextBox() then
+			self.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+			return
+		end
+
+		self.bodyGyro.CFrame = cam.CFrame
+
+		local moveDir = Vector3.new(0, 0, 0)
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += Vector3.new(0, 1, 0) end
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0, 1, 0) end
+
+		local targetVel = Vector3.new(0, 0, 0)
+		if moveDir.Magnitude > 0 then
+			targetVel = moveDir.Unit * self.actualSpeed
+		end
+
+		self.currentVelocity = self.currentVelocity:Lerp(targetVel, self.lerpFactor)
+		self.bodyVelocity.Velocity = self.currentVelocity
+	end)
+
+	notify("Vehicle flying at speed " .. self.uiSpeed .. "!", Color3.fromRGB(255, 180, 50))
+end
+
+function VehicleFlySystem:StopFly()
+	if not self.enabled then return end
+	self.enabled = false
+
+	if self.connection then self.connection:Disconnect() self.connection = nil end
+	if self.bodyGyro then self.bodyGyro:Destroy() self.bodyGyro = nil end
+	if self.bodyVelocity then self.bodyVelocity:Destroy() self.bodyVelocity = nil end
+
+	self.currentVelocity = Vector3.new(0, 0, 0)
+	self.vehicleSeat = nil
+	self.vehicleModel = nil
+
+	if self.flyBtn then
+		self.flyBtn.Text = "▶ start fly!"
+		self.flyBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 30)
+	end
+
+	notify("Vehicle fly stopped", Color3.fromRGB(255, 160, 60))
+end
+
+function VehicleFlySystem:ToggleFly()
+	if self.enabled then self:StopFly() else self:StartFly() end
+	return self.enabled
+end
+
+-- Death / seat exit handler
+client.CharacterAdded:Connect(function()
+	task.wait(0.1)
+	if VehicleFlySystem.enabled then
+		VehicleFlySystem:StopFly()
+		if VehicleFlySystem.gui and VehicleFlySystem.flyBtn then
+			VehicleFlySystem.flyBtn.Text = "▶ START VEHICLE FLY"
+			VehicleFlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 30)
+		end
+	end
+end)
+
+-- Monitor seat changes
+local function monitorSeat()
+	local char = client.Character
+	if not char then return end
+	local hum = char:WaitForChild("Humanoid")
+
+	hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+		if not hum.SeatPart and VehicleFlySystem.enabled then
+			VehicleFlySystem:StopFly()
+		end
+	end)
+end
+
+if client.Character then
+	monitorSeat()
+end
+client.CharacterAdded:Connect(monitorSeat)
+
+-- Command Functions
+local function vehiclefly(plr, spd)
+	if plr ~= client then
+		notify("Vehicle fly only works on yourself", Color3.fromRGB(255, 100, 100))
+		return
+	end
+
+	-- Check if in a seat first
+	local char = client.Character
+	if not char then
+		notify("Character not found!", Color3.fromRGB(255, 100, 100))
+		return
+	end
+
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hum or not hum.SeatPart then
+		notify("You must be in a vehicle seat first!", Color3.fromRGB(255, 100, 100))
+		return
+	end
+
+	-- Create panel if not exists
+	VehicleFlySystem:CreatePanel()
+
+	-- Update speed if provided
+	if spd then
+		local newSpeed = tonumber(spd)
+		if newSpeed then
+			VehicleFlySystem.uiSpeed = math.clamp(math.floor(newSpeed), 1, 10000)
+			VehicleFlySystem.actualSpeed = VehicleFlySystem.uiSpeed * VehicleFlySystem.speedMultiplier
+			if VehicleFlySystem.speedBox then
+				VehicleFlySystem.speedBox.Text = tostring(VehicleFlySystem.uiSpeed)
+			end
+		end
+	end
+
+	-- Start flying immediately
+	VehicleFlySystem:StartFly()
+
+	-- Update button state
+	if VehicleFlySystem.flyBtn then
+		VehicleFlySystem.flyBtn.Text = "stop flying!"
+		VehicleFlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+	end
+end
+
+local function unvehiclefly(plr)
+	if plr ~= client then
+		notify("Unvehiclefly only works on yourself", Color3.fromRGB(255, 100, 100))
+		return
+	end
+
+	VehicleFlySystem:StopFly()
+
+	-- Update button state
+	if VehicleFlySystem.flyBtn then
+		VehicleFlySystem.flyBtn.Text = "▶ start fly!"
+		VehicleFlySystem.flyBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 30)
+	end
+end
+-- =============================================================
+-- Fly
 -- =============================================================
 local FlySystem = {
 	enabled = false,
@@ -5383,101 +5834,370 @@ end
 local cmdBarData = {
 	gui = nil,
 	visible = false,
-	inputBox = nil
+	inputBox = nil,
+	minimized = false,
+	mainFrame = nil,
+	tabBtn = nil
 }
-
--- Global command processor reference
-local commandProcessor = nil
 
 local function toggleCmdBar()
 	if cmdBarData.gui then
 		cmdBarData.gui.Enabled = not cmdBarData.gui.Enabled
 		cmdBarData.visible = cmdBarData.gui.Enabled
-
-		if cmdBarData.visible and cmdBarData.inputBox then
-			task.wait() -- Small delay for better UX
+		if cmdBarData.visible and cmdBarData.inputBox and not cmdBarData.minimized then
+			task.wait(0.05)
 			cmdBarData.inputBox:CaptureFocus()
 		end
 		return
 	end
 
+	local coreGui = game:GetService("CoreGui")
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "CmdBarGui"
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 1000000
-	gui.Parent = client.PlayerGui
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = coreGui
 
+	-- Mobile detection: only true for actual mobile devices (not touchscreen PCs)
+	local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+
+	-- Main container - PC uses exact original values, mobile scales
 	local main = Instance.new("Frame")
 	main.Name = "Main"
-	main.Size = UDim2.new(0, 620, 0, 55)
-	main.Position = UDim2.new(0.5, -310, 0.08, 0)  -- Slightly higher and wider
-	main.BackgroundColor3 = currentTheme.glass
+	if isMobile then
+		local screenWidth = workspace.CurrentCamera.ViewportSize.X
+		local barWidth = math.clamp(math.floor(700 * (screenWidth / 800)), 320, screenWidth - 20)
+		main.Size = UDim2.new(0, barWidth, 0, 60)
+		main.Position = UDim2.new(0.5, -barWidth / 2, 0.08, 0)
+	else
+		main.Size = UDim2.new(0, 700, 0, 50)
+		main.Position = UDim2.new(0.5, -350, 0.08, 0)
+	end
+	main.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+	main.BackgroundTransparency = 0.55
 	main.BorderSizePixel = 0
 	main.Active = true
 	main.Draggable = true
 	main.Parent = gui
-	applyGlassEffect(main, globalConfig.uiTransparency, 0.4)
+	cmdBarData.mainFrame = main
 
-	-- Title hint
-	local titleHint = Instance.new("TextLabel", main)
-	titleHint.Size = UDim2.new(0, 120, 1, 0)
-	titleHint.Position = UDim2.new(0, 10, 0, 0)
-	titleHint.BackgroundTransparency = 1
-	titleHint.Text = "Command Bar"
-	titleHint.Font = Enum.Font.GothamBlack
-	titleHint.TextSize = 18
-	titleHint.TextColor3 = currentTheme.accent
-	titleHint.TextXAlignment = Enum.TextXAlignment.Left
+	local mainCorner = Instance.new("UICorner")
+	mainCorner.CornerRadius = UDim.new(0, 14)
+	mainCorner.Parent = main
 
+	-- Subtle glass border
+	local border = Instance.new("UIStroke")
+	border.Color = Color3.fromRGB(90, 160, 240)
+	border.Thickness = 1.2
+	border.Transparency = 0.5
+	border.Parent = main
+
+	-- Top accent glow
+	local glow = Instance.new("Frame")
+	glow.Size = UDim2.new(1, 0, 0, 2)
+	glow.Position = UDim2.new(0, 0, 0, 0)
+	glow.BackgroundColor3 = Color3.fromRGB(100, 180, 255)
+	glow.BackgroundTransparency = 0.35
+	glow.BorderSizePixel = 0
+	glow.Parent = main
+
+	local glowCorner = Instance.new("UICorner")
+	glowCorner.CornerRadius = UDim.new(0, 14)
+	glowCorner.Parent = glow
+
+	-- Icon
+	local icon = Instance.new("TextLabel")
+	icon.Name = "Icon"
+	icon.Size = UDim2.new(0, 36, 0, 36)
+	icon.Position = UDim2.new(0, 12, 0.5, -18)
+	icon.BackgroundTransparency = 1
+	icon.Text = "PL"
+	icon.Font = Enum.Font.GothamBold
+	icon.TextSize = 22
+	icon.TextColor3 = Color3.fromRGB(100, 180, 255)
+	icon.Parent = main
+
+	-- Input box
 	local input = Instance.new("TextBox")
 	input.Name = "Input"
-	input.Size = UDim2.new(1, -140, 1, -12)
-	input.Position = UDim2.new(0, 130, 0, 6)
+	input.Size = UDim2.new(1, -230, 1, -12)
+	input.Position = UDim2.new(0, 52, 0, 6)
 	input.BackgroundTransparency = 1
-	input.PlaceholderText = "Type command here... (e.g. !aimbot)"
+	input.Text = ""
+	input.PlaceholderText = "Type command..."
+	input.PlaceholderColor3 = Color3.fromRGB(130, 130, 155)
 	input.Font = Enum.Font.GothamBold
-	input.TextSize = 20
-	input.TextColor3 = globalConfig.textColor
-	input.TextTransparency = 0
-	input.TextStrokeTransparency = 0.6
-	input.TextStrokeColor3 = Color3.new(0,0,0)
-	input.ClearTextOnFocus = true
+	input.TextSize = 18
+	input.TextColor3 = Color3.fromRGB(245, 245, 255)
+	input.TextTransparency = 0.05
+	input.ClearTextOnFocus = false
 	input.Parent = main
 
 	cmdBarData.inputBox = input
 
-	-- Dropdown suggestions
+	-- Command List Button
+	local cmdListBtn = Instance.new("TextButton")
+	cmdListBtn.Name = "CmdListBtn"
+	cmdListBtn.Size = UDim2.new(0, 36, 0, 34)
+	cmdListBtn.Position = UDim2.new(1, -120, 0.5, -17)
+	cmdListBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+	cmdListBtn.BackgroundTransparency = 0.5
+	cmdListBtn.Text = "📋"
+	cmdListBtn.Font = Enum.Font.GothamBold
+	cmdListBtn.TextSize = 18
+	cmdListBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	cmdListBtn.Parent = main
+
+	local cmdListBtnCorner = Instance.new("UICorner")
+	cmdListBtnCorner.CornerRadius = UDim.new(0, 10)
+	cmdListBtnCorner.Parent = cmdListBtn
+
+	-- Execute Button
+	local execBtn = Instance.new("TextButton")
+	execBtn.Name = "ExecBtn"
+	execBtn.Size = UDim2.new(0, 36, 0, 34)
+	execBtn.Position = UDim2.new(1, -82, 0.5, -17)
+	execBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+	execBtn.BackgroundTransparency = 0.35
+	execBtn.Text = "▶"
+	execBtn.Font = Enum.Font.GothamBlack
+	execBtn.TextSize = 18
+	execBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	execBtn.Parent = main
+
+	local execBtnCorner = Instance.new("UICorner")
+	execBtnCorner.CornerRadius = UDim.new(0, 10)
+	execBtnCorner.Parent = execBtn
+
+	-- Minimize Button
+	local minBtn = Instance.new("TextButton")
+	minBtn.Name = "MinBtn"
+	minBtn.Size = UDim2.new(0, 36, 0, 34)
+	minBtn.Position = UDim2.new(1, -40, 0.5, -17)
+	minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
+	minBtn.BackgroundTransparency = 0.5
+	minBtn.Text = "−"
+	minBtn.Font = Enum.Font.GothamBlack
+	minBtn.TextSize = 22
+	minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	minBtn.Parent = main
+
+	local minBtnCorner = Instance.new("UICorner")
+	minBtnCorner.CornerRadius = UDim.new(0, 10)
+	minBtnCorner.Parent = minBtn
+
+	-- Minimized Tab (small floating button when minimized)
+	local tabBtn = Instance.new("TextButton")
+	tabBtn.Name = "TabBtn"
+	tabBtn.Size = UDim2.new(0, 44, 0, 44)
+	tabBtn.Position = UDim2.new(0.5, -22, 0.08, 0)
+	tabBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+	tabBtn.BackgroundTransparency = 0.45
+	tabBtn.Text = "PL"
+	tabBtn.Font = Enum.Font.GothamBold
+	tabBtn.TextSize = 22
+	tabBtn.TextColor3 = Color3.fromRGB(100, 180, 255)
+	tabBtn.Visible = false
+	tabBtn.Active = true
+	tabBtn.Draggable = true
+	tabBtn.Parent = gui
+	cmdBarData.tabBtn = tabBtn
+
+	local tabCorner = Instance.new("UICorner")
+	tabCorner.CornerRadius = UDim.new(0, 12)
+	tabCorner.Parent = tabBtn
+
+	local tabBorder = Instance.new("UIStroke")
+	tabBorder.Color = Color3.fromRGB(90, 160, 240)
+	tabBorder.Thickness = 1.2
+	tabBorder.Transparency = 0.5
+	tabBorder.Parent = tabBtn
+
+	local tabGlow = Instance.new("Frame")
+	tabGlow.Size = UDim2.new(1, 0, 0, 2)
+	tabGlow.Position = UDim2.new(0, 0, 0, 0)
+	tabGlow.BackgroundColor3 = Color3.fromRGB(100, 180, 255)
+	tabGlow.BackgroundTransparency = 0.35
+	tabGlow.BorderSizePixel = 0
+	tabGlow.Parent = tabBtn
+
+	-- Dropdown
 	local dropdown = Instance.new("Frame")
 	dropdown.Name = "Dropdown"
-	dropdown.Size = UDim2.new(1, 0, 0, 220)
-	dropdown.Position = UDim2.new(0, 0, 1, 8)
-	dropdown.BackgroundColor3 = currentTheme.list
+	dropdown.Size = UDim2.new(1, 0, 0, 210)
+	dropdown.Position = UDim2.new(0, 0, 1, 6)
+	dropdown.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+	dropdown.BackgroundTransparency = 0.5
 	dropdown.BorderSizePixel = 0
 	dropdown.Visible = false
 	dropdown.ClipsDescendants = true
 	dropdown.Parent = main
-	applyGlassEffect(dropdown, globalConfig.uiTransparency + 0.1, 0.5)
 
-	local dropdownScroll = Instance.new("ScrollingFrame", dropdown)
-	dropdownScroll.Size = UDim2.new(1, -12, 1, -12)
-	dropdownScroll.Position = UDim2.new(0, 6, 0, 6)
+	local dropCorner = Instance.new("UICorner")
+	dropCorner.CornerRadius = UDim.new(0, 12)
+	dropCorner.Parent = dropdown
+
+	local dropBorder = Instance.new("UIStroke")
+	dropBorder.Color = Color3.fromRGB(70, 70, 110)
+	dropBorder.Thickness = 1
+	dropBorder.Transparency = 0.5
+	dropBorder.Parent = dropdown
+
+	local dropdownScroll = Instance.new("ScrollingFrame")
+	dropdownScroll.Name = "Scroll"
+	dropdownScroll.Size = UDim2.new(1, -16, 1, -12)
+	dropdownScroll.Position = UDim2.new(0, 8, 0, 6)
 	dropdownScroll.BackgroundTransparency = 1
-	dropdownScroll.ScrollBarThickness = 5
-	dropdownScroll.ScrollBarImageColor3 = currentTheme.accent
+	dropdownScroll.ScrollBarThickness = 3
+	dropdownScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 180, 255)
+	dropdownScroll.Parent = dropdown
 
-	local dropdownList = Instance.new("UIListLayout", dropdownScroll)
+	local dropdownList = Instance.new("UIListLayout")
 	dropdownList.Padding = UDim.new(0, 3)
+	dropdownList.Parent = dropdownScroll
+
+	-- Command List Panel
+	local cmdListPanel = Instance.new("Frame")
+	cmdListPanel.Name = "CmdListPanel"
+	cmdListPanel.Size = UDim2.new(0, 300, 0, 380)
+	cmdListPanel.Position = UDim2.new(1, 10, 0, 0)
+	cmdListPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+	cmdListPanel.BackgroundTransparency = 0.5
+	cmdListPanel.BorderSizePixel = 0
+	cmdListPanel.Visible = false
+	cmdListPanel.Active = true
+	cmdListPanel.Draggable = true
+	cmdListPanel.Parent = main
+
+	local listPanelCorner = Instance.new("UICorner")
+	listPanelCorner.CornerRadius = UDim.new(0, 14)
+	listPanelCorner.Parent = cmdListPanel
+
+	local listPanelBorder = Instance.new("UIStroke")
+	listPanelBorder.Color = Color3.fromRGB(70, 70, 110)
+	listPanelBorder.Thickness = 1
+	listPanelBorder.Transparency = 0.45
+	listPanelBorder.Parent = cmdListPanel
+
+	local panelTitle = Instance.new("TextLabel")
+	panelTitle.Size = UDim2.new(1, 0, 0, 36)
+	panelTitle.BackgroundTransparency = 1
+	panelTitle.Text = "📋 Commands"
+	panelTitle.Font = Enum.Font.GothamBlack
+	panelTitle.TextSize = 16
+	panelTitle.TextColor3 = Color3.fromRGB(100, 180, 255)
+	panelTitle.Parent = cmdListPanel
+
+	local panelClose = Instance.new("TextButton")
+	panelClose.Size = UDim2.new(0, 28, 0, 28)
+	panelClose.Position = UDim2.new(1, -32, 0, 4)
+	panelClose.BackgroundTransparency = 1
+	panelClose.Text = "X"
+	panelClose.Font = Enum.Font.GothamBold
+	panelClose.TextSize = 16
+	panelClose.TextColor3 = Color3.fromRGB(255, 100, 100)
+	panelClose.Parent = cmdListPanel
+
+	local listScroll = Instance.new("ScrollingFrame")
+	listScroll.Name = "ListScroll"
+	listScroll.Size = UDim2.new(1, -16, 1, -48)
+	listScroll.Position = UDim2.new(0, 8, 0, 40)
+	listScroll.BackgroundTransparency = 1
+	listScroll.ScrollBarThickness = 3
+	listScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 180, 255)
+	listScroll.Parent = cmdListPanel
+
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.Padding = UDim.new(0, 2)
+	listLayout.Parent = listScroll
 
 	local allCommands = {
-	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance", "!destroyscript", 
-	"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!explode", "!fire", 
-	"!firstp", "!fling", "!fly", "!freecam", "!freeze", "!infjump", "!joinlogs", "!jump", "!kill", 
-	"!lay", "!leave", "!logs", "!noclip", "!ping", "!ragdoll", "!rainbow", "!rejoin", "!removewaypoint", 
-	"!resetspeed", "!sit", "!speed", "!spin", "!stopwatch", "!thirdp", "!to", "!trip", "!tracers", 
-	"!uncrosshair", "!unautoexec", "!unesp all", "!unfire", "!unfly", "!unfreecam", "!unfreeze", 
-	"!sunglare", "!unsunglare", "!uninfjump", "!unnoclip", "!unragdoll", "!unrainbow", "!unspin", 
-	"!untracers", "!unview", "!view", "!volume", "!waypoint", "!fov", "!kick", "!unlockmouse"
+		"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance", "!destroyscript",
+		"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!explode", "!fire",
+		"!firstp", "!fling", "!fly", "!freecam", "!freeze", "!infjump", "!joinlogs", "!jump", "!kill",
+		"!lay", "!leave", "!logs", "!noclip", "!ping", "!ragdoll", "!rainbow", "!rejoin", "!removewaypoint",
+		"!resetspeed", "!sit", "!speed", "!spin", "!stopwatch", "!thirdp", "!to", "!trip", "!tracers",
+		"!uncrosshair", "!unautoexec", "!unesp all", "!unfire", "!unfly", "!unfreecam", "!unfreeze",
+		"!sunglare", "!unsunglare", "!uninfjump", "!unnoclip", "!unragdoll", "!unrainbow", "!unspin",
+		"!untracers", "!unview", "!view", "!vehiclefly", "!unvehiclefly", "!volume", "!waypoint", "!fov",
+		"!kick", "!unlockmouse"
 	}
+
+	for _, cmd in ipairs(allCommands) do
+		local cmdBtn = Instance.new("TextButton")
+		cmdBtn.Size = UDim2.new(1, 0, 0, 28)
+		cmdBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 48)
+		cmdBtn.BackgroundTransparency = 0.45
+		cmdBtn.Text = "  " .. cmd
+		cmdBtn.Font = Enum.Font.Gotham
+		cmdBtn.TextSize = 14
+		cmdBtn.TextColor3 = Color3.fromRGB(205, 205, 225)
+		cmdBtn.TextXAlignment = Enum.TextXAlignment.Left
+		cmdBtn.Parent = listScroll
+
+		local cmdBtnCorner = Instance.new("UICorner")
+		cmdBtnCorner.CornerRadius = UDim.new(0, 6)
+		cmdBtnCorner.Parent = cmdBtn
+
+		cmdBtn.MouseEnter:Connect(function()
+			cmdBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 85)
+			cmdBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
+		end)
+		cmdBtn.MouseLeave:Connect(function()
+			cmdBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 48)
+			cmdBtn.TextColor3 = Color3.fromRGB(205, 205, 225)
+		end)
+		cmdBtn.MouseButton1Click:Connect(function()
+			input.Text = cmd .. " "
+			input.CursorPosition = #input.Text + 1
+			cmdListPanel.Visible = false
+			task.wait(0.05)
+			input:CaptureFocus()
+		end)
+	end
+
+	listScroll.CanvasSize = UDim2.new(0, 0, 0, #allCommands * 30)
+
+	-- Minimize / Restore
+	local function minimize()
+		cmdBarData.minimized = true
+		main.Visible = false
+		tabBtn.Visible = true
+		tabBtn.Position = main.Position
+		dropdown.Visible = false
+		cmdListPanel.Visible = false
+	end
+
+	local function restore()
+		cmdBarData.minimized = false
+		main.Visible = true
+		tabBtn.Visible = false
+		task.wait(0.05)
+		input:CaptureFocus()
+	end
+
+	minBtn.MouseButton1Click:Connect(function()
+		if cmdBarData.minimized then
+			restore()
+			minBtn.Text = "−"
+		else
+			minimize()
+		end
+	end)
+
+	tabBtn.MouseButton1Click:Connect(function()
+		restore()
+		minBtn.Text = "−"
+	end)
+
+	cmdListBtn.MouseButton1Click:Connect(function()
+		cmdListPanel.Visible = not cmdListPanel.Visible
+	end)
+
+	panelClose.MouseButton1Click:Connect(function()
+		cmdListPanel.Visible = false
+	end)
 
 	local function updateDropdown(text)
 		for _, child in ipairs(dropdownScroll:GetChildren()) do
@@ -5500,27 +6220,38 @@ local function toggleCmdBar()
 			dropdown.Visible = true
 			for _, match in ipairs(matches) do
 				local btn = Instance.new("TextButton")
-				btn.Size = UDim2.new(1, 0, 0, 32)
-				btn.BackgroundColor3 = currentTheme.btn
+				btn.Size = UDim2.new(1, 0, 0, 30)
+				btn.BackgroundColor3 = Color3.fromRGB(32, 32, 48)
 				btn.BackgroundTransparency = 0.4
 				btn.Text = "  " .. match
 				btn.Font = Enum.Font.Gotham
-				btn.TextSize = 17
-				btn.TextColor3 = globalConfig.textColor
+				btn.TextSize = 15
+				btn.TextColor3 = Color3.fromRGB(220, 220, 240)
 				btn.TextXAlignment = Enum.TextXAlignment.Left
 				btn.Parent = dropdownScroll
+
+				local btnCorner = Instance.new("UICorner")
+				btnCorner.CornerRadius = UDim.new(0, 6)
+				btnCorner.Parent = btn
 
 				btn.MouseButton1Click:Connect(function()
 					input.Text = match .. " "
 					input.CursorPosition = #input.Text + 1
 					dropdown.Visible = false
+					task.wait(0.05)
 					input:CaptureFocus()
 				end)
 
-				btn.MouseEnter:Connect(function() btn.BackgroundColor3 = currentTheme.accent end)
-				btn.MouseLeave:Connect(function() btn.BackgroundColor3 = currentTheme.btn end)
+				btn.MouseEnter:Connect(function()
+					btn.BackgroundColor3 = Color3.fromRGB(55, 55, 85)
+					btn.TextColor3 = Color3.fromRGB(100, 200, 255)
+				end)
+				btn.MouseLeave:Connect(function()
+					btn.BackgroundColor3 = Color3.fromRGB(32, 32, 48)
+					btn.TextColor3 = Color3.fromRGB(220, 220, 240)
+				end)
 			end
-			dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * 35)
+			dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, #matches * 33)
 		else
 			dropdown.Visible = false
 		end
@@ -5531,67 +6262,85 @@ local function toggleCmdBar()
 	end)
 
 	local function executeCommand()
-		local cmdText = input.Text:match("^%s*(.-)%s*$") -- trim whitespace
+		local cmdText = input.Text:match("^%s*(.-)%s*$")
 		if cmdText and cmdText ~= "" then
-			notify("▶️ Executing: " .. cmdText, Color3.fromRGB(180, 220, 255))
+			if notify then
+				notify("▶️ " .. cmdText, Color3.fromRGB(100, 200, 255))
+			end
 			if processCmd then
 				processCmd(cmdText)
 			else
-				warn("processCmd function not found!")
+				warn("processCmd not found!")
 			end
 			input.Text = ""
 			dropdown.Visible = false
 		end
 	end
 
+	execBtn.MouseButton1Click:Connect(executeCommand)
+
 	input.FocusLost:Connect(function(enterPressed)
-		if enterPressed then
-			executeCommand()
-		end
+		if enterPressed then executeCommand() end
 	end)
 
-	-- Enter key support even if not focused
 	UserInputService.InputBegan:Connect(function(inp, gp)
-		if not gp and inp.KeyCode == Enum.KeyCode.Return and cmdBarData.visible and cmdBarData.inputBox:IsFocused() then
+		if not gp and inp.KeyCode == Enum.KeyCode.Return and cmdBarData.visible and cmdBarData.inputBox and cmdBarData.inputBox:IsFocused() then
 			executeCommand()
 		end
 	end)
 
-	-- Click outside to close dropdown
-	UserInputService.InputBegan:Connect(function(inp)
-		if inp.UserInputType == Enum.UserInputType.MouseButton1 and cmdBarData.gui then
+	-- Click outside handler
+	local clickConnection
+	clickConnection = UserInputService.InputBegan:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 or (isMobile and inp.UserInputType == Enum.UserInputType.Touch) then
+			if not cmdBarData.gui then
+				clickConnection:Disconnect()
+				return
+			end
 			local mousePos = UserInputService:GetMouseLocation()
 			local mainPos = main.AbsolutePosition
 			local mainSize = main.AbsoluteSize
-			local dropdownArea = dropdown.AbsoluteSize.Y + 50
+			local panelPos = cmdListPanel.AbsolutePosition
+			local panelSize = cmdListPanel.AbsoluteSize
+			local tabPos = tabBtn.AbsolutePosition
+			local tabSize = tabBtn.AbsoluteSize
 
-			if (mousePos.X < mainPos.X or mousePos.X > mainPos.X + mainSize.X) or
-				(mousePos.Y < mainPos.Y or mousePos.Y > mainPos.Y + mainSize.Y + dropdownArea) then
-				dropdown.Visible = false
-			end
+			local inMain = mousePos.X >= mainPos.X and mousePos.X <= mainPos.X + mainSize.X and
+				mousePos.Y >= mainPos.Y and mousePos.Y <= mainPos.Y + mainSize.Y + (dropdown.Visible and dropdown.AbsoluteSize.Y or 0)
+
+			local inPanel = cmdListPanel.Visible and
+				mousePos.X >= panelPos.X and mousePos.X <= panelPos.X + panelSize.X and
+				mousePos.Y >= panelPos.Y and mousePos.Y <= panelPos.Y + panelSize.Y
+
+			local inTab = tabBtn.Visible and
+				mousePos.X >= tabPos.X and mousePos.X <= tabPos.X + tabSize.X and
+				mousePos.Y >= tabPos.Y and mousePos.Y <= tabPos.Y + tabSize.Y
+
+			if not inMain then dropdown.Visible = false end
+			if not inPanel and not inMain and not inTab then cmdListPanel.Visible = false end
 		end
 	end)
 
 	cmdBarData.gui = gui
 	cmdBarData.visible = true
 
-	-- Auto focus
 	task.spawn(function()
-		task.wait(0.1)
+		task.wait(0.15)
 		input:CaptureFocus()
 	end)
 
-	notify("Command Bar Auto-Opened • Press INSERT to toggle", currentTheme.accent)
+	if notify then
+		notify("CmdBar", Color3.fromRGB(100, 200, 255))
+	end
 end
 
--- ==================== AUTO SHOW + HOTKEY ====================
-
+-- Auto show
 task.spawn(function()
-	task.wait(0.6)  -- Small delay to let other UI load
+	task.wait(1)
 	toggleCmdBar()
 end)
 
--- Hotkey to toggle (INSERT key - very common for cheats)
+-- Hotkey
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if input.KeyCode == Enum.KeyCode.Insert then
@@ -8316,6 +9065,12 @@ function processCmd(msg)
 			Duration = 3
 		})
 		
+	elseif cmd == "vehiclefly" then
+		vehiclefly(client, args[2])
+	
+	elseif cmd == "unvehiclefly" then
+		unvehiclefly(client)
+
 	elseif cmd == "unview" then
 		unview()
 		
@@ -8601,7 +9356,7 @@ cmdDesc = {
 	["!unragdoll"] = "Stop ragdoll", ["!unrainbow [plr]"] = "Stop rainbow",
 	["!unsunglare"] = "Disable sun glare effect", ["!unspin"] = "Stop spinning",
 	["!untracers"] = "Hide tracers", ["!unview"] = "Stop spectating",
-	["!view [plr]"] = "Spectate player", ["!volume"] = "Set game volume (0-10)",
+	["!view [plr]"] = "Spectate player", ["!vehiclefly"] = "Fly in cars!", ["!unvehiclefly"] = "unFly in cars!", ["!volume"] = "Set game volume (0-10)",
 	["!waypoint"] = "Create waypoint", ["!fov [1-120]"] = "Set camera FOV",
 	["!kick [plr]"] = "Kick yourself", ["!unlockmouse"] = "Toggle mouse lock"
 }
@@ -8616,7 +9371,7 @@ cmds = {
 	"!spin [speed]", "!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]", "!tracers",
 	"!sunglare", "!unsunglare", "!uncrosshair", "!unautoexec", "!unesp all", "!unfire [plr]", "!unfling", "!unfly",
 	"!unfreecam", "!unfreeze [plr]", "!uninfjump", "!unnoclip [plr]", "!unragdoll",
-	"!unrainbow [plr]", "!unspin", "!untracers", "!unview", "!view [plr]", "!volume", "!waypoint",
+	"!unrainbow [plr]", "!unspin", "!untracers", "!unview", "!vehiclefly", "!unvehiclefly", "!view [plr]", "!volume", "!waypoint",
 	"!fov [1-120]", "!kick [plr]", "!unlockmouse"
 }
 
