@@ -950,12 +950,37 @@ task.spawn(function()
 
 	local client = Players.LocalPlayer
 
-	-- Clean up old from CoreGui
+	local isMobile = UserInputService.TouchEnabled
+
+	local frameWidth = 380
+	local frameHeight = 34
+	local frameX = -390
+	local textSize = 16
+	local moonSize = 22
+
+	if isMobile then
+		local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800,600)
+		local smallestSide = math.min(viewport.X, viewport.Y)
+
+		if smallestSide < 700 then
+			frameWidth = 300
+			frameHeight = 28
+			frameX = -310
+			textSize = 12
+			moonSize = 16
+		else
+			frameWidth = 340
+			frameHeight = 30
+			frameX = -350
+			textSize = 14
+			moonSize = 18
+		end
+	end
+
 	if CoreGui:FindFirstChild("LunarWatermark") then
 		CoreGui.LunarWatermark:Destroy()
 	end
 
-	-- ================= SETUP SERVER OBJECTS (Auto-create if missing) =================
 	local serverRunTime = workspace:FindFirstChild("ServerRunTime")
 	if not serverRunTime then
 		serverRunTime = Instance.new("NumberValue")
@@ -971,7 +996,6 @@ task.spawn(function()
 		pingEvent.Parent = ReplicatedStorage
 	end
 
-	-- ================= GUI (CoreGui — highest possible layer) =================
 	local sg = Instance.new("ScreenGui")
 	sg.Name = "LunarWatermark"
 	sg.ResetOnSpawn = false
@@ -982,8 +1006,8 @@ task.spawn(function()
 	sg.Parent = CoreGui
 
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0, 380, 0, 34)
-	frame.Position = UDim2.new(1, -390, 0, 15)
+	frame.Size = UDim2.new(0, frameWidth, 0, frameHeight)
+	frame.Position = UDim2.new(1, frameX, 0, 15)
 	frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 	frame.BackgroundTransparency = 0.15
 	frame.ZIndex = 2147483647
@@ -1004,7 +1028,7 @@ task.spawn(function()
 	tabLabel.Size = UDim2.fromScale(1, 1)
 	tabLabel.BackgroundTransparency = 1
 	tabLabel.Text = "≡"
-	tabLabel.TextSize = 18
+	tabLabel.TextSize = isMobile and 14 or 18
 	tabLabel.Font = Enum.Font.GothamBold
 	tabLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	tabLabel.ZIndex = 2147483647
@@ -1016,7 +1040,7 @@ task.spawn(function()
 	moon.BackgroundTransparency = 1
 	moon.Text = "🌙"
 	moon.TextColor3 = Color3.fromRGB(255, 215, 0)
-	moon.TextSize = 22
+	moon.TextSize = moonSize
 	moon.Font = Enum.Font.GothamBold
 	moon.ZIndex = 2147483647
 
@@ -1025,14 +1049,13 @@ task.spawn(function()
 	label.Size = UDim2.new(1, -90, 1, 0)
 	label.Position = UDim2.new(0, 80, 0, 0)
 	label.Font = Enum.Font.GothamSemibold
-	label.TextSize = 16
+	label.TextSize = textSize
 	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = "Project Lunar | Loading..."
 	label.RichText = true
 	label.ZIndex = 2147483647
 
-	-- TOGGLE SYSTEM
 	local visible = true
 	UserInputService.InputBegan:Connect(function(input, gp)
 		if gp then return end
@@ -1042,7 +1065,6 @@ task.spawn(function()
 		end
 	end)
 
-	-- dragging
 	local dragging = false
 	local dragStart
 	local startPos
@@ -1082,7 +1104,6 @@ task.spawn(function()
 		frame.Position = frame.Position:Lerp(targetPos, 0.25)
 	end)
 
-	-- ================= ACCURATE FPS =================
 	local fps = 60
 	local frameCount = 0
 	local fpsTimer = 0
@@ -1099,65 +1120,46 @@ task.spawn(function()
 		end
 	end)
 
-	-- ================= SERVER-SIDE PING LOGIC (Runs inside this LocalScript via workaround) =================
-	-- Since we can't run ServerScripts from client, we use a clever workaround:
-	-- We simulate server time locally and use RemoteEvent ping-pong with the ACTUAL server
-
 	local ping = 0
 	local latestPing = 0
 	local lastPingRequest = 0
 	local pingRequestSent = false
-
-	-- Track server time offset
 	local serverTimeOffset = 0
 	local serverTimeValid = false
 
-	-- Listen for ping responses from server (if server script exists)
 	pingEvent.OnClientEvent:Connect(function(data)
 		if type(data) == "number" then
-			-- Server sent back calculated ping directly
 			latestPing = data
 			pingRequestSent = false
 		elseif type(data) == "table" and data.serverTime then
-			-- Server sent server time for us to calculate
 			local clientTime = tick()
 			local roundTrip = (clientTime - lastPingRequest) * 1000
-			latestPing = roundTrip / 2 -- Approximate one-way ping
+			latestPing = roundTrip / 2
 			serverTimeOffset = data.serverTime - clientTime
 			serverTimeValid = true
 			pingRequestSent = false
 		end
 	end)
 
-	-- ================= FALLBACK: Self-Measured Ping (No server script needed) =================
-	-- This measures actual network latency by timing RemoteEvent round trips
 	local function measureSelfPing()
 		local startTime = tick()
 		lastPingRequest = startTime
 		pingRequestSent = true
-
-		-- Fire to server and back (even without server listener, the round trip still happens)
-		-- We use a coroutine to measure time until next heartbeat
 		local received = false
-
 		local connection
 		connection = RunService.Heartbeat:Connect(function()
 			if received then
 				connection:Disconnect()
 				return
 			end
-			-- Timeout after 5 seconds
 			if tick() - startTime > 5 then
 				received = true
 				connection:Disconnect()
 			end
 		end)
-
-		-- Fire the remote (this creates network traffic we can time)
 		pingEvent:FireServer({action = "ping", clientTime = startTime})
 	end
 
-	-- Listen for our own ping responses (server echoes back)
 	pingEvent.OnClientEvent:Connect(function(data)
 		if type(data) == "table" and data.action == "pong" and data.clientTime then
 			local roundTrip = (tick() - data.clientTime) * 1000
@@ -1166,50 +1168,35 @@ task.spawn(function()
 		end
 	end)
 
-	-- ================= AUTO-SERVER SCRIPT (Creates server script if we're the first player) =================
-	-- This only works if the LocalScript has access to ServerScriptService (it doesn't in normal games)
-	-- So we use the fallback self-ping method instead
-
-	-- ================= MAIN PING LOOP =================
 	task.spawn(function()
-		-- Initial ping measurement
 		task.wait(1)
 		measureSelfPing()
 
 		while sg.Parent do
-			-- Request new ping measurement every 0.5 seconds
 			if not pingRequestSent then
 				measureSelfPing()
 			end
 
-			-- Use latest measured ping
 			local targetPing = latestPing
-
-			-- Fallback to GetNetworkPing if self-measurement hasn't returned yet
 			if targetPing <= 0 then
 				pcall(function()
 					targetPing = client:GetNetworkPing() * 1000
 				end)
 			end
-
-			-- Handle invalid values
 			if targetPing < 0 or targetPing ~= targetPing then
 				targetPing = 0
 			end
 
-			-- Instant rise, gentle fall
 			local diff = targetPing - ping
 			if diff > 0 then
-				ping = ping + diff * 0.9 -- 90% of spike shown instantly
+				ping = ping + diff * 0.9
 			else
-				ping = ping + diff * 0.15 -- Slow decay
+				ping = ping + diff * 0.15
 			end
 
-			-- Format display
 			local fpsDisplay = math.floor(fps + 0.5)
 			local pingDisplay = math.floor(ping + 0.5)
 
-			-- Color based on ping
 			local pingColor
 			if pingDisplay < 50 then
 				pingColor = Color3.fromRGB(0, 255, 100)
@@ -1224,7 +1211,6 @@ task.spawn(function()
 				pingColor = Color3.fromRGB(255, 150, 0):Lerp(Color3.fromRGB(255, 50, 50), t)
 			end
 
-			-- Handle extreme values
 			local pingText
 			if pingDisplay >= 100000 then
 				pingText = string.format("%dK", math.floor(pingDisplay / 1000))
@@ -1236,17 +1222,15 @@ task.spawn(function()
 				pingText = tostring(pingDisplay)
 			end
 
-			-- Rich text color
 			local r = math.floor(pingColor.R * 255)
 			local g = math.floor(pingColor.G * 255)
 			local b = math.floor(pingColor.B * 255)
 
-			label.Text = string.format(
-				"Project Lunar | %d FPS | <font color=\"rgb(%d,%d,%d)\">%s ms</font>",
-				fpsDisplay,
-				r, g, b,
-				pingText
-			)
+			if isMobile then
+				label.Text = string.format([[Lunar | %d FPS | <font color="rgb(%d,%d,%d)">%s ms</font>]], fpsDisplay, r, g, b, pingText)
+			else
+				label.Text = string.format([[Project Lunar | %d FPS | <font color="rgb(%d,%d,%d)">%s ms</font>]], fpsDisplay, r, g, b, pingText)
+			end
 
 			task.wait(0.1)
 		end
