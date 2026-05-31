@@ -4463,9 +4463,7 @@ local FlySystem = {
 	bodyVelocity = nil,
 	connection = nil,
 	currentVelocity = Vector3.new(0, 0, 0),
-	lerpFactor = 0.25,
-	mobileInput = Vector3.new(0, 0, 0),
-	touchConnection = nil
+	lerpFactor = 0.25
 }
 
 function FlySystem:CreatePanel()
@@ -4703,51 +4701,6 @@ function FlySystem:StartFly()
 	-- Mobile detection
 	local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 
-	-- Mobile: set up custom touch input tracking (avoids Humanoid.MoveDirection flip issues)
-	if isMobile then
-		self.mobileInput = Vector3.new(0, 0, 0)
-		local touchStartPos = nil
-		local activeTouch = nil
-		local deadzone = 20  -- pixels
-		local maxDist = 100  -- pixels for full speed
-
-		self.touchConnection = UserInputService.TouchStarted:Connect(function(touch, gameProcessed)
-			if gameProcessed then return end
-			-- Only use left side of screen for movement joystick
-			if touch.Position.X > workspace.CurrentCamera.ViewportSize.X * 0.5 then return end
-
-			touchStartPos = touch.Position
-			activeTouch = touch
-		end)
-
-		UserInputService.TouchMoved:Connect(function(touch, gameProcessed)
-			if gameProcessed or touch ~= activeTouch or not touchStartPos then return end
-
-			local delta = touch.Position - touchStartPos
-			local dist = delta.Magnitude
-
-			if dist < deadzone then
-				self.mobileInput = Vector3.new(0, 0, 0)
-				return
-			end
-
-			-- Normalize to -1 to 1 range
-			local factor = math.min(dist, maxDist) / maxDist
-			local normX = (delta.X / maxDist)
-			local normY = -(delta.Y / maxDist)  -- Invert Y (up on screen = forward)
-
-			self.mobileInput = Vector3.new(normX, 0, normY) * factor
-		end)
-
-		UserInputService.TouchEnded:Connect(function(touch, gameProcessed)
-			if touch == activeTouch then
-				self.mobileInput = Vector3.new(0, 0, 0)
-				activeTouch = nil
-				touchStartPos = nil
-			end
-		end)
-	end
-
 	if self.flyBtn then
 		self.flyBtn.Text = "STOP FLY"
 		self.flyBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
@@ -4773,17 +4726,21 @@ function FlySystem:StartFly()
 		local moveDir = Vector3.new(0, 0, 0)
 
 		if isMobile then
-			-- Mobile: use custom touch input (left side of screen = virtual joystick)
-			local input = self.mobileInput
-			if input.Magnitude > 0.1 then
-				local camLook = cam.CFrame.LookVector
-				local camRight = cam.CFrame.RightVector
+	local hum = client.Character:FindFirstChildOfClass("Humanoid")
 
-				-- Forward/back follows camera look (includes up/down pitch)
-				-- Left/right strafes relative to camera
-				moveDir = (camLook * input.Z) + (camRight * input.X)
-			end
-		else
+	if hum then
+		local stickDir = hum.MoveDirection
+
+		if stickDir.Magnitude > 0 then
+			local camLook = cam.CFrame.LookVector
+			local camRight = cam.CFrame.RightVector
+
+			moveDir =
+				(camLook * stickDir.Magnitude) +
+				(camRight * (stickDir:Dot(camRight) * 0.5))
+		end
+	end
+else
 			-- PC: keyboard controls
 			if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
 			if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
@@ -4810,7 +4767,6 @@ function FlySystem:StopFly()
 	self.enabled = false
 
 	if self.connection then self.connection:Disconnect() self.connection = nil end
-	if self.touchConnection then self.touchConnection:Disconnect() self.touchConnection = nil end
 	if self.bodyGyro then self.bodyGyro:Destroy() self.bodyGyro = nil end
 	if self.bodyVelocity then self.bodyVelocity:Destroy() self.bodyVelocity = nil end
 
@@ -4819,7 +4775,6 @@ function FlySystem:StopFly()
 	if hum then hum.PlatformStand = false hum.AutoRotate = true end
 
 	self.currentVelocity = Vector3.new(0, 0, 0)
-	self.mobileInput = Vector3.new(0, 0, 0)
 
 	if self.flyBtn then
 		self.flyBtn.Text = "▶ start fly!"
