@@ -1,4 +1,4 @@
--- Join my Discord :3 https://discord.gg/5GeQAXYYcW
+-- Join my Discord :3 https://discord.gg/ydNKRbFmUd
 -- Created by @LunarRbxZ
 -- Fixed and Enhanced Admin Script
 
@@ -165,10 +165,6 @@ local function createInstantSplash(imageId)
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	---------------------------------------------------
-	-- BACKGROUND
-	---------------------------------------------------
-
 	local bg = Instance.new("Frame")
 	bg.Size = UDim2.fromScale(1, 1)
 	bg.BackgroundColor3 = Color3.fromRGB(3, 3, 3)
@@ -186,17 +182,9 @@ local function createInstantSplash(imageId)
 	gradient.Rotation = 25
 	gradient.Parent = bg
 
-	---------------------------------------------------
-	-- CINEMATIC BLUR
-	---------------------------------------------------
-
 	local blur = Instance.new("BlurEffect")
 	blur.Size = 0
 	blur.Parent = Lighting
-
-	---------------------------------------------------
-	-- VIGNETTE
-	---------------------------------------------------
 
 	local vignette = Instance.new("ImageLabel")
 	vignette.Size = UDim2.fromScale(1.2, 1.2)
@@ -207,10 +195,6 @@ local function createInstantSplash(imageId)
 	vignette.ScaleType = Enum.ScaleType.Stretch
 	vignette.ZIndex = 2
 	vignette.Parent = gui
-
-	---------------------------------------------------
-	-- MAIN FRAME
-	---------------------------------------------------
 
 	local frame = Instance.new("Frame")
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -244,10 +228,6 @@ local function createInstantSplash(imageId)
 	glow.ZIndex = 0
 	glow.Parent = frame
 
-	---------------------------------------------------
-	-- IMAGE
-	---------------------------------------------------
-
 	local image = Instance.new("ImageLabel")
 	image.AnchorPoint = Vector2.new(0.5, 0.5)
 	image.Position = UDim2.fromScale(0.5, 0.5)
@@ -258,10 +238,6 @@ local function createInstantSplash(imageId)
 	image.ScaleType = Enum.ScaleType.Fit
 	image.ZIndex = 3
 	image.Parent = frame
-
-	---------------------------------------------------
--- CINEMATIC LIGHT SWEEP
----------------------------------------------------
 
 local shineHolder = Instance.new("Frame")
 shineHolder.Size = UDim2.fromScale(1, 1)
@@ -283,17 +259,9 @@ shine.ScaleType = Enum.ScaleType.Stretch
 shine.ZIndex = 4
 shine.Parent = shineHolder
 
-	---------------------------------------------------
-	-- SCALE
-	---------------------------------------------------
-
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.45
 	scale.Parent = frame
-
-	---------------------------------------------------
-	-- LOADING TEXT
-	---------------------------------------------------
 
 	local text = Instance.new("TextLabel")
 	text.AnchorPoint = Vector2.new(0.5, 0)
@@ -307,10 +275,6 @@ shine.Parent = shineHolder
 	text.TextScaled = true
 	text.ZIndex = 5
 	text.Parent = frame
-
-	---------------------------------------------------
-	-- PARTICLES
-	---------------------------------------------------
 
 	local attachment = Instance.new("Attachment")
 	attachment.Parent = frame
@@ -332,10 +296,6 @@ shine.Parent = shineHolder
 		NumberSequenceKeypoint.new(1, 1)
 	})
 	particles.Parent = attachment
-
-	---------------------------------------------------
-	-- INTRO ANIMATION
-	---------------------------------------------------
 
 	TweenService:Create(bg, TweenInfo.new(0.4), {
 		BackgroundTransparency = 0.15
@@ -373,10 +333,6 @@ shine.Parent = shineHolder
 
 	particles:Emit(40)
 
-	---------------------------------------------------
--- LIGHT SWEEP ANIMATION
----------------------------------------------------
-
 task.spawn(function()
 	while gui.Parent do
 		shine.Position = UDim2.fromScale(-0.6, 0.5)
@@ -399,10 +355,6 @@ task.spawn(function()
 	end
 end)
 
-	---------------------------------------------------
-	-- FLOATING MOTION
-	---------------------------------------------------
-
 	local connection
 	local start = tick()
 
@@ -422,15 +374,7 @@ end)
 		glow.Rotation += 0.08
 	end)
 
-	---------------------------------------------------
-	-- HOLD
-	---------------------------------------------------
-
 	task.wait(3)
-
-	---------------------------------------------------
-	-- OUTRO
-	---------------------------------------------------
 
 	local outro = TweenInfo.new(
 		0.45,
@@ -582,8 +526,225 @@ local themes = {
 		btn = Color3.fromRGB(40, 40, 55),
 		list = Color3.fromRGB(35, 35, 45),
 		glass = Color3.fromRGB(25, 25, 35)
+	},
+	
+	-- === PURPLE / VIOLET ===
+	Purple = {
+		main = Color3.fromRGB(35, 20, 50),
+		grad1 = Color3.fromRGB(75, 40, 110),
+		grad2 = Color3.fromRGB(40, 20, 60),
+		accent = Color3.fromRGB(180, 100, 255),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(90, 50, 130),
+		list = Color3.fromRGB(60, 30, 85),
+		glass = Color3.fromRGB(50, 25, 75)
+	},
+	
+	-- === GREEN ===
+	Green = {
+		main = Color3.fromRGB(20, 40, 25),
+		grad1 = Color3.fromRGB(40, 90, 50),
+		grad2 = Color3.fromRGB(25, 55, 30),
+		accent = Color3.fromRGB(80, 255, 120),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(50, 120, 65),
+		list = Color3.fromRGB(35, 80, 45),
+		glass = Color3.fromRGB(30, 70, 40)
+	},
+	
+	-- === ORANGE ===
+	Orange = {
+		main = Color3.fromRGB(50, 30, 15),
+		grad1 = Color3.fromRGB(140, 80, 30),
+		grad2 = Color3.fromRGB(90, 50, 20),
+		accent = Color3.fromRGB(255, 160, 50),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(170, 100, 35),
+		list = Color3.fromRGB(120, 70, 25),
+		glass = Color3.fromRGB(100, 60, 20)
+	},
+	
+	-- === YELLOW / GOLD ===
+	Gold = {
+		main = Color3.fromRGB(40, 35, 15),
+		grad1 = Color3.fromRGB(120, 100, 30),
+		grad2 = Color3.fromRGB(80, 65, 20),
+		accent = Color3.fromRGB(255, 220, 80),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(150, 125, 40),
+		list = Color3.fromRGB(100, 85, 30),
+		glass = Color3.fromRGB(90, 75, 25)
+	},
+	
+	-- === CYAN / TEAL ===
+	Cyan = {
+		main = Color3.fromRGB(20, 40, 45),
+		grad1 = Color3.fromRGB(40, 100, 110),
+		grad2 = Color3.fromRGB(25, 65, 75),
+		accent = Color3.fromRGB(0, 255, 220),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(45, 130, 145),
+		list = Color3.fromRGB(35, 90, 100),
+		glass = Color3.fromRGB(30, 80, 90)
+	},
+	
+	-- === WHITE / LIGHT ===
+	Light = {
+		main = Color3.fromRGB(240, 240, 245),
+		grad1 = Color3.fromRGB(220, 220, 230),
+		grad2 = Color3.fromRGB(245, 245, 250),
+		accent = Color3.fromRGB(0, 140, 255),
+		text = Color3.new(0.15,0.15,0.15),
+		btn = Color3.fromRGB(210, 210, 220),
+		list = Color3.fromRGB(225, 225, 235),
+		glass = Color3.fromRGB(230, 230, 240)
+	},
+	
+	-- === MIDNIGHT (Deep Blue-Black) ===
+	Midnight = {
+		main = Color3.fromRGB(10, 12, 25),
+		grad1 = Color3.fromRGB(20, 25, 50),
+		grad2 = Color3.fromRGB(12, 15, 30),
+		accent = Color3.fromRGB(100, 120, 255),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(25, 30, 60),
+		list = Color3.fromRGB(18, 22, 45),
+		glass = Color3.fromRGB(15, 18, 40)
+	},
+	
+	-- === LAVENDER (Soft Purple) ===
+	Lavender = {
+		main = Color3.fromRGB(200, 190, 220),
+		grad1 = Color3.fromRGB(180, 170, 210),
+		grad2 = Color3.fromRGB(220, 210, 240),
+		accent = Color3.fromRGB(140, 80, 200),
+		text = Color3.new(0.15,0.15,0.15),
+		btn = Color3.fromRGB(170, 160, 200),
+		list = Color3.fromRGB(190, 180, 215),
+		glass = Color3.fromRGB(210, 200, 230)
+	},
+	
+	-- === MINT (Soft Green) ===
+	Mint = {
+		main = Color3.fromRGB(200, 240, 220),
+		grad1 = Color3.fromRGB(180, 230, 210),
+		grad2 = Color3.fromRGB(210, 250, 230),
+		accent = Color3.fromRGB(50, 200, 120),
+		text = Color3.new(0.15,0.15,0.15),
+		btn = Color3.fromRGB(170, 225, 200),
+		list = Color3.fromRGB(190, 235, 215),
+		glass = Color3.fromRGB(200, 245, 225)
+	},
+	
+	-- === CORAL (Peachy Red) ===
+	Coral = {
+		main = Color3.fromRGB(60, 35, 35),
+		grad1 = Color3.fromRGB(180, 100, 90),
+		grad2 = Color3.fromRGB(120, 60, 55),
+		accent = Color3.fromRGB(255, 140, 120),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(200, 110, 100),
+		list = Color3.fromRGB(150, 80, 75),
+		glass = Color3.fromRGB(130, 70, 65)
+	},
+	
+	-- === NEON (High Contrast) ===
+	Neon = {
+		main = Color3.fromRGB(5, 5, 5),
+		grad1 = Color3.fromRGB(20, 20, 20),
+		grad2 = Color3.fromRGB(5, 5, 5),
+		accent = Color3.fromRGB(0, 255, 65),
+		text = Color3.fromRGB(0, 255, 65),
+		btn = Color3.fromRGB(15, 15, 15),
+		list = Color3.fromRGB(10, 10, 10),
+		glass = Color3.fromRGB(8, 8, 8)
+	},
+	
+	-- === SUNSET (Pink-Orange Gradient Feel) ===
+	Sunset = {
+		main = Color3.fromRGB(45, 25, 35),
+		grad1 = Color3.fromRGB(160, 70, 90),
+		grad2 = Color3.fromRGB(100, 45, 60),
+		accent = Color3.fromRGB(255, 120, 140),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(180, 80, 100),
+		list = Color3.fromRGB(130, 55, 75),
+		glass = Color3.fromRGB(110, 45, 65)
+	},
+	
+	-- === OCEAN (Deep Sea Blue-Green) ===
+	Ocean = {
+		main = Color3.fromRGB(15, 30, 40),
+		grad1 = Color3.fromRGB(30, 70, 90),
+		grad2 = Color3.fromRGB(20, 45, 60),
+		accent = Color3.fromRGB(0, 220, 200),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(35, 85, 110),
+		list = Color3.fromRGB(25, 60, 80),
+		glass = Color3.fromRGB(22, 55, 75)
+	},
+	
+	-- === CHERRY (Deep Red-Pink) ===
+	Cherry = {
+		main = Color3.fromRGB(40, 15, 25),
+		grad1 = Color3.fromRGB(130, 30, 60),
+		grad2 = Color3.fromRGB(85, 20, 40),
+		accent = Color3.fromRGB(255, 60, 120),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(160, 40, 80),
+		list = Color3.fromRGB(110, 28, 55),
+		glass = Color3.fromRGB(95, 22, 48)
+	},
+	
+	-- === FOREST (Earthy Green-Brown) ===
+	Forest = {
+		main = Color3.fromRGB(25, 35, 25),
+		grad1 = Color3.fromRGB(50, 80, 50),
+		grad2 = Color3.fromRGB(35, 55, 35),
+		accent = Color3.fromRGB(140, 210, 100),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(60, 100, 60),
+		list = Color3.fromRGB(45, 75, 45),
+		glass = Color3.fromRGB(38, 65, 38)
+	},
+	
+	-- === COTTON CANDY (Pastel Pink-Blue) ===
+	CottonCandy = {
+		main = Color3.fromRGB(230, 210, 230),
+		grad1 = Color3.fromRGB(210, 190, 230),
+		grad2 = Color3.fromRGB(200, 220, 240),
+		accent = Color3.fromRGB(255, 130, 180),
+		text = Color3.new(0.15,0.15,0.15),
+		btn = Color3.fromRGB(220, 200, 230),
+		list = Color3.fromRGB(215, 205, 235),
+		glass = Color3.fromRGB(225, 215, 240)
+	},
+	
+	-- === AMETHYST (Rich Dark Purple) ===
+	Amethyst = {
+		main = Color3.fromRGB(30, 15, 40),
+		grad1 = Color3.fromRGB(70, 35, 90),
+		grad2 = Color3.fromRGB(45, 20, 60),
+		accent = Color3.fromRGB(200, 120, 255),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(85, 45, 110),
+		list = Color3.fromRGB(60, 30, 80),
+		glass = Color3.fromRGB(50, 25, 70)
+	},
+	
+	-- === SLATE (Gray-Blue Professional) ===
+	Slate = {
+		main = Color3.fromRGB(35, 40, 50),
+		grad1 = Color3.fromRGB(60, 70, 85),
+		grad2 = Color3.fromRGB(40, 45, 55),
+		accent = Color3.fromRGB(130, 170, 220),
+		text = Color3.new(1,1,1),
+		btn = Color3.fromRGB(70, 80, 100),
+		list = Color3.fromRGB(55, 65, 80),
+		glass = Color3.fromRGB(48, 55, 70)
 	}
 }
+
 local currentTheme = themes.Default
 -- =============================================================
 -- SOUND EFFECTS
@@ -591,32 +752,34 @@ local currentTheme = themes.Default
 local currentHoverSound = nil
 
 local function playOpen()
+	if soundMuted then return end
 	local s = Instance.new("Sound")
 	s.SoundId = "rbxassetid://126864503471832"
-	s.Volume = 0.45
+	s.Volume = 0.45 * (_G.uiSoundVol or 1)
 	s.Parent = SoundService
 	s:Play()
 	Debris:AddItem(s, 3)
 end
 
 local function playClose()
+	if soundMuted then return end
 	local s = Instance.new("Sound")
 	s.SoundId = "rbxassetid://4566"
-	s.Volume = 0.4
+	s.Volume = 0.4 * (_G.uiSoundVol or 1)
 	s.Parent = SoundService
 	s:Play()
 	Debris:AddItem(s, 3)
 end
 
 local function playHover()
-	-- Stop any previous hover sound to prevent overlap
+	if soundMuted then return end
 	if currentHoverSound and currentHoverSound.IsPlaying then
 		currentHoverSound:Stop()
 	end
 
 	local s = Instance.new("Sound")
 	s.SoundId = "rbxassetid://107677435338382"
-	s.Volume = 1
+	s.Volume = 1 * (_G.uiSoundVol or 1)
 	s.Parent = SoundService
 	s:Play()
 	Debris:AddItem(s, 2)
@@ -625,19 +788,18 @@ local function playHover()
 end
 
 local function playClick()
-	-- Stop hover sound immediately when clicking
+	if soundMuted then return end
 	if currentHoverSound and currentHoverSound.IsPlaying then
 		currentHoverSound:Stop()
 	end
 
 	local s = Instance.new("Sound")
 	s.SoundId = "rbxassetid://109439703653606"
-	s.Volume = 5
+	s.Volume = 5 * (_G.uiSoundVol or 1)
 	s.Parent = SoundService
 	s:Play()
 	Debris:AddItem(s, 2)
 end
-
 -- =============================================================
 -- apply sounds to all buttons NOW
 -- =============================================================
@@ -673,7 +835,6 @@ local function setupButtonSounds()
 		end
 	end)
 end
-
 -- =============================================================
 -- better notis
 -- =============================================================
@@ -730,13 +891,14 @@ local notifDuration = 5
 local currentNotifSound = nil
 
 local function playNotifSound()
+	if notifSoundMuted then return end
 	if currentNotifSound and currentNotifSound.IsPlaying then
 		currentNotifSound:Stop()
 	end
 
 	local s = Instance.new("Sound")
-	s.SoundId = "rbxassetid://97643101798871"
-	s.Volume = 0.55
+	s.SoundId = _G.customNotifId or "rbxassetid://97643101798871"
+	s.Volume = (_G.notifSoundVol or 0.55)
 	s.Parent = SoundService
 	s:Play()
 
@@ -3010,7 +3172,7 @@ function LoadLunarCrosshair()
 			TweenService:Create(btnStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(120, 130, 255)}):Play()
 		end)
 
-		local discordLink = "https://discord.gg/5GeQAXYYcW"
+		local discordLink = "https://discord.gg/ydNKRbFmUd"
 		btn.MouseButton1Click:Connect(function()
 			if setclipboard then
 				setclipboard(discordLink)
@@ -7969,7 +8131,7 @@ function TouchFling:CreateGUI()
 	Watermark.Position = UDim2.new(0.05, 0, 0.94, 0)
 	Watermark.Size = UDim2.new(0.9, 0, 0, 18)
 	Watermark.Font = Enum.Font.Gotham
-	Watermark.Text = "https://discord.gg/5GeQAXYYcW"
+	Watermark.Text = "https://discord.gg/ydNKRbFmUd"
 	Watermark.TextColor3 = Color3.fromRGB(120, 180, 255)
 	Watermark.TextSize = 13
 	Watermark.TextTransparency = 0.5
@@ -9779,7 +9941,235 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Theme Section
+-- ========== SOUND SETTINGS SECTION ==========
+do
+	local mSection = makeSection(setScroll, "SOUND SETTINGS", 320)
+
+	_G.uiSoundVol = 1
+	_G.notifSoundVol = 0.55
+	_G.customNotifId = "rbxassetid://97643101798871"
+
+	-- Track which slider is being dragged (nil, "ui", or "notif")
+	local activeSlider = nil
+
+	local function mkSlider(parent, y, lbl, def, key)
+		local c = Instance.new("Frame", parent)
+		c.Size = UDim2.new(0.9, 0, 0, math.floor(50*scale))
+		c.Position = UDim2.new(0.05, 0, 0, math.floor(y*scale))
+		c.BackgroundTransparency = 1
+		c.ZIndex = 2147483647
+
+		local lab = Instance.new("TextLabel", c)
+		lab.Size = UDim2.new(1, 0, 0, math.floor(18*scale))
+		lab.BackgroundTransparency = 1
+		lab.Text = lbl..": "..math.round(def*100).."%"
+		lab.Font = Enum.Font.GothamBold
+		lab.TextSize = math.floor(13*fontScale)
+		lab.TextColor3 = globalConfig.textColor
+		lab.TextXAlignment = Enum.TextXAlignment.Left
+		lab.ZIndex = 2147483647
+
+		local track = Instance.new("Frame", c)
+		track.Size = UDim2.new(1, 0, 0, math.floor(10*scale))
+		track.Position = UDim2.new(0, 0, 0, math.floor(26*scale))
+		track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+		track.BorderSizePixel = 0
+		track.ZIndex = 2147483647
+		Instance.new("UICorner", track).CornerRadius = UDim.new(0, 5)
+
+		local fill = Instance.new("Frame", track)
+		fill.Size = UDim2.new(def, 0, 1, 0)
+		fill.BackgroundColor3 = currentTheme.accent
+		fill.BorderSizePixel = 0
+		fill.ZIndex = 2147483647
+		Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 5)
+
+		local knob = Instance.new("Frame", track)
+		knob.Size = UDim2.new(0, math.floor(16*scale), 0, math.floor(16*scale))
+		knob.Position = UDim2.new(def, math.floor(-8*scale), 0.5, math.floor(-8*scale))
+		knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		knob.BorderSizePixel = 0
+		knob.ZIndex = 2147483647
+		Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+		local function setVol(x)
+			local v = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+			fill.Size = UDim2.new(v, 0, 1, 0)
+			knob.Position = UDim2.new(v, math.floor(-8*scale), 0.5, math.floor(-8*scale))
+			lab.Text = lbl..": "..math.round(v*100).."%"
+			_G[key] = v
+		end
+
+		-- Mouse + Touch start
+		track.InputBegan:Connect(function(inp)
+			if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+				activeSlider = key
+				setVol(inp.Position.X)
+			end
+		end)
+
+		-- Mouse + Touch end
+		track.InputEnded:Connect(function(inp)
+			if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+				if activeSlider == key then activeSlider = nil end
+			end
+		end)
+
+		return setVol
+	end
+
+	local uiSetVol = mkSlider(mSection, 38, "UI Vol", 1, "uiSoundVol")
+	local nfSetVol = mkSlider(mSection, 96, "Notif Vol", 0.55, "notifSoundVol")
+
+	-- Global drag handler for mobile (touch moves outside the frame)
+	UserInputService.InputChanged:Connect(function(inp)
+		if not activeSlider then return end
+		if inp.UserInputType ~= Enum.UserInputType.MouseMovement and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+		if activeSlider == "uiSoundVol" then
+			uiSetVol(inp.Position.X)
+		else
+			nfSetVol(inp.Position.X)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+			activeSlider = nil
+		end
+	end)
+
+	-- Sound ID box
+	local c = Instance.new("Frame", mSection)
+	c.Size = UDim2.new(0.9, 0, 0, math.floor(70*scale))
+	c.Position = UDim2.new(0.05, 0, 0, math.floor(154*scale))
+	c.BackgroundTransparency = 1
+	c.ZIndex = 2147483647
+
+	local l = Instance.new("TextLabel", c)
+	l.Size = UDim2.new(1, 0, 0, math.floor(18*scale))
+	l.BackgroundTransparency = 1
+	l.Text = "Custom Notif Sound ID"
+	l.Font = Enum.Font.GothamBold
+	l.TextSize = math.floor(13*fontScale)
+	l.TextColor3 = globalConfig.textColor
+	l.TextXAlignment = Enum.TextXAlignment.Left
+	l.ZIndex = 2147483647
+
+	local b = Instance.new("TextBox", c)
+	b.Size = UDim2.new(1, math.floor(-70*scale), 0, math.floor(36*scale))
+	b.Position = UDim2.new(0, 0, 0, math.floor(24*scale))
+	b.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+	b.BorderSizePixel = 0
+	b.Text = "rbxassetid://97643101798871"
+	b.PlaceholderText = "rbxassetid://..."
+	b.PlaceholderColor3 = Color3.fromRGB(100, 100, 110)
+	b.Font = Enum.Font.Gotham
+	b.TextSize = math.floor(13*fontScale)
+	b.TextColor3 = globalConfig.textColor
+	b.ClearTextOnFocus = false
+	b.ZIndex = 2147483647
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+
+	-- Mobile: make textbox easier to tap
+	b.TextEditable = true
+	b.ClearTextOnFocus = false
+
+	local btn = Instance.new("TextButton", c)
+	btn.Size = UDim2.new(0, math.floor(60*scale), 0, math.floor(28*scale))
+	btn.Position = UDim2.new(1, math.floor(-65*scale), 0, math.floor(28*scale))
+	btn.BackgroundColor3 = currentTheme.accent
+	btn.Text = "Set"
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = math.floor(12*fontScale)
+	btn.TextColor3 = Color3.new(0, 0, 0)
+	btn.BorderSizePixel = 0
+	btn.ZIndex = 2147483647
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+	btn.MouseButton1Click:Connect(function()
+		local t = b.Text:gsub("%s+", "")
+		if t ~= "" then
+			if not t:find("rbxassetid://") and tonumber(t) then t = "rbxassetid://"..t end
+			_G.customNotifId = t
+			notify("Sound ID set!", Color3.fromRGB(100, 255, 100))
+		end
+	end)
+
+	-- Also allow pressing Return/Enter on mobile keyboard
+	b.FocusLost:Connect(function(enterPressed)
+		if enterPressed then
+			local t = b.Text:gsub("%s+", "")
+			if t ~= "" then
+				if not t:find("rbxassetid://") and tonumber(t) then t = "rbxassetid://"..t end
+				_G.customNotifId = t
+				notify("Sound ID set!", Color3.fromRGB(100, 255, 100))
+			end
+		end
+	end)
+
+	-- Test button
+	local test = Instance.new("TextButton", mSection)
+	test.Size = UDim2.new(0.9, 0, 0, math.floor(32*scale))
+	test.Position = UDim2.new(0.05, 0, 0, math.floor(232*scale))
+	test.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
+	test.Text = "▶ Test Sound"
+	test.Font = Enum.Font.GothamBold
+	test.TextSize = math.floor(13*fontScale)
+	test.TextColor3 = Color3.new(1, 1, 1)
+	test.BorderSizePixel = 0
+	test.ZIndex = 2147483647
+	Instance.new("UICorner", test).CornerRadius = UDim.new(0, 6)
+
+	test.MouseButton1Click:Connect(function()
+		if notifSoundMuted then notify("Notif sounds muted!", Color3.fromRGB(255, 100, 100)); return end
+		local s = Instance.new("Sound"); s.SoundId = _G.customNotifId; s.Volume = _G.notifSoundVol
+		s.Parent = SoundService; s:Play(); Debris:AddItem(s, 4)
+	end)
+
+	-- Mute buttons
+	local mc = Instance.new("Frame", mSection)
+	mc.Size = UDim2.new(0.9, 0, 0, math.floor(36*scale))
+	mc.Position = UDim2.new(0.05, 0, 0, math.floor(272*scale))
+	mc.BackgroundTransparency = 1
+	mc.ZIndex = 2147483647
+
+	local function mkMute(parent, x, w, st, on, off, isUi)
+		local btn = Instance.new("TextButton", parent)
+		btn.Size = UDim2.new(w, 0, 1, 0)
+		btn.Position = UDim2.new(x, 0, 0, 0)
+		btn.BackgroundColor3 = st and Color3.fromRGB(200, 60, 60) or Color3.fromRGB(60, 180, 80)
+		btn.Text = st and off or on
+		btn.Font = Enum.Font.GothamBlack
+		btn.TextSize = math.floor(13*fontScale)
+		btn.TextColor3 = Color3.new(1, 1, 1)
+		btn.BorderSizePixel = 0
+		btn.ZIndex = 2147483647
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+		btn.MouseButton1Click:Connect(function()
+			if isUi then
+				soundMuted = not soundMuted
+				btn.BackgroundColor3 = soundMuted and Color3.fromRGB(200, 60, 60) or Color3.fromRGB(60, 180, 80)
+				btn.Text = soundMuted and off or on
+				if soundMuted then notify("UI sounds muted", Color3.fromRGB(255, 100, 100))
+				else
+					notify("UI sounds enabled", Color3.fromRGB(100, 255, 100))
+					local s = Instance.new("Sound"); s.SoundId = "rbxassetid://109439703653606"; s.Volume = _G.uiSoundVol*0.3
+					s.Parent = SoundService; s:Play(); Debris:AddItem(s, 1)
+				end
+			else
+				notifSoundMuted = not notifSoundMuted
+				btn.BackgroundColor3 = notifSoundMuted and Color3.fromRGB(200, 60, 60) or Color3.fromRGB(60, 180, 80)
+				btn.Text = notifSoundMuted and off or on
+				notify(notifSoundMuted and "Notif sounds muted" or "Notif sounds enabled", notifSoundMuted and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(100, 255, 100))
+			end
+		end)
+	end
+
+	mkMute(mc, 0, 0.48, soundMuted, "🔊 UI", "🔇 UI", true)
+	mkMute(mc, 0.52, 0.48, notifSoundMuted, "🔊 Notif", "🔇 Notif", false)
+end
+-- ========== THEME SELECTOR SECTION ==========
 thSection = makeSection(setScroll, "THEME SELECTOR", 0)
 
 thCont = Instance.new("Frame", thSection)
@@ -9788,27 +10178,51 @@ thCont.Position = UDim2.new(0, math.floor(10 * scale), 0, math.floor(36 * scale)
 thCont.BackgroundTransparency = 1
 thCont.ZIndex = 2147483647
 
-local thCount = 0
-for _ in pairs(themes) do thCount = thCount + 1 end
-local rows = math.ceil(thCount / 2)
-thSection.Size = UDim2.new(1, math.floor(-16 * scale), 0, math.floor(36 + rows * 55 + 10) * scale)
+-- Sort theme names alphabetically for consistent ordering
+local sortedThemes = {}
+for name in pairs(themes) do
+	table.insert(sortedThemes, name)
+end
+table.sort(sortedThemes)
+
+local thCount = #sortedThemes
+local cols = 2
+local rows = math.ceil(thCount / cols)
+
+-- Fixed: apply scale to each number individually, then sum
+local sectionHeight = math.floor(36 * scale) + math.floor(rows * 55 * scale) + math.floor(10 * scale)
+thSection.Size = UDim2.new(1, math.floor(-16 * scale), 0, sectionHeight)
 
 thGrid = Instance.new("UIGridLayout", thCont)
 thGrid.CellSize = UDim2.new(0.48, 0, 0, math.floor(45 * scale))
 thGrid.CellPadding = UDim2.new(0, math.floor(10 * scale), 0, math.floor(10 * scale))
 thGrid.SortOrder = Enum.SortOrder.LayoutOrder
+thGrid.FillDirection = Enum.FillDirection.Horizontal
+thGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+thGrid.VerticalAlignment = Enum.VerticalAlignment.Top
 
-for name, th in pairs(themes) do
+for i, name in ipairs(sortedThemes) do
+	local th = themes[name]
 	local themeBtn = Instance.new("TextButton", thCont)
+	themeBtn.Name = name .. "ThemeBtn"
 	themeBtn.BackgroundColor3 = th.accent
 	themeBtn.Text = name
 	themeBtn.Font = Enum.Font.GothamBold
-	themeBtn.TextSize = math.floor(14 * fontScale)
+	themeBtn.TextSize = math.floor(13 * fontScale)
 	themeBtn.TextColor3 = th.text
+	themeBtn.TextScaled = false
+	themeBtn.TextWrapped = true
+	themeBtn.TextTruncate = Enum.TextTruncate.AtEnd
 	themeBtn.BorderSizePixel = 0
-	themeBtn.LayoutOrder = name == "Default" and 1 or 2
+	themeBtn.LayoutOrder = i
 	themeBtn.ZIndex = 2147483647
 	Instance.new("UICorner", themeBtn).CornerRadius = UDim.new(0, 6)
+
+	-- Subtle border for readability
+	local btnStroke = Instance.new("UIStroke", themeBtn)
+	btnStroke.Color = Color3.fromRGB(255, 255, 255)
+	btnStroke.Transparency = 0.85
+	btnStroke.Thickness = 1
 
 	themeBtn.MouseButton1Click:Connect(function()
 		local oldTheme = currentTheme
@@ -9829,7 +10243,11 @@ for name, th in pairs(themes) do
 		if cmdScroll then cmdScroll.BackgroundColor3 = th.glass end
 		if setScroll then setScroll.BackgroundColor3 = th.glass end
 
+		-- SKIP theme selector buttons so they keep their original accent colors
 		for _, obj in ipairs(lunarGui:GetDescendants()) do
+			-- Skip anything inside the theme selector container
+			if obj:IsDescendantOf(thCont) then continue end
+
 			if obj:IsA("TextButton") then
 				if obj.BackgroundColor3 == oldTheme.accent then obj.BackgroundColor3 = th.accent end
 				if obj.BackgroundColor3 == oldTheme.btn then obj.BackgroundColor3 = th.btn end
@@ -9892,7 +10310,7 @@ Instance.new("UICorner", dBtn).CornerRadius = UDim.new(0, 6)
 
 dBtn.MouseButton1Click:Connect(function()
 	if setclipboard then
-		setclipboard("https://discord.gg/5GeQAXYYcW")
+		setclipboard("https://discord.gg/ydNKRbFmUd")
 		notify("Discord link copied to clipboard!", Color3.fromRGB(88,101,242))
 	else
 		notify("Clipboard not supported in this executor", Color3.fromRGB(255,100,100))
