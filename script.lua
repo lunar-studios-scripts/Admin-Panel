@@ -9099,6 +9099,11 @@ end
 -- =============================================================
 -- Main Gui :3
 -- =============================================================
+-- Mobile detection at top
+local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+local scale = isMobile and 0.7 or 1
+local fontScale = isMobile and 0.85 or 1
+
 lunarGui = Instance.new("ScreenGui")
 lunarGui.Name = "LunarGui"
 lunarGui.ResetOnSpawn = false
@@ -9111,8 +9116,8 @@ lunarGui.Parent = game:GetService("CoreGui")
 
 mainFrame = Instance.new("Frame", lunarGui)
 mainFrame.Name = "Main"
-mainFrame.Size = UDim2.new(0, 420, 0, 560)
-mainFrame.Position = UDim2.new(1, -440, 0.5, -280)
+mainFrame.Size = UDim2.new(0, math.floor(420 * scale), 0, math.floor(560 * scale))
+mainFrame.Position = UDim2.new(1, math.floor(-440 * scale), 0.5, math.floor(-280 * scale))
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
@@ -9123,7 +9128,7 @@ Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
 -- Top Bar
 topBar = Instance.new("Frame", mainFrame)
-topBar.Size = UDim2.new(1, 0, 0, 50)
+topBar.Size = UDim2.new(1, 0, 0, math.floor(50 * scale))
 topBar.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 topBar.BorderSizePixel = 0
 topBar.ZIndex = 2147483647
@@ -9131,12 +9136,12 @@ Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 8)
 
 -- Title
 titleLabel = Instance.new("TextLabel", topBar)
-titleLabel.Size = UDim2.new(1, -100, 1, 0)
-titleLabel.Position = UDim2.new(0, 15, 0, 0)
+titleLabel.Size = UDim2.new(1, math.floor(-100 * scale), 1, 0)
+titleLabel.Position = UDim2.new(0, math.floor(15 * scale), 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Project Lunar"
 titleLabel.Font = Enum.Font.GothamBlack
-titleLabel.TextSize = 24
+titleLabel.TextSize = math.floor(24 * fontScale)
 titleLabel.TextColor3 = currentTheme.accent
 titleLabel.TextStrokeTransparency = 0.5
 titleLabel.TextStrokeColor3 = Color3.new(0,0,0)
@@ -9146,12 +9151,12 @@ titleLabel.ZIndex = 2147483647
 -- Minimize Button
 minBtn = Instance.new("TextButton", topBar)
 minBtn.Name = "MinimizeBtn"
-minBtn.Size = UDim2.new(0, 35, 0, 35)
-minBtn.Position = UDim2.new(1, -75, 0.5, -17.5)
+minBtn.Size = UDim2.new(0, math.floor(35 * scale), 0, math.floor(35 * scale))
+minBtn.Position = UDim2.new(1, math.floor(-75 * scale), 0.5, math.floor(-17.5 * scale))
 minBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 minBtn.Text = "−"
 minBtn.Font = Enum.Font.GothamBold
-minBtn.TextSize = 20
+minBtn.TextSize = math.floor(20 * fontScale)
 minBtn.TextColor3 = Color3.new(1,1,1)
 minBtn.BorderSizePixel = 0
 minBtn.ZIndex = 2147483647
@@ -9159,12 +9164,12 @@ Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
 
 -- Close Button
 closeBtn = Instance.new("TextButton", topBar)
-closeBtn.Size = UDim2.new(0, 35, 0, 35)
-closeBtn.Position = UDim2.new(1, -40, 0.5, -17.5)
+closeBtn.Size = UDim2.new(0, math.floor(35 * scale), 0, math.floor(35 * scale))
+closeBtn.Position = UDim2.new(1, math.floor(-40 * scale), 0.5, math.floor(-17.5 * scale))
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 closeBtn.Text = "×"
 closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 22
+closeBtn.TextSize = math.floor(22 * fontScale)
 closeBtn.TextColor3 = Color3.new(1,1,1)
 closeBtn.BorderSizePixel = 0
 closeBtn.ZIndex = 2147483647
@@ -9180,7 +9185,7 @@ local origSize = mainFrame.Size
 minBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	if minimized then
-		mainFrame:TweenSize(UDim2.new(0, 420, 0, 50), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+		mainFrame:TweenSize(UDim2.new(0, math.floor(420 * scale), 0, math.floor(50 * scale)), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
 		minBtn.Text = "+"
 	else
 		mainFrame:TweenSize(origSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
@@ -9191,12 +9196,12 @@ end)
 -- Resize Handle
 resizeHandle = Instance.new("TextButton", mainFrame)
 resizeHandle.Name = "ResizeHandle"
-resizeHandle.Size = UDim2.new(0, 20, 0, 20)
-resizeHandle.Position = UDim2.new(1, -20, 1, -20)
+resizeHandle.Size = UDim2.new(0, math.floor(20 * scale), 0, math.floor(20 * scale))
+resizeHandle.Position = UDim2.new(1, math.floor(-20 * scale), 1, math.floor(-20 * scale))
 resizeHandle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 resizeHandle.Text = "◢"
 resizeHandle.Font = Enum.Font.GothamBold
-resizeHandle.TextSize = 10
+resizeHandle.TextSize = math.floor(10 * fontScale)
 resizeHandle.TextColor3 = Color3.fromRGB(150, 150, 150)
 resizeHandle.BorderSizePixel = 0
 resizeHandle.AutoButtonColor = false
@@ -9225,14 +9230,14 @@ end)
 UserInputService.InputChanged:Connect(function(input)
 	if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 		local d = input.Position - startPos
-		mainFrame.Size = UDim2.new(0, math.clamp(startSize.X.Offset + d.X, 320, 800), 0, math.clamp(startSize.Y.Offset + d.Y, 300, 700))
+		mainFrame.Size = UDim2.new(0, math.clamp(startSize.X.Offset + d.X, math.floor(320 * scale), math.floor(800 * scale)), 0, math.clamp(startSize.Y.Offset + d.Y, math.floor(300 * scale), math.floor(700 * scale)))
 	end
 end)
 
 -- Tabs
 tabBar = Instance.new("Frame", mainFrame)
-tabBar.Size = UDim2.new(1, -20, 0, 40)
-tabBar.Position = UDim2.new(0, 10, 0, 60)
+tabBar.Size = UDim2.new(1, math.floor(-20 * scale), 0, math.floor(40 * scale))
+tabBar.Position = UDim2.new(0, math.floor(10 * scale), 0, math.floor(60 * scale))
 tabBar.BackgroundTransparency = 1
 tabBar.ZIndex = 2147483647
 
@@ -9242,7 +9247,7 @@ cmdTab.Size = UDim2.new(0.5, -5, 1, 0)
 cmdTab.BackgroundColor3 = currentTheme.accent
 cmdTab.Text = "Commands"
 cmdTab.Font = Enum.Font.GothamBold
-cmdTab.TextSize = 16
+cmdTab.TextSize = math.floor(16 * fontScale)
 cmdTab.TextColor3 = Color3.new(0,0,0)
 cmdTab.BorderSizePixel = 0
 cmdTab.ZIndex = 2147483647
@@ -9255,7 +9260,7 @@ setTab.Position = UDim2.new(0.5, 5, 0, 0)
 setTab.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 setTab.Text = "Settings"
 setTab.Font = Enum.Font.GothamBold
-setTab.TextSize = 16
+setTab.TextSize = math.floor(16 * fontScale)
 setTab.TextColor3 = globalConfig.textColor
 setTab.BorderSizePixel = 0
 setTab.ZIndex = 2147483647
@@ -9264,8 +9269,8 @@ Instance.new("UICorner", setTab).CornerRadius = UDim.new(0, 6)
 -- Content Container
 contentFrame = Instance.new("Frame", mainFrame)
 contentFrame.Name = "Content"
-contentFrame.Size = UDim2.new(1, -20, 1, -110)
-contentFrame.Position = UDim2.new(0, 10, 0, 110)
+contentFrame.Size = UDim2.new(1, math.floor(-20 * scale), 1, math.floor(-110 * scale))
+contentFrame.Position = UDim2.new(0, math.floor(10 * scale), 0, math.floor(110 * scale))
 contentFrame.BackgroundTransparency = 1
 contentFrame.ClipsDescendants = true
 contentFrame.ZIndex = 2147483647
@@ -9279,30 +9284,30 @@ cmdFrame.ZIndex = 2147483647
 
 -- Search Bar
 searchBar = Instance.new("Frame", cmdFrame)
-searchBar.Size = UDim2.new(1, 0, 0, 38)
+searchBar.Size = UDim2.new(1, 0, 0, math.floor(38 * scale))
 searchBar.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 searchBar.BorderSizePixel = 0
 searchBar.ZIndex = 2147483647
 Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 6)
 
 searchIcon = Instance.new("TextLabel", searchBar)
-searchIcon.Size = UDim2.new(0, 30, 1, 0)
-searchIcon.Position = UDim2.new(0, 8, 0, 0)
+searchIcon.Size = UDim2.new(0, math.floor(30 * scale), 1, 0)
+searchIcon.Position = UDim2.new(0, math.floor(8 * scale), 0, 0)
 searchIcon.BackgroundTransparency = 1
 searchIcon.Text = "🔍"
 searchIcon.Font = Enum.Font.Gotham
-searchIcon.TextSize = 14
+searchIcon.TextSize = math.floor(14 * fontScale)
 searchIcon.TextColor3 = Color3.fromRGB(120, 120, 130)
 searchIcon.ZIndex = 2147483647
 
 searchBox = Instance.new("TextBox", searchBar)
-searchBox.Size = UDim2.new(1, -45, 1, 0)
-searchBox.Position = UDim2.new(0, 38, 0, 0)
+searchBox.Size = UDim2.new(1, math.floor(-45 * scale), 1, 0)
+searchBox.Position = UDim2.new(0, math.floor(38 * scale), 0, 0)
 searchBox.BackgroundTransparency = 1
 searchBox.PlaceholderText = "Search commands..."
 searchBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 110)
 searchBox.Font = Enum.Font.Gotham
-searchBox.TextSize = 15
+searchBox.TextSize = math.floor(15 * fontScale)
 searchBox.TextColor3 = globalConfig.textColor
 searchBox.TextStrokeTransparency = 0.5
 searchBox.TextStrokeColor3 = Color3.new(0,0,0)
@@ -9311,18 +9316,18 @@ searchBox.ZIndex = 2147483647
 
 -- Scroll Frame
 cmdScroll = Instance.new("ScrollingFrame", cmdFrame)
-cmdScroll.Size = UDim2.new(1, 0, 1, -48)
-cmdScroll.Position = UDim2.new(0, 0, 0, 48)
+cmdScroll.Size = UDim2.new(1, 0, 1, math.floor(-48 * scale))
+cmdScroll.Position = UDim2.new(0, 0, 0, math.floor(48 * scale))
 cmdScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 cmdScroll.BorderSizePixel = 0
-cmdScroll.ScrollBarThickness = 6
+cmdScroll.ScrollBarThickness = math.floor(6 * scale)
 cmdScroll.ScrollBarImageColor3 = currentTheme.accent
 cmdScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 cmdScroll.ZIndex = 2147483647
 Instance.new("UICorner", cmdScroll).CornerRadius = UDim.new(0, 6)
 
 cmdList = Instance.new("UIListLayout", cmdScroll)
-cmdList.Padding = UDim.new(0, 6)
+cmdList.Padding = UDim.new(0, math.floor(6 * scale))
 cmdList.SortOrder = Enum.SortOrder.LayoutOrder
 
 -- Command data in tables (no locals for each)
@@ -9377,11 +9382,11 @@ cmds = {
 
 for i, cmdStr in ipairs(cmds) do
 	btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, -10, 0, 42)
+	btn.Size = UDim2.new(1, math.floor(-10 * scale), 0, math.floor(42 * scale))
 	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	btn.Text = "  " .. cmdStr
 	btn.Font = Enum.Font.GothamSemibold
-	btn.TextSize = 14
+	btn.TextSize = math.floor(14 * fontScale)
 	btn.TextColor3 = globalConfig.textColor
 	btn.TextXAlignment = Enum.TextXAlignment.Left
 	btn.TextStrokeTransparency = 0.5
@@ -9435,20 +9440,20 @@ setScroll = Instance.new("ScrollingFrame", setFrame)
 setScroll.Size = UDim2.new(1, 0, 1, 0)
 setScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 setScroll.BorderSizePixel = 0
-setScroll.ScrollBarThickness = 6
+setScroll.ScrollBarThickness = math.floor(6 * scale)
 setScroll.ScrollBarImageColor3 = currentTheme.accent
 setScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 setScroll.ZIndex = 2147483647
 Instance.new("UICorner", setScroll).CornerRadius = UDim.new(0, 6)
 
 setList = Instance.new("UIListLayout", setScroll)
-setList.Padding = UDim.new(0, 12)
+setList.Padding = UDim.new(0, math.floor(12 * scale))
 setList.SortOrder = Enum.SortOrder.LayoutOrder
 
 -- Section creator (function reuses parameter names)
 function makeSection(parent, titleText, h)
 	s = Instance.new("Frame", parent)
-	s.Size = UDim2.new(1, -16, 0, h)
+	s.Size = UDim2.new(1, math.floor(-16 * scale), 0, math.floor(h * scale))
 	s.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 	s.BorderSizePixel = 0
 	s.LayoutOrder = #parent:GetChildren()
@@ -9456,12 +9461,12 @@ function makeSection(parent, titleText, h)
 	Instance.new("UICorner", s).CornerRadius = UDim.new(0, 8)
 
 	t = Instance.new("TextLabel", s)
-	t.Size = UDim2.new(1, -20, 0, 28)
-	t.Position = UDim2.new(0, 10, 0, 8)
+	t.Size = UDim2.new(1, math.floor(-20 * scale), 0, math.floor(28 * scale))
+	t.Position = UDim2.new(0, math.floor(10 * scale), 0, math.floor(8 * scale))
 	t.BackgroundTransparency = 1
 	t.Text = titleText
 	t.Font = Enum.Font.GothamBlack
-	t.TextSize = 16
+	t.TextSize = math.floor(16 * fontScale)
 	t.TextColor3 = currentTheme.accent
 	t.TextStrokeTransparency = 0.5
 	t.TextStrokeColor3 = Color3.new(0,0,0)
@@ -9475,37 +9480,40 @@ end
 cSection = makeSection(setScroll, "TEXT COLOR", 170)
 
 cDisplay = Instance.new("TextLabel", cSection)
-cDisplay.Size = UDim2.new(0.8, 0, 0, 32)
-cDisplay.Position = UDim2.new(0.1, 0, 0, 38)
+cDisplay.Size = UDim2.new(0.8, 0, 0, math.floor(32 * scale))
+cDisplay.Position = UDim2.new(0.1, 0, 0, math.floor(38 * scale))
 cDisplay.BackgroundColor3 = globalConfig.textColor
 cDisplay.Text = "Preview"
 cDisplay.Font = Enum.Font.GothamBold
-cDisplay.TextSize = 15
+cDisplay.TextSize = math.floor(15 * fontScale)
 cDisplay.TextColor3 = Color3.new(0,0,0)
 cDisplay.ZIndex = 2147483647
 Instance.new("UICorner", cDisplay).CornerRadius = UDim.new(0, 6)
 
+-- FIX: Each slider now has its own dragging state table instead of shared 'dragging' variable
+local sliderStates = {}
+
 -- Slider creator (reuses all parameter names, minimal locals)
 function makeSlider(parent, y, color, label, comp)
 	cont = Instance.new("Frame", parent)
-	cont.Size = UDim2.new(0.8, 0, 0, 24)
-	cont.Position = UDim2.new(0.1, 0, 0, y)
+	cont.Size = UDim2.new(0.8, 0, 0, math.floor(24 * scale))
+	cont.Position = UDim2.new(0.1, 0, 0, math.floor(y * scale))
 	cont.BackgroundTransparency = 1
 	cont.ZIndex = 2147483647
 
 	lab = Instance.new("TextLabel", cont)
-	lab.Size = UDim2.new(0, 30, 1, 0)
+	lab.Size = UDim2.new(0, math.floor(30 * scale), 1, 0)
 	lab.BackgroundTransparency = 1
 	lab.Text = label
 	lab.Font = Enum.Font.GothamBold
-	lab.TextSize = 12
+	lab.TextSize = math.floor(12 * fontScale)
 	lab.TextColor3 = color
 	lab.TextXAlignment = Enum.TextXAlignment.Left
 	lab.ZIndex = 2147483647
 
 	track = Instance.new("Frame", cont)
-	track.Size = UDim2.new(1, -40, 0, 8)
-	track.Position = UDim2.new(0, 35, 0.5, -4)
+	track.Size = UDim2.new(1, math.floor(-40 * scale), 0, math.floor(8 * scale))
+	track.Position = UDim2.new(0, math.floor(35 * scale), 0.5, math.floor(-4 * scale))
 	track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 	track.BorderSizePixel = 0
 	track.ZIndex = 2147483647
@@ -9520,19 +9528,20 @@ function makeSlider(parent, y, color, label, comp)
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
 
 	knob = Instance.new("Frame", track)
-	knob.Size = UDim2.new(0, 14, 0, 14)
-	knob.Position = UDim2.new(val, -7, 0.5, -7)
+	knob.Size = UDim2.new(0, math.floor(14 * scale), 0, math.floor(14 * scale))
+	knob.Position = UDim2.new(val, math.floor(-7 * scale), 0.5, math.floor(-7 * scale))
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	knob.BorderSizePixel = 0
 	knob.ZIndex = 2147483647
 	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-	dragging = false
+	-- FIX: Unique dragging state per slider using the track as key
+	sliderStates[track] = false
 
 	function updateSlider(x)
 		pos = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
 		fill.Size = UDim2.new(pos, 0, 1, 0)
-		knob.Position = UDim2.new(pos, -7, 0.5, -7)
+		knob.Position = UDim2.new(pos, math.floor(-7 * scale), 0.5, math.floor(-7 * scale))
 
 		newC = Color3.new(
 			comp == "R" and pos or globalConfig.textColor.R,
@@ -9553,19 +9562,19 @@ function makeSlider(parent, y, color, label, comp)
 
 	track.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
+			sliderStates[track] = true
 			updateSlider(input.Position.X)
 		end
 	end)
 
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
+			sliderStates[track] = false
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		if sliderStates[track] and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 			updateSlider(input.Position.X)
 		end
 	end)
@@ -9579,18 +9588,18 @@ makeSlider(cSection, 134, Color3.fromRGB(80, 140, 255), "B", "B")
 tSection = makeSection(setScroll, "UI TRANSPARENCY", 110)
 
 tLabel = Instance.new("TextLabel", tSection)
-tLabel.Size = UDim2.new(1, 0, 0, 22)
-tLabel.Position = UDim2.new(0, 0, 0, 36)
+tLabel.Size = UDim2.new(1, 0, 0, math.floor(22 * scale))
+tLabel.Position = UDim2.new(0, 0, 0, math.floor(36 * scale))
 tLabel.BackgroundTransparency = 1
 tLabel.Text = "Transparency: " .. math.round(globalConfig.uiTransparency * 100) .. "%"
 tLabel.Font = Enum.Font.GothamBold
-tLabel.TextSize = 14
+tLabel.TextSize = math.floor(14 * fontScale)
 tLabel.TextColor3 = globalConfig.textColor
 tLabel.ZIndex = 2147483647
 
 tTrack = Instance.new("Frame", tSection)
-tTrack.Size = UDim2.new(0.8, 0, 0, 10)
-tTrack.Position = UDim2.new(0.1, 0, 0, 68)
+tTrack.Size = UDim2.new(0.8, 0, 0, math.floor(10 * scale))
+tTrack.Position = UDim2.new(0.1, 0, 0, math.floor(68 * scale))
 tTrack.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 tTrack.BorderSizePixel = 0
 tTrack.ZIndex = 2147483647
@@ -9604,8 +9613,8 @@ tFill.ZIndex = 2147483647
 Instance.new("UICorner", tFill).CornerRadius = UDim.new(0, 5)
 
 tKnob = Instance.new("Frame", tTrack)
-tKnob.Size = UDim2.new(0, 16, 0, 16)
-tKnob.Position = UDim2.new(globalConfig.uiTransparency, -8, 0.5, -8)
+tKnob.Size = UDim2.new(0, math.floor(16 * scale), 0, math.floor(16 * scale))
+tKnob.Position = UDim2.new(globalConfig.uiTransparency, math.floor(-8 * scale), 0.5, math.floor(-8 * scale))
 tKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 tKnob.BorderSizePixel = 0
 tKnob.ZIndex = 2147483647
@@ -9616,7 +9625,7 @@ tDragging = false
 function updateTrans(x)
 	pos = math.clamp((x - tTrack.AbsolutePosition.X) / tTrack.AbsoluteSize.X, 0, 1)
 	tFill.Size = UDim2.new(pos, 0, 1, 0)
-	tKnob.Position = UDim2.new(pos, -8, 0.5, -8)
+	tKnob.Position = UDim2.new(pos, math.floor(-8 * scale), 0.5, math.floor(-8 * scale))
 	globalConfig.uiTransparency = pos
 	tLabel.Text = "Transparency: " .. math.round(pos * 100) .. "%"
 	if mainFrame then
@@ -9647,19 +9656,19 @@ end)
 thSection = makeSection(setScroll, "THEME SELECTOR", 0)
 
 thCont = Instance.new("Frame", thSection)
-thCont.Size = UDim2.new(1, -20, 1, -40)
-thCont.Position = UDim2.new(0, 10, 0, 36)
+thCont.Size = UDim2.new(1, math.floor(-20 * scale), 1, math.floor(-40 * scale))
+thCont.Position = UDim2.new(0, math.floor(10 * scale), 0, math.floor(36 * scale))
 thCont.BackgroundTransparency = 1
 thCont.ZIndex = 2147483647
 
 thCount = 0
 for _ in pairs(themes) do thCount = thCount + 1 end
 rows = math.ceil(thCount / 2)
-thSection.Size = UDim2.new(1, -16, 0, 36 + rows * 55 + 10)
+thSection.Size = UDim2.new(1, math.floor(-16 * scale), 0, math.floor(36 + rows * 55 + 10) * scale)
 
 thGrid = Instance.new("UIGridLayout", thCont)
-thGrid.CellSize = UDim2.new(0.48, 0, 0, 45)
-thGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+thGrid.CellSize = UDim2.new(0.48, 0, 0, math.floor(45 * scale))
+thGrid.CellPadding = UDim2.new(0, math.floor(10 * scale), 0, math.floor(10 * scale))
 thGrid.SortOrder = Enum.SortOrder.LayoutOrder
 
 for name, th in pairs(themes) do
@@ -9667,7 +9676,7 @@ for name, th in pairs(themes) do
 	btn.BackgroundColor3 = th.accent
 	btn.Text = name
 	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 14
+	btn.TextSize = math.floor(14 * fontScale)
 	btn.TextColor3 = th.text
 	btn.BorderSizePixel = 0
 	btn.LayoutOrder = name == "Default" and 1 or 2
@@ -9697,12 +9706,12 @@ dSection = makeSection(setScroll, "COMMUNITY", 90)
 dSection.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
 
 dBtn = Instance.new("TextButton", dSection)
-dBtn.Size = UDim2.new(0.9, 0, 0, 40)
-dBtn.Position = UDim2.new(0.05, 0, 0, 38)
+dBtn.Size = UDim2.new(0.9, 0, 0, math.floor(40 * scale))
+dBtn.Position = UDim2.new(0.05, 0, 0, math.floor(38 * scale))
 dBtn.BackgroundColor3 = Color3.fromRGB(120, 130, 255)
 dBtn.Text = "Join Discord Server"
 dBtn.Font = Enum.Font.GothamBlack
-dBtn.TextSize = 16
+dBtn.TextSize = math.floor(16 * fontScale)
 dBtn.TextColor3 = Color3.new(1,1,1)
 dBtn.ZIndex = 2147483647
 Instance.new("UICorner", dBtn).CornerRadius = UDim.new(0, 6)
