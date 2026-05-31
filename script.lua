@@ -891,14 +891,14 @@ local notifDuration = 5
 local currentNotifSound = nil
 
 local function playNotifSound()
-	if notifSoundMuted then return end
+	if notifSoundMuted then return end  -- Only checks notif mute, not UI mute
 	if currentNotifSound and currentNotifSound.IsPlaying then
 		currentNotifSound:Stop()
 	end
 
 	local s = Instance.new("Sound")
-	s.SoundId = _G.customNotifId or "rbxassetid://97643101798871"
-	s.Volume = (_G.notifSoundVol or 0.55)
+	s.SoundId = "rbxassetid://97643101798871"
+	s.Volume = 0.55
 	s.Parent = SoundService
 	s:Play()
 
