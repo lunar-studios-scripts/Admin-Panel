@@ -754,7 +754,7 @@ local currentHoverSound = nil
 local function playOpen()
 	if soundMuted then return end
 	local s = Instance.new("Sound")
-	s.SoundId = "rbxassetid://126864503471832"
+	s.SoundId = "rbxassetid://1111111111111" -- opening sound!!! for the panel
 	s.Volume = 0.45 * (_G.uiSoundVol or 1)
 	s.Parent = SoundService
 	s:Play()
@@ -764,7 +764,7 @@ end
 local function playClose()
 	if soundMuted then return end
 	local s = Instance.new("Sound")
-	s.SoundId = "rbxassetid://4566"
+	s.SoundId = "rbxassetid://4566" -- closing sound!! for the panel
 	s.Volume = 0.4 * (_G.uiSoundVol or 1)
 	s.Parent = SoundService
 	s:Play()
