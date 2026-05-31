@@ -903,7 +903,7 @@ local function notify(text, col)
 	end
 end
 -- =============================================================
--- Lunar Hub watermakr yea
+-- Project Lunar watermakr yea
 -- =============================================================
 task.spawn(function()
 	local Players = game:GetService("Players")
@@ -8379,7 +8379,7 @@ titleLabel = Instance.new("TextLabel", topBar)
 titleLabel.Size = UDim2.new(1, -100, 1, 0)
 titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Lunar Hub"
+titleLabel.Text = "Project Lunar"
 titleLabel.Font = Enum.Font.GothamBlack
 titleLabel.TextSize = 24
 titleLabel.TextColor3 = currentTheme.accent
@@ -9069,7 +9069,7 @@ local function createHubGUI(character)
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0.40, 0)
     title.BackgroundTransparency = 1
-    title.Text = "LUNAR HUB"
+    title.Text = "Project Lunar"
     title.TextColor3 = Color3.fromRGB(0, 255, 100)
     title.TextScaled = true
     title.Font = Enum.Font.Code
