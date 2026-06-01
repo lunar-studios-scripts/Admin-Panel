@@ -5949,9 +5949,9 @@ local function leaveGame()
 end
 
 -- =============================================================
--- DESTROY SCRIPT COMMAND
+-- unload script
 -- =============================================================
-local function destroyScript()
+local function unload()
 	local CoreGui = game:GetService("CoreGui")
 
 	-- Destroy from both PlayerGui and CoreGui
@@ -6334,7 +6334,7 @@ local function toggleCmdBar()
 	listLayout.Parent = listScroll
 
 	local allCommands = {
-		"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance", "!destroyscript",
+		"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance", "!unload",
 		"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!explode", "!fire",
 		"!firstp", "!fling", "!fly", "!freecam", "!freeze", "!infjump", "!joinlogs", "!jump", "!kill",
 		"!lay", "!leave", "!logs", "!noclip", "!ping", "!ragdoll", "!rainbow", "!rejoin", "!removewaypoint",
@@ -9104,8 +9104,8 @@ function processCmd(msg)
 	elseif cmd == "dance" then
 		dance(target)
 		
-	elseif cmd == "destroyscript" then
-		destroyScript()
+	elseif cmd == "unload" then
+		unload()
 		
 	elseif cmd == "disablefalldamage" then
 		disableFallDamage()
@@ -9616,7 +9616,7 @@ cmdDesc = {
 	["!aimbot"] = "Opens aimbot control panel", ["!autoexec"] = "Enables auto-run on join",
 	["!clicktp"] = "Click to teleport", ["!cmdbar"] = "Toggle command bar",
 	["!console"] = "Opens dev console", ["!crosshair"] = "Loads custom crosshair",
-	["!dance [plr]"] = "Makes player dance", ["!destroyscript"] = "Removes all UI/scripts",
+	["!dance [plr]"] = "Makes player dance", ["!!unload"] = "Closes script",
 	["!disablefalldamage"] = "WIP", ["!enable inventory"] = "Toggle backpack",
 	["!enable playerlist"] = "Toggle player list", ["!esp [plr/all]"] = "Enable esp on player or all",
 	["!explode [plr]"] = "Explodes player", ["!fire [plr]"] = "Sets player on fire",
@@ -9649,7 +9649,7 @@ cmdDesc = {
 
 cmds = {
 	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance [plr]",
-	"!destroyscript", "!disablefalldamage", "!enable inventory", "!enable playerlist",
+	"!!unload", "!disablefalldamage", "!enable inventory", "!enable playerlist",
 	"!esp all", "!explode [plr]", "!fire [plr]", "!firstp", "!fling", "!fly",
 	"!flyspeed [num]", "!freecam", "!freeze [plr]", "!infjump", "!joinlogs", "!jump [power]",
 	"!kill [plr/all/me]", "!lay", "!leave", "!logs", "!noclip [plr]", "!ping", "!ragdoll",
