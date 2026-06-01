@@ -128,7 +128,7 @@ end)
 -- Export for manual use if needed
 _G.ApplyMobileUIScale = applyMobileScale
 --------------------------------------------------------------
----------- loading screen ------------------------------------
+---------- loading screen
 --------------------------------------------------------------
 local function createInstantSplash(imageId)
 	imageId = imageId or "rbxassetid://115041688502921"
@@ -8427,17 +8427,16 @@ local function dance(plr, number)
 		return
 	end
 
-	-- Default to random dance if no number is given
 	if not number then
 		number = math.random(1, 3)
 	else
 		number = tonumber(number) or 1
-		number = math.clamp(number, 1, 3)  -- Only 1, 2, or 3 are valid
+		number = math.clamp(number, 1, 3) 
 	end
 
 	-- Roblox default dance animation IDs
 	local danceIds = {
-		[1] = "rbxassetid://507771019",   -- Dance 1 (the one you had)
+		[1] = "rbxassetid://507771019",   -- Dance 1 
 		[2] = "rbxassetid://507776043",   -- Dance 2
 		[3] = "rbxassetid://507777268"    -- Dance 3
 	}
@@ -8447,9 +8446,8 @@ local function dance(plr, number)
 
 	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
 
-	-- Stop any existing dance animation first (prevents stacking)
 	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-		if track.Animation.AnimationId:find("50777") then  -- stops previous dances
+		if track.Animation.AnimationId:find("50777") then 
 			track:Stop()
 		end
 	end
@@ -8478,7 +8476,6 @@ end
 ------------------------------------
 -- explode 
 ------------------------------------
-
 local function explode(plr)
 	local char = plr.Character
 	if not char then
@@ -8494,34 +8491,26 @@ local function explode(plr)
 		return
 	end
 
-	-- Step 1: Create a big visible explosion for everyone
 	local explosion = Instance.new("Explosion")
 	explosion.Position = root.Position
-	explosion.BlastRadius = 12           -- decent size
-	explosion.BlastPressure = 500000     -- strong visual push
-	explosion.DestroyJointRadiusPercent = 0  -- don't auto-break joints (we do it manually)
+	explosion.BlastRadius = 12 
+	explosion.BlastPressure = 500000    
+	explosion.DestroyJointRadiusPercent = 0  
 	explosion.Parent = workspace
 
-	-- Step 2: Force death + ragdoll (kills you and makes physics take over)
 	humanoid.Health = 0
 	humanoid:ChangeState(Enum.HumanoidStateType.Dead)
 
-	-- Step 3: Detach limbs visibly (breaks Motor6D joints → parts fly apart)
-	-- This is what makes limbs scatter like an explosion
 	for _, motor in ipairs(char:GetDescendants()) do
 		if motor:IsA("Motor6D") and motor.Part1 and motor.Part0 then
-			-- Create a BallSocketConstraint or just break the joint
-			-- Option A: Simple break (most games let this replicate)
 			motor.Enabled = false
-
-			-- Option B: Replace with BallSocket + NoCollision for flying parts (more dramatic)
+			
 			local socket = Instance.new("BallSocketConstraint")
 			socket.Attachment0 = Instance.new("Attachment", motor.Part0)
 			socket.Attachment1 = Instance.new("Attachment", motor.Part1)
 			socket.LimitsEnabled = false
 			socket.Parent = motor.Part0
 
-			-- Optional: Give random velocity to make limbs fly farther
 			if motor.Part1:IsA("BasePart") then
 				motor.Part1.Velocity = Vector3.new(
 					math.random(-80,80),
@@ -8537,9 +8526,8 @@ local function explode(plr)
 		end
 	end
 
-	-- Step 4: Extra ragdoll physics boost (makes body flop/scatter more)
 	if root then
-		root.Velocity = Vector3.new(0, 80, 0)  -- upward kick
+		root.Velocity = Vector3.new(0, 80, 0) 
 		root.AssemblyLinearVelocity = Vector3.new(
 			math.random(-60,60),
 			math.random(40,100),
@@ -8547,10 +8535,9 @@ local function explode(plr)
 		)
 	end
 
-	-- Optional: Hide head or make dramatic (some games detect head removal)
 	local head = char:FindFirstChild("Head")
 	if head then
-		head.Transparency = 0.3  -- slight fade or leave visible
+		head.Transparency = 0.3  
 		head.Velocity = Vector3.new(math.random(-50,50), 100, math.random(-50,50))
 	end
 
