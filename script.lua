@@ -128,7 +128,7 @@ end)
 -- Export for manual use if needed
 _G.ApplyMobileUIScale = applyMobileScale
 --------------------------------------------------------------
----------- loading screen
+---------- loading screen ------------------------------------
 --------------------------------------------------------------
 local function createInstantSplash(imageId)
 	imageId = imageId or "rbxassetid://115041688502921"
@@ -6334,7 +6334,7 @@ local function toggleCmdBar()
 	listLayout.Parent = listScroll
 
 	local allCommands = {
-		"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance", "!unload",
+		"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!unload",
 		"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!explode", "!fire",
 		"!firstp", "!fling", "!fly", "!freecam", "!freeze", "!infjump", "!joinlogs", "!jump", "!kill",
 		"!lay", "!leave", "!logs", "!noclip", "!ping", "!ragdoll", "!rainbow", "!rejoin", "!removewaypoint",
@@ -8413,51 +8413,6 @@ local function enableCore(name)
 	notify("✅ " .. name:gsub("^%l", string.upper) .. (not current and " enabled" or " disabled"), Color3.fromRGB(180, 180, 255))
 end
 ------------------------------------------------
--- Dance
-------------------------------------------------
-local function dance(plr, number)
-	if plr ~= client then
-		notify("❌ Dance only works on yourself", Color3.fromRGB(255, 100, 100))
-		return
-	end
-
-	local hum = getHum(plr)
-	if not hum then
-		notify("❌ No humanoid found", Color3.fromRGB(255, 100, 100))
-		return
-	end
-
-	if not number then
-		number = math.random(1, 3)
-	else
-		number = tonumber(number) or 1
-		number = math.clamp(number, 1, 3) 
-	end
-
-	-- Roblox default dance animation IDs
-	local danceIds = {
-		[1] = "rbxassetid://507771019",   -- Dance 1 
-		[2] = "rbxassetid://507776043",   -- Dance 2
-		[3] = "rbxassetid://507777268"    -- Dance 3
-	}
-
-	local anim = Instance.new("Animation")
-	anim.AnimationId = danceIds[number]
-
-	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-
-	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-		if track.Animation.AnimationId:find("50777") then 
-			track:Stop()
-		end
-	end
-
-	local track = animator:LoadAnimation(anim)
-	track:Play()
-
-	notify("Dancing " .. number, Color3.fromRGB(255, 100, 255))
-end
-------------------------------------------------
 -- trip
 ------------------------------------------------
 local function trip(plr)
@@ -8476,6 +8431,7 @@ end
 ------------------------------------
 -- explode 
 ------------------------------------
+
 local function explode(plr)
 	local char = plr.Character
 	if not char then
@@ -8491,26 +8447,34 @@ local function explode(plr)
 		return
 	end
 
+	-- Step 1: Create a big visible explosion for everyone
 	local explosion = Instance.new("Explosion")
 	explosion.Position = root.Position
-	explosion.BlastRadius = 12 
-	explosion.BlastPressure = 500000    
-	explosion.DestroyJointRadiusPercent = 0  
+	explosion.BlastRadius = 12           -- decent size
+	explosion.BlastPressure = 500000     -- strong visual push
+	explosion.DestroyJointRadiusPercent = 0  -- don't auto-break joints (we do it manually)
 	explosion.Parent = workspace
 
+	-- Step 2: Force death + ragdoll (kills you and makes physics take over)
 	humanoid.Health = 0
 	humanoid:ChangeState(Enum.HumanoidStateType.Dead)
 
+	-- Step 3: Detach limbs visibly (breaks Motor6D joints → parts fly apart)
+	-- This is what makes limbs scatter like an explosion
 	for _, motor in ipairs(char:GetDescendants()) do
 		if motor:IsA("Motor6D") and motor.Part1 and motor.Part0 then
+			-- Create a BallSocketConstraint or just break the joint
+			-- Option A: Simple break (most games let this replicate)
 			motor.Enabled = false
-			
+
+			-- Option B: Replace with BallSocket + NoCollision for flying parts (more dramatic)
 			local socket = Instance.new("BallSocketConstraint")
 			socket.Attachment0 = Instance.new("Attachment", motor.Part0)
 			socket.Attachment1 = Instance.new("Attachment", motor.Part1)
 			socket.LimitsEnabled = false
 			socket.Parent = motor.Part0
 
+			-- Optional: Give random velocity to make limbs fly farther
 			if motor.Part1:IsA("BasePart") then
 				motor.Part1.Velocity = Vector3.new(
 					math.random(-80,80),
@@ -8526,8 +8490,9 @@ local function explode(plr)
 		end
 	end
 
+	-- Step 4: Extra ragdoll physics boost (makes body flop/scatter more)
 	if root then
-		root.Velocity = Vector3.new(0, 80, 0) 
+		root.Velocity = Vector3.new(0, 80, 0)  -- upward kick
 		root.AssemblyLinearVelocity = Vector3.new(
 			math.random(-60,60),
 			math.random(40,100),
@@ -8535,9 +8500,10 @@ local function explode(plr)
 		)
 	end
 
+	-- Optional: Hide head or make dramatic (some games detect head removal)
 	local head = char:FindFirstChild("Head")
 	if head then
-		head.Transparency = 0.3  
+		head.Transparency = 0.3  -- slight fade or leave visible
 		head.Velocity = Vector3.new(math.random(-50,50), 100, math.random(-50,50))
 	end
 
@@ -9087,10 +9053,7 @@ function processCmd(msg)
 
 	elseif cmd == "uncrosshair" then
 		UnloadLunarCrosshair()
-		
-	elseif cmd == "dance" then
-		dance(target)
-		
+
 	elseif cmd == "unload" then
 		unload()
 		
@@ -9603,7 +9566,7 @@ cmdDesc = {
 	["!aimbot"] = "Opens aimbot control panel", ["!autoexec"] = "Enables auto-run on join",
 	["!clicktp"] = "Click to teleport", ["!cmdbar"] = "Toggle command bar",
 	["!console"] = "Opens dev console", ["!crosshair"] = "Loads custom crosshair",
-	["!dance [plr]"] = "Makes player dance", ["!!unload"] = "Closes script",
+	["!!unload"] = "Closes script",
 	["!disablefalldamage"] = "WIP", ["!enable inventory"] = "Toggle backpack",
 	["!enable playerlist"] = "Toggle player list", ["!esp [plr/all]"] = "Enable esp on player or all",
 	["!explode [plr]"] = "Explodes player", ["!fire [plr]"] = "Sets player on fire",
@@ -9635,7 +9598,7 @@ cmdDesc = {
 }
 
 cmds = {
-	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair", "!dance [plr]",
+	"!aimbot", "!autoexec", "!clicktp", "!cmdbar", "!console", "!crosshair",
 	"!!unload", "!disablefalldamage", "!enable inventory", "!enable playerlist",
 	"!esp all", "!explode [plr]", "!fire [plr]", "!firstp", "!fling", "!fly",
 	"!flyspeed [num]", "!freecam", "!freeze [plr]", "!infjump", "!joinlogs", "!jump [power]",
