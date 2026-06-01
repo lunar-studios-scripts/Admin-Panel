@@ -10305,7 +10305,7 @@ task.spawn(function()
 	label.Size = UDim2.new(0, 320, 0, 40)
 	label.Position = UDim2.new(0.5, -160, 0.94, 0)
 	label.BackgroundTransparency = 1
-	label.Text = "Created By @xlunarxZzrbxx • lunar_rbx discord"
+	label.Text = "Created By @lun4r_y • lunar_rbx discord"
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 24
 	label.TextColor3 = globalConfig.textColor
