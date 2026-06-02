@@ -1460,10 +1460,41 @@ local function Volume(plr, args)
 	notify("Volume: " .. vol .. "/10", currentTheme.accent)
 end
 -- ============================================
+-- serverhop
+-- ============================================
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+local function serverhop(plr, args)
+	if plr ~= client then
+		notify("❌ Serverhop only works on yourself", Color3.fromRGB(255, 100, 100))
+		return
+	end
+
+	notify("🚀 Finding public server...", Color3.fromRGB(100, 255, 150))
+
+	local placeId = game.PlaceId
+
+	-- Force public server by using reserved server with no access code
+	-- This bypasses private server restrictions
+	local ok, err = pcall(function()
+		local accessCode = TeleportService:ReserveServer(placeId)
+		TeleportService:TeleportToPrivateServer(placeId, accessCode, {plr})
+	end)
+
+	if not ok then
+		-- Fallback: try normal teleport with friend check disabled
+		local ok2, err2 = pcall(function()
+			TeleportService:Teleport(placeId, plr)
+		end)
+
+		if not ok2 then
+			notify("❌ Teleport failed: " .. tostring(err2), Color3.fromRGB(255, 100, 100))
+		end
+	end
+end
+-- ============================================
 -- Crosshair tingy
--- ============================================
--- ============================================
--- Crosshair System (Lunar Crosshair V2)
 -- ============================================
 _G.LunarCrosshairData = {
 	enabled = false,
@@ -6338,7 +6369,7 @@ local function toggleCmdBar()
 		"!disablefalldamage", "!enable inventory", "!enable playerlist", "!esp all", "!explode", "!fire",
 		"!firstp", "!fling", "!fly", "!freecam", "!freeze", "!infjump", "!joinlogs", "!jump", "!kill",
 		"!lay", "!leave", "!logs", "!noclip", "!ping", "!ragdoll", "!rainbow", "!rejoin", "!removewaypoint",
-		"!resetspeed", "!sit", "!speed", "!spin", "!stopwatch", "!thirdp", "!to", "!trip", "!tracers",
+		"!resetspeed", "!sit", "!speed", "!serverhop", "!spin", "!stopwatch", "!thirdp", "!to", "!trip", "!tracers",
 		"!uncrosshair", "!unautoexec", "!unesp all", "!unfire", "!unfly", "!unfreecam", "!unfreeze",
 		"!sunglare", "!unsunglare", "!uninfjump", "!unnoclip", "!unragdoll", "!unrainbow", "!unspin",
 		"!untracers", "!unview", "!view", "!vehiclefly", "!unvehiclefly", "!volume", "!waypoint", "!fov",
@@ -8272,12 +8303,35 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local function rejoin()
-	-- Optional: show a little notification (if you have a notify function already)
-	notify("🔄 Rejoining same server...", Color3.fromRGB(100, 200, 255))
+local function rejoin(plr, args)
+	if plr ~= LocalPlayer then
+		notify("❌ Rejoin only works on yourself", Color3.fromRGB(255, 100, 100))
+		return
+	end
 
-	-- This rejoins **exactly** the current server (using current JobId)
-	TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+	notify("🔄 Rejoining...", Color3.fromRGB(100, 200, 255))
+
+	local placeId = game.PlaceId
+	local jobId = game.JobId
+
+	-- Try exact same server first
+	local ok, err = pcall(function()
+		TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+	end)
+
+	if not ok then
+		notify("🔄 Server restricted, using bypass...", Color3.fromRGB(255, 200, 100))
+
+		-- Same bypass as serverhop: reserve a fresh server
+		local ok2, err2 = pcall(function()
+			local accessCode = TeleportService:ReserveServer(placeId)
+			TeleportService:TeleportToPrivateServer(placeId, accessCode, {LocalPlayer})
+		end)
+
+		if not ok2 then
+			notify("❌ Rejoin failed: " .. tostring(err2), Color3.fromRGB(255, 100, 100))
+		end
+	end
 end
 ------------------------------------------------
 -- Ping
@@ -9159,7 +9213,7 @@ function processCmd(msg)
 		rainbow(target)
 		
 	elseif cmd == "rejoin" then
-		rejoin()
+		rejoin(LocalPlayer, args)
 		
 	elseif cmd == "removewaypoint" then
 		removeWaypoint()
@@ -9177,6 +9231,9 @@ function processCmd(msg)
 			setspeed(target, args[2])
 		end
 		
+	elseif cmd == "serverhop" then
+		serverhop(target, args)
+
 	elseif cmd == "spin" then
 		spin(client, args[1])
 		
@@ -9580,7 +9637,8 @@ cmdDesc = {
 	["!ping"] = "Show ping", ["!ragdoll"] = "Ragdoll character",
 	["!rainbow [plr]"] = "Rainbow color cycle", ["!rejoin"] = "Rejoin server",
 	["!removewaypoint"] = "Remove last waypoint", ["!sunglare"] = "Enable sun glare effect",
-	["!sit"] = "Makes character sit", ["!speed [plr] [num]"] = "Set walkspeed",
+	["!sit"] = "Makes character sit", ["!speed [plr] [num]"] = "Set walkspeed", 
+	["!serverhop"] = "(Broken)",
 	["!spin [speed]"] = "Spin character", ["!stopwatch"] = "Open stopwatch",
 	["!thirdp"] = "Third person mode", ["!to [plr]"] = "Teleport to player",
 	["!trip [plr]"] = "Makes player trip", ["!tracers"] = "Show player tracers",
@@ -9603,7 +9661,7 @@ cmds = {
 	"!esp all", "!explode [plr]", "!fire [plr]", "!firstp", "!fling", "!fly",
 	"!flyspeed [num]", "!freecam", "!freeze [plr]", "!infjump", "!joinlogs", "!jump [power]",
 	"!kill [plr/all/me]", "!lay", "!leave", "!logs", "!noclip [plr]", "!ping", "!ragdoll",
-	"!rainbow [plr]", "!rejoin", "!removewaypoint", "!sit", "!speed [plr] [num]",
+	"!rainbow [plr]", "!rejoin", "!removewaypoint", "!sit", "!speed [plr] [num]", "!serverhop",
 	"!spin [speed]", "!stopwatch", "!thirdp", "!to [plr]", "!trip [plr]", "!tracers",
 	"!sunglare", "!unsunglare", "!uncrosshair", "!unautoexec", "!unesp all", "!unfire [plr]", "!unfling", "!unfly",
 	"!unfreecam", "!unfreeze [plr]", "!uninfjump", "!unnoclip [plr]", "!unragdoll",
@@ -10305,7 +10363,7 @@ task.spawn(function()
 	label.Size = UDim2.new(0, 320, 0, 40)
 	label.Position = UDim2.new(0.5, -160, 0.94, 0)
 	label.BackgroundTransparency = 1
-	label.Text = "Created By @lun4r_y • lunar_rbx discord"
+	label.Text = "Created By @xlunarxZzrbxx • lunar_rbx discord"
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 24
 	label.TextColor3 = globalConfig.textColor
