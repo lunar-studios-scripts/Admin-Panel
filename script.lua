@@ -9669,6 +9669,52 @@ cmds = {
 	"!fov [1-120]", "!kick [plr]", "!unlockmouse"
 }
 
+-- PC-only tooltip (follows mouse) — sharp corners, no border, like the screenshot
+local tooltip = nil
+if not isMobile then
+	tooltip = Instance.new("Frame")
+	tooltip.Name = "CmdTooltip"
+	tooltip.Size = UDim2.new(0, math.floor(260 * scale), 0, math.floor(60 * scale))
+	tooltip.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	tooltip.BorderSizePixel = 0
+	tooltip.ZIndex = 2147483647
+	tooltip.Visible = false
+	tooltip.Parent = lunarGui
+	-- NO UICorner — sharp corners
+	-- NO UIStroke — no border
+
+	local tipText = Instance.new("TextLabel", tooltip)
+	tipText.Name = "TipText"
+	tipText.Size = UDim2.new(1, math.floor(-16 * scale), 1, math.floor(-12 * scale))
+	tipText.Position = UDim2.new(0, math.floor(8 * scale), 0, math.floor(6 * scale))
+	tipText.BackgroundTransparency = 1
+	tipText.Text = ""
+	tipText.Font = Enum.Font.Gotham
+	tipText.TextSize = math.floor(13 * fontScale)
+	tipText.TextColor3 = globalConfig.textColor
+	tipText.TextWrapped = true
+	tipText.TextXAlignment = Enum.TextXAlignment.Left
+	tipText.TextYAlignment = Enum.TextYAlignment.Top
+	tipText.ZIndex = 2147483647
+
+	-- Follow mouse
+	local RunService = game:GetService("RunService")
+	local mouseConn = nil
+	local function followMouse()
+		if not tooltip or not tooltip.Visible then return end
+		local mousePos = UserInputService:GetMouseLocation()
+		local x = mousePos.X + math.floor(16 * scale)
+		local y = mousePos.Y + math.floor(16 * scale)
+		-- Clamp to screen
+		local vp = workspace.CurrentCamera.ViewportSize
+		local tw, th = tooltip.AbsoluteSize.X, tooltip.AbsoluteSize.Y
+		if x + tw > vp.X then x = mousePos.X - tw - math.floor(8 * scale) end
+		if y + th > vp.Y then y = mousePos.Y - th - math.floor(8 * scale) end
+		tooltip.Position = UDim2.new(0, x, 0, y)
+	end
+	mouseConn = RunService.RenderStepped:Connect(followMouse)
+end
+
 for i, cmdStr in ipairs(cmds) do
 	local cmdBtn = Instance.new("TextButton")
 	cmdBtn.Size = UDim2.new(1, math.floor(-10 * scale), 0, math.floor(42 * scale))
@@ -9691,10 +9737,23 @@ for i, cmdStr in ipairs(cmds) do
 		cmdBtn.MouseEnter:Connect(function()
 			cmdBtn.BackgroundColor3 = currentTheme.btn or Color3.fromRGB(50, 50, 60)
 			cmdBtn.TextColor3 = currentTheme.accent
+			-- Show tooltip (PC only)
+			if tooltip and not isMobile then
+				tooltip.Visible = true
+				tooltip:FindFirstChild("TipText").Text = desc
+				-- Size tooltip to fit text
+				local textService = game:GetService("TextService")
+				local textSize = textService:GetTextSize(desc, math.floor(13 * fontScale), Enum.Font.Gotham, Vector2.new(math.floor(244 * scale), 9999))
+				tooltip.Size = UDim2.new(0, math.floor(260 * scale), 0, math.max(math.floor(44 * scale), textSize.Y + math.floor(20 * scale)))
+			end
 		end)
 		cmdBtn.MouseLeave:Connect(function()
 			cmdBtn.BackgroundColor3 = currentTheme.list or Color3.fromRGB(40, 40, 48)
 			cmdBtn.TextColor3 = globalConfig.textColor
+			-- Hide tooltip (PC only)
+			if tooltip and not isMobile then
+				tooltip.Visible = false
+			end
 		end)
 	end
 
