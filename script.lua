@@ -1496,9 +1496,6 @@ end
 -- ============================================
 -- BOOMBOX SYSTEM - Debug version
 -- ============================================
--- Boombox LocalScript - CoreGui Version
--- Place in StarterPlayerScripts
-
 local boomboxCode = [[
 	local Players = game:GetService("Players")
 	local CoreGui = game:GetService("CoreGui")
@@ -1508,6 +1505,10 @@ local boomboxCode = [[
 	local HttpService = game:GetService("HttpService")
 
 	local player = Players.LocalPlayer
+
+	-- Detect mobile
+	local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	local scale = isMobile and 0.65 or 1
 
 	_G.Boombox = _G.Boombox or {
 		gui = {},
@@ -1705,62 +1706,70 @@ local boomboxCode = [[
 		BB.gui.screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		BB.gui.screen.Parent = CoreGui
 
+		-- Scale container
+		BB.gui.scaleFrame = Instance.new("Frame")
+		BB.gui.scaleFrame.Size = UDim2.new(1, 0, 1, 0)
+		BB.gui.scaleFrame.BackgroundTransparency = 1
+		BB.gui.scaleFrame.Parent = BB.gui.screen
+
 		BB.gui.main = Instance.new("Frame")
-		BB.gui.main.Size = UDim2.new(0, 380, 0, 460)
-		BB.gui.main.Position = UDim2.new(0.5, -190, 0.5, -230)
+		BB.gui.main.Size = UDim2.new(0, 380 * scale, 0, 460 * scale)
+		BB.gui.main.Position = UDim2.new(0.5, -190 * scale, 0.5, -230 * scale)
 		BB.gui.main.BackgroundColor3 = C.BG
 		BB.gui.main.BorderSizePixel = 0
 		BB.gui.main.Active = true
 		BB.gui.main.Visible = false
-		BB.gui.main.Parent = BB.gui.screen
+		BB.gui.main.Parent = BB.gui.scaleFrame
 
 		-- Title Bar (ONLY draggable part)
 		local bar = Instance.new("Frame")
 		bar.Name = "TitleBar"
-		bar.Size = UDim2.new(1, 0, 0, 45)
+		bar.Size = UDim2.new(1, 0, 0, 45 * scale)
 		bar.BackgroundColor3 = C.DARK
 		bar.BorderSizePixel = 0
 		bar.Active = true
 		bar.Parent = BB.gui.main
 
-		-- Draggable ONLY on title bar
+		-- Draggable on BOTH mouse and touch
 		local drag, dragStart, startPos = false, nil, nil
 		bar.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				drag = true
 				dragStart = input.Position
 				startPos = BB.gui.main.Position
 			end
 		end)
 		UserInputService.InputChanged:Connect(function(input)
-			if drag and input.UserInputType == Enum.UserInputType.MouseMovement then
+			if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				local d = input.Position - dragStart
 				BB.gui.main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
 			end
 		end)
 		UserInputService.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				drag = false
+			end
 		end)
 
 		local title = Instance.new("TextLabel")
 		title.Size = UDim2.new(0.6, 0, 1, 0)
-		title.Position = UDim2.new(0, 15, 0, 0)
+		title.Position = UDim2.new(0, 15 * scale, 0, 0)
 		title.BackgroundTransparency = 1
 		title.Text = "BOOMBOX"
 		title.TextColor3 = C.WHITE
-		title.TextSize = 18
+		title.TextSize = 18 * scale
 		title.Font = Enum.Font.GothamBold
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		title.Parent = bar
 
 		local close = Instance.new("TextButton")
-		close.Size = UDim2.new(0, 35, 0, 35)
-		close.Position = UDim2.new(1, -40, 0, 5)
+		close.Size = UDim2.new(0, 35 * scale, 0, 35 * scale)
+		close.Position = UDim2.new(1, -40 * scale, 0, 5 * scale)
 		close.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 		close.BorderSizePixel = 0
 		close.Text = "×"
 		close.TextColor3 = C.WHITE
-		close.TextSize = 22
+		close.TextSize = 22 * scale
 		close.Font = Enum.Font.GothamBold
 		close.Parent = bar
 		close.MouseEnter:Connect(function() close.BackgroundColor3 = Color3.fromRGB(255, 80, 80) end)
@@ -1775,53 +1784,53 @@ local boomboxCode = [[
 		end)
 
 		BB.gui.songName = Instance.new("TextLabel")
-		BB.gui.songName.Size = UDim2.new(1, -30, 0, 28)
-		BB.gui.songName.Position = UDim2.new(0, 15, 0, 55)
+		BB.gui.songName.Size = UDim2.new(1, -30 * scale, 0, 28 * scale)
+		BB.gui.songName.Position = UDim2.new(0, 15 * scale, 0, 55 * scale)
 		BB.gui.songName.BackgroundTransparency = 1
 		BB.gui.songName.Text = "No song playing"
 		BB.gui.songName.TextColor3 = C.WHITE
-		BB.gui.songName.TextSize = 20
+		BB.gui.songName.TextSize = 20 * scale
 		BB.gui.songName.Font = Enum.Font.GothamBold
 		BB.gui.songName.TextXAlignment = Enum.TextXAlignment.Left
 		BB.gui.songName.TextTruncate = Enum.TextTruncate.AtEnd
 		BB.gui.songName.Parent = BB.gui.main
 
 		BB.gui.artistName = Instance.new("TextLabel")
-		BB.gui.artistName.Size = UDim2.new(1, -30, 0, 18)
-		BB.gui.artistName.Position = UDim2.new(0, 15, 0, 83)
+		BB.gui.artistName.Size = UDim2.new(1, -30 * scale, 0, 18 * scale)
+		BB.gui.artistName.Position = UDim2.new(0, 15 * scale, 0, 83 * scale)
 		BB.gui.artistName.BackgroundTransparency = 1
 		BB.gui.artistName.Text = "Enter a Roblox audio ID"
 		BB.gui.artistName.TextColor3 = C.GRAY
-		BB.gui.artistName.TextSize = 13
+		BB.gui.artistName.TextSize = 13 * scale
 		BB.gui.artistName.Font = Enum.Font.Gotham
 		BB.gui.artistName.TextXAlignment = Enum.TextXAlignment.Left
 		BB.gui.artistName.Parent = BB.gui.main
 
 		BB.gui.curTime = Instance.new("TextLabel")
-		BB.gui.curTime.Size = UDim2.new(0, 50, 0, 18)
-		BB.gui.curTime.Position = UDim2.new(0, 15, 0, 110)
+		BB.gui.curTime.Size = UDim2.new(0, 50 * scale, 0, 18 * scale)
+		BB.gui.curTime.Position = UDim2.new(0, 15 * scale, 0, 110 * scale)
 		BB.gui.curTime.BackgroundTransparency = 1
 		BB.gui.curTime.Text = "0:00"
 		BB.gui.curTime.TextColor3 = C.WHITE
-		BB.gui.curTime.TextSize = 13
+		BB.gui.curTime.TextSize = 13 * scale
 		BB.gui.curTime.Font = Enum.Font.Gotham
 		BB.gui.curTime.TextXAlignment = Enum.TextXAlignment.Left
 		BB.gui.curTime.Parent = BB.gui.main
 
 		BB.gui.totTime = Instance.new("TextLabel")
-		BB.gui.totTime.Size = UDim2.new(0, 50, 0, 18)
-		BB.gui.totTime.Position = UDim2.new(1, -65, 0, 110)
+		BB.gui.totTime.Size = UDim2.new(0, 50 * scale, 0, 18 * scale)
+		BB.gui.totTime.Position = UDim2.new(1, -65 * scale, 0, 110 * scale)
 		BB.gui.totTime.BackgroundTransparency = 1
 		BB.gui.totTime.Text = "0:00"
 		BB.gui.totTime.TextColor3 = C.WHITE
-		BB.gui.totTime.TextSize = 13
+		BB.gui.totTime.TextSize = 13 * scale
 		BB.gui.totTime.Font = Enum.Font.Gotham
 		BB.gui.totTime.TextXAlignment = Enum.TextXAlignment.Right
 		BB.gui.totTime.Parent = BB.gui.main
 
 		local progBg = Instance.new("Frame")
-		progBg.Size = UDim2.new(1, -30, 0, 4)
-		progBg.Position = UDim2.new(0, 15, 0, 132)
+		progBg.Size = UDim2.new(1, -30 * scale, 0, 4 * scale)
+		progBg.Position = UDim2.new(0, 15 * scale, 0, 132 * scale)
 		progBg.BackgroundColor3 = C.SLIDER_BG
 		progBg.BorderSizePixel = 0
 		progBg.Parent = BB.gui.main
@@ -1842,47 +1851,49 @@ local boomboxCode = [[
 		end
 
 		progBg.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				BB.dragging = true
 				setSlider(input)
 			end
 		end)
 		UserInputService.InputChanged:Connect(function(input)
-			if BB.dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			if BB.dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				setSlider(input)
 			end
 		end)
 		UserInputService.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then BB.dragging = false end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				BB.dragging = false
+			end
 		end)
 
 		local ctrl = Instance.new("Frame")
-		ctrl.Size = UDim2.new(1, -30, 0, 40)
-		ctrl.Position = UDim2.new(0, 15, 0, 148)
+		ctrl.Size = UDim2.new(1, -30 * scale, 0, 40 * scale)
+		ctrl.Position = UDim2.new(0, 15 * scale, 0, 148 * scale)
 		ctrl.BackgroundTransparency = 1
 		ctrl.Parent = BB.gui.main
 
 		local prev = Instance.new("TextButton")
-		prev.Size = UDim2.new(0, 50, 0, 30)
-		prev.Position = UDim2.new(0, 0, 0, 5)
+		prev.Size = UDim2.new(0, 50 * scale, 0, 30 * scale)
+		prev.Position = UDim2.new(0, 0, 0, 5 * scale)
 		prev.BackgroundColor3 = C.DARK_GRAY
 		prev.BorderSizePixel = 0
 		prev.Text = "PREV"
 		prev.TextColor3 = C.WHITE
-		prev.TextSize = 12
+		prev.TextSize = 12 * scale
 		prev.Font = Enum.Font.GothamBold
 		prev.Parent = ctrl
 		prev.MouseEnter:Connect(function() prev.BackgroundColor3 = Color3.fromRGB(70, 70, 75) end)
 		prev.MouseLeave:Connect(function() prev.BackgroundColor3 = C.DARK_GRAY end)
 
 		BB.gui.playBtn = Instance.new("TextButton")
-		BB.gui.playBtn.Size = UDim2.new(0, 80, 0, 30)
-		BB.gui.playBtn.Position = UDim2.new(0.5, -40, 0, 5)
+		BB.gui.playBtn.Size = UDim2.new(0, 80 * scale, 0, 30 * scale)
+		BB.gui.playBtn.Position = UDim2.new(0.5, -40 * scale, 0, 5 * scale)
 		BB.gui.playBtn.BackgroundColor3 = C.GREEN
 		BB.gui.playBtn.BorderSizePixel = 0
 		BB.gui.playBtn.Text = "PLAY"
 		BB.gui.playBtn.TextColor3 = C.BG
-		BB.gui.playBtn.TextSize = 14
+		BB.gui.playBtn.TextSize = 14 * scale
 		BB.gui.playBtn.Font = Enum.Font.GothamBold
 		BB.gui.playBtn.Parent = ctrl
 		BB.gui.playBtn.MouseEnter:Connect(function()
@@ -1906,26 +1917,26 @@ local boomboxCode = [[
 		end)
 
 		local nextB = Instance.new("TextButton")
-		nextB.Size = UDim2.new(0, 50, 0, 30)
-		nextB.Position = UDim2.new(1, -50, 0, 5)
+		nextB.Size = UDim2.new(0, 50 * scale, 0, 30 * scale)
+		nextB.Position = UDim2.new(1, -50 * scale, 0, 5 * scale)
 		nextB.BackgroundColor3 = C.DARK_GRAY
 		nextB.BorderSizePixel = 0
 		nextB.Text = "NEXT"
 		nextB.TextColor3 = C.WHITE
-		nextB.TextSize = 12
+		nextB.TextSize = 12 * scale
 		nextB.Font = Enum.Font.GothamBold
 		nextB.Parent = ctrl
 		nextB.MouseEnter:Connect(function() nextB.BackgroundColor3 = Color3.fromRGB(70, 70, 75) end)
 		nextB.MouseLeave:Connect(function() nextB.BackgroundColor3 = C.DARK_GRAY end)
 
 		BB.gui.loopBtn = Instance.new("TextButton")
-		BB.gui.loopBtn.Size = UDim2.new(0, 70, 0, 25)
-		BB.gui.loopBtn.Position = UDim2.new(1, -75, 0, 42)
+		BB.gui.loopBtn.Size = UDim2.new(0, 70 * scale, 0, 25 * scale)
+		BB.gui.loopBtn.Position = UDim2.new(1, -75 * scale, 0, 42 * scale)
 		BB.gui.loopBtn.BackgroundColor3 = C.DARK_GRAY
 		BB.gui.loopBtn.BorderSizePixel = 0
 		BB.gui.loopBtn.Text = "LOOP OFF"
 		BB.gui.loopBtn.TextColor3 = C.WHITE
-		BB.gui.loopBtn.TextSize = 11
+		BB.gui.loopBtn.TextSize = 11 * scale
 		BB.gui.loopBtn.Font = Enum.Font.GothamBold
 		BB.gui.loopBtn.Parent = ctrl
 		BB.gui.loopBtn.MouseEnter:Connect(function()
@@ -1944,32 +1955,30 @@ local boomboxCode = [[
 
 		-- Volume with working slider
 		local volFrame = Instance.new("Frame")
-		volFrame.Size = UDim2.new(1, -30, 0, 30)
-		volFrame.Position = UDim2.new(0, 15, 0, 195)
+		volFrame.Size = UDim2.new(1, -30 * scale, 0, 30 * scale)
+		volFrame.Position = UDim2.new(0, 15 * scale, 0, 195 * scale)
 		volFrame.BackgroundTransparency = 1
 		volFrame.Parent = BB.gui.main
 
 		local volLabel = Instance.new("TextLabel")
-		volLabel.Size = UDim2.new(0, 50, 1, 0)
+		volLabel.Size = UDim2.new(0, 50 * scale, 1, 0)
 		volLabel.BackgroundTransparency = 1
 		volLabel.Text = "VOL"
 		volLabel.TextColor3 = C.GRAY
-		volLabel.TextSize = 12
+		volLabel.TextSize = 12 * scale
 		volLabel.Font = Enum.Font.GothamBold
 		volLabel.Parent = volFrame
 
-		-- Invisible hit area (tall for easy grabbing)
 		local volHit = Instance.new("Frame")
-		volHit.Size = UDim2.new(1, -55, 0, 20)
-		volHit.Position = UDim2.new(0, 45, 0.5, -10)
+		volHit.Size = UDim2.new(1, -55 * scale, 0, 20 * scale)
+		volHit.Position = UDim2.new(0, 45 * scale, 0.5, -10 * scale)
 		volHit.BackgroundTransparency = 1
 		volHit.Active = true
 		volHit.Parent = volFrame
 
-		-- Visual bar
 		local volSlider = Instance.new("Frame")
-		volSlider.Size = UDim2.new(1, 0, 0, 4)
-		volSlider.Position = UDim2.new(0, 0, 0.5, -2)
+		volSlider.Size = UDim2.new(1, 0, 0, 4 * scale)
+		volSlider.Position = UDim2.new(0, 0, 0.5, -2 * scale)
 		volSlider.BackgroundColor3 = C.SLIDER_BG
 		volSlider.BorderSizePixel = 0
 		volSlider.Parent = volHit
@@ -1980,7 +1989,6 @@ local boomboxCode = [[
 		volFill.BorderSizePixel = 0
 		volFill.Parent = volSlider
 
-		-- Volume interaction
 		local volDrag = false
 		local function setVol(input)
 			local rel = math.clamp((input.Position.X - volHit.AbsolutePosition.X) / volHit.AbsoluteSize.X, 0, 1)
@@ -1990,48 +1998,50 @@ local boomboxCode = [[
 			end
 		end
 		volHit.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				volDrag = true
 				setVol(input)
 			end
 		end)
 		UserInputService.InputChanged:Connect(function(input)
-			if volDrag and input.UserInputType == Enum.UserInputType.MouseMovement then
+			if volDrag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				setVol(input)
 			end
 		end)
 		UserInputService.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then volDrag = false end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				volDrag = false
+			end
 		end)
 
 		local inFrame = Instance.new("Frame")
-		inFrame.Size = UDim2.new(1, -30, 0, 35)
-		inFrame.Position = UDim2.new(0, 15, 0, 235)
+		inFrame.Size = UDim2.new(1, -30 * scale, 0, 35 * scale)
+		inFrame.Position = UDim2.new(0, 15 * scale, 0, 235 * scale)
 		inFrame.BackgroundColor3 = C.DARK
 		inFrame.BorderSizePixel = 0
 		inFrame.Parent = BB.gui.main
 
 		BB.gui.idBox = Instance.new("TextBox")
-		BB.gui.idBox.Size = UDim2.new(1, -80, 1, 0)
-		BB.gui.idBox.Position = UDim2.new(0, 10, 0, 0)
+		BB.gui.idBox.Size = UDim2.new(1, -80 * scale, 1, 0)
+		BB.gui.idBox.Position = UDim2.new(0, 10 * scale, 0, 0)
 		BB.gui.idBox.BackgroundTransparency = 1
 		BB.gui.idBox.Text = ""
 		BB.gui.idBox.PlaceholderText = "Enter Audio ID..."
 		BB.gui.idBox.TextColor3 = C.WHITE
 		BB.gui.idBox.PlaceholderColor3 = C.GRAY
-		BB.gui.idBox.TextSize = 14
+		BB.gui.idBox.TextSize = 14 * scale
 		BB.gui.idBox.Font = Enum.Font.Gotham
 		BB.gui.idBox.ClearTextOnFocus = false
 		BB.gui.idBox.Parent = inFrame
 
 		local submitBtn = Instance.new("TextButton")
-		submitBtn.Size = UDim2.new(0, 70, 1, -4)
-		submitBtn.Position = UDim2.new(1, -75, 0, 2)
+		submitBtn.Size = UDim2.new(0, 70 * scale, 1, -4 * scale)
+		submitBtn.Position = UDim2.new(1, -75 * scale, 0, 2 * scale)
 		submitBtn.BackgroundColor3 = C.ACCENT
 		submitBtn.BorderSizePixel = 0
 		submitBtn.Text = "LOAD"
 		submitBtn.TextColor3 = C.BG
-		submitBtn.TextSize = 14
+		submitBtn.TextSize = 14 * scale
 		submitBtn.Font = Enum.Font.GothamBold
 		submitBtn.Parent = inFrame
 		submitBtn.MouseButton1Click:Connect(function()
@@ -2046,29 +2056,29 @@ local boomboxCode = [[
 		end)
 
 		local histLabel = Instance.new("TextLabel")
-		histLabel.Size = UDim2.new(1, -30, 0, 20)
-		histLabel.Position = UDim2.new(0, 15, 0, 280)
+		histLabel.Size = UDim2.new(1, -30 * scale, 0, 20 * scale)
+		histLabel.Position = UDim2.new(0, 15 * scale, 0, 280 * scale)
 		histLabel.BackgroundTransparency = 1
 		histLabel.Text = "RECENTLY PLAYED"
 		histLabel.TextColor3 = C.GRAY
-		histLabel.TextSize = 12
+		histLabel.TextSize = 12 * scale
 		histLabel.Font = Enum.Font.GothamBold
 		histLabel.TextXAlignment = Enum.TextXAlignment.Left
 		histLabel.Parent = BB.gui.main
 
 		BB.gui.histFrame = Instance.new("ScrollingFrame")
-		BB.gui.histFrame.Size = UDim2.new(1, -30, 0, 140)
-		BB.gui.histFrame.Position = UDim2.new(0, 15, 0, 305)
+		BB.gui.histFrame.Size = UDim2.new(1, -30 * scale, 0, 140 * scale)
+		BB.gui.histFrame.Position = UDim2.new(0, 15 * scale, 0, 305 * scale)
 		BB.gui.histFrame.BackgroundColor3 = C.DARK
 		BB.gui.histFrame.BorderSizePixel = 0
-		BB.gui.histFrame.ScrollBarThickness = 4
+		BB.gui.histFrame.ScrollBarThickness = 4 * scale
 		BB.gui.histFrame.ScrollBarImageColor3 = C.ACCENT
 		BB.gui.histFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 		BB.gui.histFrame.Parent = BB.gui.main
 
 		BB.gui.histList = Instance.new("UIListLayout")
 		BB.gui.histList.SortOrder = Enum.SortOrder.LayoutOrder
-		BB.gui.histList.Padding = UDim.new(0, 2)
+		BB.gui.histList.Padding = UDim.new(0, 2 * scale)
 		BB.gui.histList.Parent = BB.gui.histFrame
 
 		local ok, saved = pcall(function()
@@ -2102,6 +2112,23 @@ local boomboxCode = [[
 			end
 		end
 	end)
+
+	function _G.Boombox:run(msg)
+		local args = msg:split(" ")
+		local cmd = args[1]:lower()
+		if cmd == "!boombox" then
+			self:open()
+			if args[2] then
+				local id = tostring(args[2]):gsub("%D", "")
+				if id ~= "" then
+					task.wait(0.1)
+					self:play(id)
+				end
+			end
+			return true
+		end
+		return false
+	end
 
 	print("[Boombox CoreGui] Loaded! Type !boombox or !boombox [id]")
 ]]
@@ -5827,9 +5854,6 @@ LocalPlayer.CharacterRemoving:Connect(function()
 		unview()
 	end
 end)
-
-print("Spectate system ready: full free camera control like playing as them + glitch fix")
-
 -- =============================================================
 -- JOIN LOGS PANEL
 -- =============================================================
@@ -8464,8 +8488,7 @@ end
 ------------------------------------------------
 -- Fling/clicktp
 ------------------------------------------------
-
-local TouchFling = {
+TouchFling = {
 	enabled = false,
 	flingAll = false,
 	lockFling = false,
@@ -8473,33 +8496,71 @@ local TouchFling = {
 	oneTimeTP = false,
 	selectedPlayer = nil,
 	movel = 0.1,
-	clickTPKey = Enum.KeyCode.E, -- Default key
+	clickTPKey = Enum.KeyCode.E,
 	isSelectingKey = false,
 	gui = nil,
 	mainFrame = nil,
 	toggles = {},
-	buttons = {}
+	buttons = {},
+	isMinimized = false,
+	flingAllIndex = 1,
+	flingAllTimer = 0,
+	isMobile = false,
+	_t = nil,
+	_v = nil,
+	_p = nil,
+	_c = nil,
+	_b = nil,
+	_l = nil,
+	_s = nil,
+	_f = nil,
+	_m = nil,
+	_n = nil,
+	_o = nil,
+	_r = nil,
+	_u = nil,
+	_d = false,
+	_g = nil,
+	_h = nil,
+	_i = nil,
+	_j = nil,
+	_k = nil,
+	_q = nil,
+	_w = nil,
+	_x = nil,
+	_y = nil,
+	_z = nil,
+	_a = nil,
+	_e = nil
 }
 
-function TouchFling:UpdateToggle(name, displayName)
-	local state = self[name]
-	local btn = self.toggles[name]
-	if btn then
-		btn.Text = displayName .. ": " .. (state and "ON" or "OFF")
+-- Check mobile
+TouchFling._v = workspace.CurrentCamera.ViewportSize
+if UserInputService.TouchEnabled and (not UserInputService.KeyboardEnabled or not UserInputService.MouseEnabled or TouchFling._v.X < 700 or TouchFling._v.Y < 500) then
+	TouchFling.isMobile = true
+end
 
+function TouchFling:UpdateToggle(name, displayName)
+	TouchFling._t = self[name]
+	TouchFling._b = self.toggles[name]
+	if TouchFling._b then
+		TouchFling._b.Text = displayName .. ": " .. (TouchFling._t and "ON" or "OFF")
 		if name == "lockFling" then
-			btn.TextColor3 = state and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(255, 80, 80)
+			TouchFling._b.TextColor3 = TouchFling._t and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(255, 80, 80)
 		else
-			btn.TextColor3 = state and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
+			TouchFling._b.TextColor3 = TouchFling._t and Color3.fromRGB(80, 255, 120) or Color3.fromRGB(255, 80, 80)
 		end
 	end
 end
 
 function TouchFling:UpdateKeybindButton()
-	if self.toggles.keybindBtn then
-		local keyName = self.clickTPKey and self.clickTPKey.Name or "None"
-		self.toggles.keybindBtn.Text = "Click TP Key: " .. keyName
-		self.toggles.keybindBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
+	TouchFling._b = self.toggles.keybindBtn
+	if TouchFling._b then
+		TouchFling._t = self.clickTPKey and self.clickTPKey.Name or "None"
+		if self.clickTPKey == "MouseButton1" then TouchFling._t = "Mouse1" end
+		if self.clickTPKey == "MouseButton2" then TouchFling._t = "Mouse2" end
+		TouchFling._b.Text = "Click TP Key: " .. TouchFling._t
+		TouchFling._b.TextColor3 = Color3.fromRGB(100, 200, 255)
 	end
 end
 
@@ -8514,64 +8575,64 @@ end
 
 function TouchFling:ToggleMinimize()
 	if not self.mainFrame then return end
-	local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-	if self.mainFrame.Size.Y.Offset > 100 then
-		TweenService:Create(self.mainFrame, tweenInfo, {Size = UDim2.new(0, 300, 0, 40)}):Play()
-		for _, obj in pairs(self.mainFrame:GetDescendants()) do
+	TouchFling._t = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TouchFling._f = self.mainFrame
+	if not self.isMinimized then
+		self.isMinimized = true
+		TweenService:Create(TouchFling._f, TouchFling._t, {Size = UDim2.new(0, TouchFling._f.Size.X.Offset, 0, 40)}):Play()
+		for _, obj in pairs(TouchFling._f:GetDescendants()) do
 			if obj:IsA("TextButton") and obj.Name ~= "MinimizeBtn" and obj.Name ~= "CloseBtn" then
-				TweenService:Create(obj, tweenInfo, {TextTransparency = 1}):Play()
+				TweenService:Create(obj, TouchFling._t, {TextTransparency = 1}):Play()
 			elseif obj:IsA("TextLabel") and obj.Name ~= "Title" then
-				TweenService:Create(obj, tweenInfo, {TextTransparency = 1}):Play()
-			elseif obj:IsA("ScrollingFrame") then
-				TweenService:Create(obj, tweenInfo, {BackgroundTransparency = 1}):Play()
+				TweenService:Create(obj, TouchFling._t, {TextTransparency = 1}):Play()
+			elseif obj:IsA("ScrollingFrame") or (obj:IsA("Frame") and obj.Name ~= "TopBar") then
+				TweenService:Create(obj, TouchFling._t, {BackgroundTransparency = 1}):Play()
 			end
 		end
+		TouchFling._b = TouchFling._f:FindFirstChild("TopBar") and TouchFling._f.TopBar:FindFirstChild("MinimizeBtn")
+		if TouchFling._b then TouchFling._b.Text = "+" end
 	else
-		TweenService:Create(self.mainFrame, tweenInfo, {Size = UDim2.new(0, 300, 0, 500)}):Play()
-		for _, obj in pairs(self.mainFrame:GetDescendants()) do
+		self.isMinimized = false
+		TouchFling._h = self.isMobile and 420 or 540
+		TweenService:Create(TouchFling._f, TouchFling._t, {Size = UDim2.new(0, TouchFling._f.Size.X.Offset, 0, TouchFling._h)}):Play()
+		for _, obj in pairs(TouchFling._f:GetDescendants()) do
 			if obj:IsA("TextButton") and obj.Name ~= "MinimizeBtn" and obj.Name ~= "CloseBtn" then
-				TweenService:Create(obj, tweenInfo, {TextTransparency = 0}):Play()
+				TweenService:Create(obj, TouchFling._t, {TextTransparency = 0}):Play()
 			elseif obj:IsA("TextLabel") then
-				TweenService:Create(obj, tweenInfo, {TextTransparency = obj.Name == "Watermark" and 0.5 or 0}):Play()
+				TweenService:Create(obj, TouchFling._t, {TextTransparency = (obj.Name == "Watermark") and 0.5 or 0}):Play()
 			elseif obj:IsA("ScrollingFrame") then
-				TweenService:Create(obj, tweenInfo, {BackgroundTransparency = 0.7}):Play()
+				TweenService:Create(obj, TouchFling._t, {BackgroundTransparency = 0.7}):Play()
+			elseif obj:IsA("Frame") and obj.Name ~= "TopBar" then
+				TweenService:Create(obj, TouchFling._t, {BackgroundTransparency = 0}):Play()
 			end
 		end
+		TouchFling._b = TouchFling._f:FindFirstChild("TopBar") and TouchFling._f.TopBar:FindFirstChild("MinimizeBtn")
+		if TouchFling._b then TouchFling._b.Text = "-" end
 	end
 end
 
 function TouchFling:StartKeySelection()
 	if self.isSelectingKey then return end
 	self.isSelectingKey = true
-
 	if self.toggles.keybindBtn then
 		self.toggles.keybindBtn.Text = "Press any key..."
 		self.toggles.keybindBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
 	end
-
-	-- One-time connection for next input
-	local connection
-	connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	TouchFling._c = nil
+	TouchFling._c = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
-
-		-- Accept keyboard keys and mouse buttons
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			self.clickTPKey = input.KeyCode
-			connection:Disconnect()
-			self.isSelectingKey = false
-			self:UpdateKeybindButton()
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			self.clickTPKey = "MouseButton1"
-			connection:Disconnect()
-			self.isSelectingKey = false
-			self:UpdateKeybindButton()
 		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 			self.clickTPKey = "MouseButton2"
-			connection:Disconnect()
-			self.isSelectingKey = false
-			self:UpdateKeybindButton()
+		else
+			return
 		end
+		TouchFling._c:Disconnect()
+		self.isSelectingKey = false
+		self:UpdateKeybindButton()
 	end)
 end
 
@@ -8581,86 +8642,135 @@ function TouchFling:CreateGUI()
 		return 
 	end
 
-	local ScreenGui = Instance.new("ScreenGui")
-	ScreenGui.Name = "LunarTouchFling"
-	ScreenGui.ResetOnSpawn = false
-	ScreenGui.Parent = client:WaitForChild("PlayerGui")
-	self.gui = ScreenGui
+	TouchFling._s = Instance.new("ScreenGui")
+	TouchFling._s.Name = "LunarTouchFling"
+	TouchFling._s.ResetOnSpawn = false
+	TouchFling._s.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	local MainFrame = Instance.new("Frame")
-	MainFrame.Name = "Main"
-	MainFrame.Parent = ScreenGui
-	MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-	MainFrame.BorderSizePixel = 0
-	MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
-	MainFrame.Size = UDim2.new(0, 300, 0, 540) -- Increased height for keybind button
-	MainFrame.Active = true
-	MainFrame.Draggable = true
-	MainFrame.ClipsDescendants = true
-	self.mainFrame = MainFrame
+	-- Try CoreGui first, fallback to PlayerGui
+	local success = pcall(function()
+		TouchFling._s.Parent = game:GetService("CoreGui")
+	end)
+	if not success then
+		TouchFling._s.Parent = client:WaitForChild("PlayerGui")
+	end
 
-	local UICorner = Instance.new("UICorner")
-	UICorner.CornerRadius = UDim.new(0, 12)
-	UICorner.Parent = MainFrame
+	self.gui = TouchFling._s
 
-	local UIGradient = Instance.new("UIGradient")
-	UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(30,30,50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10,10,20))}
-	UIGradient.Rotation = 90
-	UIGradient.Parent = MainFrame
+	TouchFling._m = self.isMobile
+	TouchFling._w = TouchFling._m and 260 or 300
+	TouchFling._h = TouchFling._m and 420 or 540
+	TouchFling._b = TouchFling._m and 32 or 38
+	TouchFling._t = TouchFling._m and 11 or 13
+	TouchFling._u = TouchFling._m and 18 or 22
 
-	local TopBar = Instance.new("Frame")
-	TopBar.Name = "TopBar"
-	TopBar.Parent = MainFrame
-	TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-	TopBar.BorderSizePixel = 0
-	TopBar.Size = UDim2.new(1, 0, 0, 40)
-	TopBar.Active = true
+	TouchFling._f = Instance.new("Frame")
+	TouchFling._f.Name = "Main"
+	TouchFling._f.Parent = TouchFling._s
+	TouchFling._f.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+	TouchFling._f.BorderSizePixel = 0
+	TouchFling._f.Position = UDim2.new(0.35, 0, 0.3, 0)
+	TouchFling._f.Size = UDim2.new(0, TouchFling._w, 0, TouchFling._h)
+	TouchFling._f.Active = true
+	TouchFling._f.ClipsDescendants = true
+	self.mainFrame = TouchFling._f
 
-	local TopCorner = Instance.new("UICorner")
-	TopCorner.CornerRadius = UDim.new(0, 12)
-	TopCorner.Parent = TopBar
+	-- Custom drag from top bar only
+	TouchFling._d = false
+	TouchFling._g = nil
+	TouchFling._h = nil
 
-	local Title = Instance.new("TextLabel")
-	Title.Name = "Title"
-	Title.Parent = TopBar
-	Title.BackgroundTransparency = 1
-	Title.Position = UDim2.new(0, 15, 0, 0)
-	Title.Size = UDim2.new(0.6, 0, 1, 0)
-	Title.Font = Enum.Font.GothamBold
-	Title.Text = "Touch Fling"
-	Title.TextColor3 = Color3.fromRGB(180, 220, 255)
-	Title.TextSize = 22
-	Title.TextXAlignment = Enum.TextXAlignment.Left
+	TouchFling._c = Instance.new("UICorner")
+	TouchFling._c.CornerRadius = UDim.new(0, 12)
+	TouchFling._c.Parent = TouchFling._f
 
-	local MinimizeBtn = Instance.new("TextButton")
-	MinimizeBtn.Name = "MinimizeBtn"
-	MinimizeBtn.Parent = TopBar
-	MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-	MinimizeBtn.Position = UDim2.new(1, -70, 0.5, -12)
-	MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
-	MinimizeBtn.Font = Enum.Font.GothamBold
-	MinimizeBtn.Text = "-"
-	MinimizeBtn.TextColor3 = Color3.new(1, 1, 1)
-	MinimizeBtn.TextSize = 20
-	local MinCorner = Instance.new("UICorner")
-	MinCorner.CornerRadius = UDim.new(0, 8)
-	MinCorner.Parent = MinimizeBtn
+	TouchFling._r = Instance.new("UIGradient")
+	TouchFling._r.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(30,30,50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10,10,20))}
+	TouchFling._r.Rotation = 90
+	TouchFling._r.Parent = TouchFling._f
 
-	local CloseBtn = Instance.new("TextButton")
-	CloseBtn.Name = "CloseBtn"
-	CloseBtn.Parent = TopBar
-	CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-	CloseBtn.Position = UDim2.new(1, -36, 0.5, -12)
-	CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-	CloseBtn.Font = Enum.Font.GothamBold
-	CloseBtn.Text = "X"
-	CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-	CloseBtn.TextSize = 18
-	local CloseCorner = Instance.new("UICorner")
-	CloseCorner.CornerRadius = UDim.new(0, 8)
-	CloseCorner.Parent = CloseBtn
+	TouchFling._o = Instance.new("Frame")
+	TouchFling._o.Name = "TopBar"
+	TouchFling._o.Parent = TouchFling._f
+	TouchFling._o.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+	TouchFling._o.BorderSizePixel = 0
+	TouchFling._o.Size = UDim2.new(1, 0, 0, 36)
+	TouchFling._o.Active = true
+	TouchFling._o.ZIndex = 10
 
-	CloseBtn.MouseButton1Click:Connect(function()
+	TouchFling._o.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			TouchFling._d = true
+			TouchFling._g = input.Position
+			TouchFling._h = TouchFling._f.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then TouchFling._d = false end
+			end)
+		end
+	end)
+
+	TouchFling._o.InputChanged:Connect(function(input)
+		if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and TouchFling._d then
+			TouchFling._i = input.Position - TouchFling._g
+			TouchFling._f.Position = UDim2.new(TouchFling._h.X.Scale, TouchFling._h.X.Offset + TouchFling._i.X, TouchFling._h.Y.Scale, TouchFling._h.Y.Offset + TouchFling._i.Y)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and TouchFling._d then
+			TouchFling._i = input.Position - TouchFling._g
+			TouchFling._f.Position = UDim2.new(TouchFling._h.X.Scale, TouchFling._h.X.Offset + TouchFling._i.X, TouchFling._h.Y.Scale, TouchFling._h.Y.Offset + TouchFling._i.Y)
+		end
+	end)
+
+	TouchFling._c = Instance.new("UICorner")
+	TouchFling._c.CornerRadius = UDim.new(0, 12)
+	TouchFling._c.Parent = TouchFling._o
+
+	TouchFling._l = Instance.new("TextLabel")
+	TouchFling._l.Name = "Title"
+	TouchFling._l.Parent = TouchFling._o
+	TouchFling._l.BackgroundTransparency = 1
+	TouchFling._l.Position = UDim2.new(0, 10, 0, 0)
+	TouchFling._l.Size = UDim2.new(0.5, 0, 1, 0)
+	TouchFling._l.Font = Enum.Font.GothamBold
+	TouchFling._l.Text = "Touch Fling"
+	TouchFling._l.TextColor3 = Color3.fromRGB(180, 220, 255)
+	TouchFling._l.TextSize = TouchFling._u
+	TouchFling._l.TextXAlignment = Enum.TextXAlignment.Left
+	TouchFling._l.ZIndex = 11
+
+	TouchFling._b = Instance.new("TextButton")
+	TouchFling._b.Name = "MinimizeBtn"
+	TouchFling._b.Parent = TouchFling._o
+	TouchFling._b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+	TouchFling._b.Position = UDim2.new(1, -65, 0.5, -12)
+	TouchFling._b.Size = UDim2.new(0, 26, 0, 26)
+	TouchFling._b.Font = Enum.Font.GothamBold
+	TouchFling._b.Text = "-"
+	TouchFling._b.TextColor3 = Color3.new(1, 1, 1)
+	TouchFling._b.TextSize = 18
+	TouchFling._b.ZIndex = 11
+	TouchFling._c = Instance.new("UICorner")
+	TouchFling._c.CornerRadius = UDim.new(0, 8)
+	TouchFling._c.Parent = TouchFling._b
+
+	TouchFling._n = Instance.new("TextButton")
+	TouchFling._n.Name = "CloseBtn"
+	TouchFling._n.Parent = TouchFling._o
+	TouchFling._n.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+	TouchFling._n.Position = UDim2.new(1, -34, 0.5, -12)
+	TouchFling._n.Size = UDim2.new(0, 26, 0, 26)
+	TouchFling._n.Font = Enum.Font.GothamBold
+	TouchFling._n.Text = "X"
+	TouchFling._n.TextColor3 = Color3.new(1, 1, 1)
+	TouchFling._n.TextSize = 16
+	TouchFling._n.ZIndex = 11
+	TouchFling._c = Instance.new("UICorner")
+	TouchFling._c.CornerRadius = UDim.new(0, 8)
+	TouchFling._c.Parent = TouchFling._n
+
+	TouchFling._n.MouseButton1Click:Connect(function()
 		self.gui:Destroy()
 		self.gui = nil
 		self.mainFrame = nil
@@ -8672,51 +8782,50 @@ function TouchFling:CreateGUI()
 		self.clickTP = false
 		self.oneTimeTP = false
 		self.selectedPlayer = nil
+		self.isMinimized = false
 	end)
 
-	MinimizeBtn.MouseButton1Click:Connect(function()
+	TouchFling._b.MouseButton1Click:Connect(function()
 		self:ToggleMinimize()
 	end)
 
 	local function makeToggle(y, text, name)
-		local btn = Instance.new("TextButton")
-		btn.Name = name
-		btn.Parent = MainFrame
-		btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-		btn.Position = UDim2.new(0.1, 0, y, 0)
-		btn.Size = UDim2.new(0.8, 0, 0, 38)
-		btn.Font = Enum.Font.GothamSemibold
-		btn.Text = text .. ": OFF"
-		btn.TextColor3 = Color3.fromRGB(255, 80, 80)
-		btn.TextSize = 13
-		local c = Instance.new("UICorner")
-		c.CornerRadius = UDim.new(0, 10)
-		c.Parent = btn
-		return btn
+		TouchFling._b = Instance.new("TextButton")
+		TouchFling._b.Name = name
+		TouchFling._b.Parent = TouchFling._f
+		TouchFling._b.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+		TouchFling._b.Position = UDim2.new(0.1, 0, y, 0)
+		TouchFling._b.Size = UDim2.new(0.8, 0, 0, (TouchFling._m and 32 or 38))
+		TouchFling._b.Font = Enum.Font.GothamSemibold
+		TouchFling._b.Text = text .. ": OFF"
+		TouchFling._b.TextColor3 = Color3.fromRGB(255, 80, 80)
+		TouchFling._b.TextSize = (TouchFling._m and 11 or 13)
+		TouchFling._c = Instance.new("UICorner")
+		TouchFling._c.CornerRadius = UDim.new(0, 10)
+		TouchFling._c.Parent = TouchFling._b
+		return TouchFling._b
 	end
 
-	self.toggles.enabled = makeToggle(0.09, "Touch Fling", "TouchFling")
-	self.toggles.flingAll = makeToggle(0.18, "Fling All (wip)", "FlingAll")
-	self.toggles.lockFling = makeToggle(0.27, "Lock Fling", "LockFling")
-	self.toggles.clickTP = makeToggle(0.36, "Click TP", "ClickTP")
-	self.toggles.oneTimeTP = makeToggle(0.45, "One-Time TP", "OneTimeTP")
+	self.toggles.enabled = makeToggle(0.10, "Touch Fling", "TouchFling")
+	self.toggles.flingAll = makeToggle(0.20, "Fling All", "FlingAll")
+	self.toggles.lockFling = makeToggle(0.30, "Lock Fling", "LockFling")
+	self.toggles.clickTP = makeToggle(0.40, "Click TP", "ClickTP")
+	self.toggles.oneTimeTP = makeToggle(0.50, "One-Time TP", "OneTimeTP")
 
-	-- Keybind Selector Button (NEW)
 	self.toggles.keybindBtn = Instance.new("TextButton")
 	self.toggles.keybindBtn.Name = "KeybindBtn"
-	self.toggles.keybindBtn.Parent = MainFrame
+	self.toggles.keybindBtn.Parent = TouchFling._f
 	self.toggles.keybindBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
-	self.toggles.keybindBtn.Position = UDim2.new(0.1, 0, 0.54, 0)
-	self.toggles.keybindBtn.Size = UDim2.new(0.8, 0, 0, 38)
+	self.toggles.keybindBtn.Position = UDim2.new(0.1, 0, 0.60, 0)
+	self.toggles.keybindBtn.Size = UDim2.new(0.8, 0, 0, (TouchFling._m and 32 or 38))
 	self.toggles.keybindBtn.Font = Enum.Font.GothamSemibold
 	self.toggles.keybindBtn.Text = "Click TP Key: E"
 	self.toggles.keybindBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
-	self.toggles.keybindBtn.TextSize = 13
-	local kbCorner = Instance.new("UICorner")
-	kbCorner.CornerRadius = UDim.new(0, 10)
-	kbCorner.Parent = self.toggles.keybindBtn
+	self.toggles.keybindBtn.TextSize = (TouchFling._m and 11 or 13)
+	TouchFling._c = Instance.new("UICorner")
+	TouchFling._c.CornerRadius = UDim.new(0, 10)
+	TouchFling._c.Parent = self.toggles.keybindBtn
 
-	-- Toggle Click Handlers
 	self.toggles.enabled.MouseButton1Click:Connect(function()
 		self.enabled = not self.enabled
 		self:UpdateToggle("enabled", "Touch Fling")
@@ -8724,7 +8833,9 @@ function TouchFling:CreateGUI()
 
 	self.toggles.flingAll.MouseButton1Click:Connect(function()
 		self.flingAll = not self.flingAll
-		self:UpdateToggle("flingAll", "Fling All (wip)")
+		self.flingAllIndex = 1
+		self.flingAllTimer = 0
+		self:UpdateToggle("flingAll", "Fling All")
 	end)
 
 	self.toggles.lockFling.MouseButton1Click:Connect(function()
@@ -8742,50 +8853,47 @@ function TouchFling:CreateGUI()
 		self:UpdateToggle("oneTimeTP", "One-Time TP")
 	end)
 
-	-- Keybind Button Handler
 	self.toggles.keybindBtn.MouseButton1Click:Connect(function()
 		self:StartKeySelection()
 	end)
 
-	-- Player List Label (moved down)
-	local ListLabel = Instance.new("TextLabel")
-	ListLabel.Name = "ListLabel"
-	ListLabel.Parent = MainFrame
-	ListLabel.BackgroundTransparency = 1
-	ListLabel.Position = UDim2.new(0.1, 0, 0.64, 0)
-	ListLabel.Size = UDim2.new(0.8, 0, 0, 20)
-	ListLabel.Font = Enum.Font.GothamSemibold
-	ListLabel.Text = "Select Player"
-	ListLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-	ListLabel.TextSize = 14
+	TouchFling._l = Instance.new("TextLabel")
+	TouchFling._l.Name = "ListLabel"
+	TouchFling._l.Parent = TouchFling._f
+	TouchFling._l.BackgroundTransparency = 1
+	TouchFling._l.Position = UDim2.new(0.1, 0, 0.70, 0)
+	TouchFling._l.Size = UDim2.new(0.8, 0, 0, 18)
+	TouchFling._l.Font = Enum.Font.GothamSemibold
+	TouchFling._l.Text = "Select Player"
+	TouchFling._l.TextColor3 = Color3.fromRGB(200, 200, 255)
+	TouchFling._l.TextSize = (TouchFling._m and 11 or 13) + 1
 
-	-- Player Scroll (moved down)
-	local Scroll = Instance.new("ScrollingFrame")
-	Scroll.Name = "PlayerScroll"
-	Scroll.Parent = MainFrame
-	Scroll.Position = UDim2.new(0.1, 0, 0.69, 0)
-	Scroll.Size = UDim2.new(0.8, 0, 0, 120)
-	Scroll.BackgroundTransparency = 0.7
-	Scroll.ScrollBarThickness = 4
-	local sc = Instance.new("UICorner")
-	sc.CornerRadius = UDim.new(0, 8)
-	sc.Parent = Scroll
+	TouchFling._s = Instance.new("ScrollingFrame")
+	TouchFling._s.Name = "PlayerScroll"
+	TouchFling._s.Parent = TouchFling._f
+	TouchFling._s.Position = UDim2.new(0.1, 0, 0.75, 0)
+	TouchFling._s.Size = UDim2.new(0.8, 0, 0, (TouchFling._m and 80 or 100))
+	TouchFling._s.BackgroundTransparency = 0.7
+	TouchFling._s.ScrollBarThickness = 4
+	TouchFling._c = Instance.new("UICorner")
+	TouchFling._c.CornerRadius = UDim.new(0, 8)
+	TouchFling._c.Parent = TouchFling._s
 
-	local UIList = Instance.new("UIListLayout")
-	UIList.Parent = Scroll
-	UIList.Padding = UDim.new(0, 4)
+	TouchFling._u = Instance.new("UIListLayout")
+	TouchFling._u.Parent = TouchFling._s
+	TouchFling._u.Padding = UDim.new(0, 4)
 
-	local Watermark = Instance.new("TextLabel")
-	Watermark.Name = "Watermark"
-	Watermark.Parent = MainFrame
-	Watermark.BackgroundTransparency = 1
-	Watermark.Position = UDim2.new(0.05, 0, 0.94, 0)
-	Watermark.Size = UDim2.new(0.9, 0, 0, 18)
-	Watermark.Font = Enum.Font.Gotham
-	Watermark.Text = "https://discord.gg/ydNKRbFmUd"
-	Watermark.TextColor3 = Color3.fromRGB(120, 180, 255)
-	Watermark.TextSize = 13
-	Watermark.TextTransparency = 0.5
+	TouchFling._l = Instance.new("TextLabel")
+	TouchFling._l.Name = "Watermark"
+	TouchFling._l.Parent = TouchFling._f
+	TouchFling._l.BackgroundTransparency = 1
+	TouchFling._l.Position = UDim2.new(0.05, 0, 0.93, 0)
+	TouchFling._l.Size = UDim2.new(0.9, 0, 0, 16)
+	TouchFling._l.Font = Enum.Font.Gotham
+	TouchFling._l.Text = "https://discord.gg/ydNKRbFmUd"
+	TouchFling._l.TextColor3 = Color3.fromRGB(120, 180, 255)
+	TouchFling._l.TextSize = 11
+	TouchFling._l.TextTransparency = 0.5
 
 	local function refreshList()
 		for plr, btn in pairs(self.buttons) do
@@ -8794,194 +8902,158 @@ function TouchFling:CreateGUI()
 				self.buttons[plr] = nil 
 			end
 		end
-
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= client and not self.buttons[plr] then
-				local btn = Instance.new("TextButton")
-				btn.Size = UDim2.new(1, -8, 0, 32)
-				btn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-				btn.Text = plr.Name
-				btn.TextColor3 = Color3.new(1, 1, 1)
-				btn.Font = Enum.Font.GothamSemibold
-				btn.TextSize = 16
-				btn.Parent = Scroll
-				local c = Instance.new("UICorner")
-				c.CornerRadius = UDim.new(0, 8)
-				c.Parent = btn
-
-				btn.MouseButton1Click:Connect(function()
+				TouchFling._b = Instance.new("TextButton")
+				TouchFling._b.Size = UDim2.new(1, -8, 0, 28)
+				TouchFling._b.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+				TouchFling._b.Text = plr.Name
+				TouchFling._b.TextColor3 = Color3.new(1, 1, 1)
+				TouchFling._b.Font = Enum.Font.GothamSemibold
+				TouchFling._b.TextSize = 14
+				TouchFling._b.Parent = TouchFling._s
+				TouchFling._c = Instance.new("UICorner")
+				TouchFling._c.CornerRadius = UDim.new(0, 8)
+				TouchFling._c.Parent = TouchFling._b
+				TouchFling._b.MouseButton1Click:Connect(function()
 					self:SelectPlayer(plr)
 				end)
-
-				self.buttons[plr] = btn
+				self.buttons[plr] = TouchFling._b
 			end
 		end
-
-		Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 10)
+		TouchFling._s.CanvasSize = UDim2.new(0, 0, 0, TouchFling._u.AbsoluteContentSize.Y + 10)
 	end
 
 	Players.PlayerAdded:Connect(refreshList)
 	Players.PlayerRemoving:Connect(refreshList)
 	refreshList()
+	self:UpdateKeybindButton()
 end
 
--- Click TP with Keybind (NEW SYSTEM)
+-- Click TP with Keybind
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if not TouchFling.clickTP then return end
-
-	local keyMatched = false
-
+	TouchFling._d = false
 	if TouchFling.clickTPKey == "MouseButton1" and input.UserInputType == Enum.UserInputType.MouseButton1 then
-		keyMatched = true
+		TouchFling._d = true
 	elseif TouchFling.clickTPKey == "MouseButton2" and input.UserInputType == Enum.UserInputType.MouseButton2 then
-		keyMatched = true
+		TouchFling._d = true
 	elseif input.KeyCode == TouchFling.clickTPKey then
-		keyMatched = true
+		TouchFling._d = true
 	end
-
-	if keyMatched and Mouse.Target then
-		local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
-		if myRoot then
-			myRoot.CFrame = Mouse.Hit + Vector3.new(0, 3, 0)
+	if TouchFling._d and Mouse.Target then
+		TouchFling._t = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+		if TouchFling._t then
+			TouchFling._t.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0, 3, 0))
 		end
 	end
 end)
 
--- Remove old Mouse.Button1Down connection for clickTP
--- (The new UserInputService connection above handles it)
-
 -- Main Loop
-RunService.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function(deltaTime)
+	-- Touch Fling self
 	if TouchFling.enabled then
-		local char = client.Character
-		if char then
-			local hrp = char:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				local old = hrp.Velocity
-				hrp.Velocity = old * 12000 + Vector3.new(0, 14000, 0)
+		TouchFling._t = client.Character
+		if TouchFling._t then
+			TouchFling._t = TouchFling._t:FindFirstChild("HumanoidRootPart")
+			if TouchFling._t then
+				TouchFling._v = TouchFling._t.Velocity
+				TouchFling._t.Velocity = TouchFling._v * 12000 + Vector3.new(0, 14000, 0)
 				RunService.RenderStepped:Wait()
-				if hrp.Parent then hrp.Velocity = old end
+				if TouchFling._t.Parent then TouchFling._t.Velocity = TouchFling._v end
 				RunService.Stepped:Wait()
-				if hrp.Parent then 
-					hrp.Velocity = old + Vector3.new(0, TouchFling.movel * 2, 0)
+				if TouchFling._t.Parent then 
+					TouchFling._t.Velocity = TouchFling._v + Vector3.new(0, TouchFling.movel * 2, 0)
 					TouchFling.movel = -TouchFling.movel 
 				end
 			end
 		end
 	end
 
+	-- Fling All - cycles through players one at a time
 	if TouchFling.flingAll then
-		local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
-		if myRoot then
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= client and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-					local t = plr.Character.HumanoidRootPart
-					if (myRoot.Position - t.Position).Magnitude < 15 then
-						t.AssemblyLinearVelocity = Vector3.new(
-							math.random(-6000, 6000),
-							2200 + math.random(0, 800),
-							math.random(-6000, 6000)
-						)
-					end
+		-- Get my root part first
+		TouchFling._y = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+		if not TouchFling._y then return end
+
+		-- Build valid targets list
+		TouchFling._p = Players:GetPlayers()
+		TouchFling._l = {}
+		for _, plr in ipairs(TouchFling._p) do
+			if plr ~= client and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				table.insert(TouchFling._l, plr)
+			end
+		end
+		if #TouchFling._l == 0 then return end
+
+		-- Timer-based cycling
+		TouchFling.flingAllTimer = TouchFling.flingAllTimer + deltaTime
+		if TouchFling.flingAllTimer >= 0.5 then
+			TouchFling.flingAllTimer = 0
+
+			-- Get current target index
+			TouchFling._i = TouchFling.flingAllIndex
+			if TouchFling._i > #TouchFling._l then
+				TouchFling._i = 1
+				TouchFling.flingAllIndex = 1
+			end
+
+			-- Get target player
+			TouchFling._p = TouchFling._l[TouchFling._i]
+
+			-- Check if target is valid and has HRP
+			if TouchFling._p and TouchFling._p.Character and TouchFling._p.Character:FindFirstChild("HumanoidRootPart") then
+				TouchFling._t = TouchFling._p.Character.HumanoidRootPart
+
+				-- Check distance
+				if (TouchFling._y.Position - TouchFling._t.Position).Magnitude < 25 then
+					-- Fling them
+					TouchFling._t.AssemblyLinearVelocity = Vector3.new(math.random(-6000, 6000), 2200 + math.random(0, 800), math.random(-6000, 6000))
+
+					-- Move to next
+					TouchFling.flingAllIndex = TouchFling._i + 1
+					if TouchFling.flingAllIndex > #TouchFling._l then TouchFling.flingAllIndex = 1 end
+				else
+					-- Too far, skip
+					TouchFling.flingAllIndex = TouchFling._i + 1
+					if TouchFling.flingAllIndex > #TouchFling._l then TouchFling.flingAllIndex = 1 end
 				end
+			else
+				-- Invalid target, skip
+				TouchFling.flingAllIndex = TouchFling._i + 1
+				if TouchFling.flingAllIndex > #TouchFling._l then TouchFling.flingAllIndex = 1 end
 			end
 		end
 	end
 
+	-- Lock Fling
 	if TouchFling.lockFling and TouchFling.selectedPlayer and TouchFling.selectedPlayer.Character then
-		local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
-		local tRoot = TouchFling.selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-		if myRoot and tRoot then
-			myRoot.CFrame = tRoot.CFrame
-
-			local oldVel = tRoot.Velocity
-			tRoot.Velocity = oldVel * 12000 + Vector3.new(0, 16000, 0)
+		TouchFling._t = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+		TouchFling._v = TouchFling.selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if TouchFling._t and TouchFling._v then
+			TouchFling._t.CFrame = TouchFling._v.CFrame
+			TouchFling._o = TouchFling._v.Velocity
+			TouchFling._v.Velocity = TouchFling._o * 12000 + Vector3.new(0, 16000, 0)
 			RunService.RenderStepped:Wait()
-			if tRoot.Parent then tRoot.Velocity = oldVel end
+			if TouchFling._v.Parent then TouchFling._v.Velocity = TouchFling._o end
 			RunService.Stepped:Wait()
-			if tRoot.Parent then
-				tRoot.Velocity = oldVel + Vector3.new(0, TouchFling.movel * 3, 0)
+			if TouchFling._v.Parent then
+				TouchFling._v.Velocity = TouchFling._o + Vector3.new(0, TouchFling.movel * 3, 0)
 				TouchFling.movel = -TouchFling.movel
 			end
 		end
 	end
 
+	-- One-Time TP
 	if TouchFling.oneTimeTP and TouchFling.selectedPlayer and TouchFling.selectedPlayer.Character then
-		local myRoot = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
-		local tRoot = TouchFling.selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if myRoot and tRoot then
-			myRoot.CFrame = tRoot.CFrame
+		TouchFling._t = client.Character and client.Character:FindFirstChild("HumanoidRootPart")
+		TouchFling._v = TouchFling.selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if TouchFling._t and TouchFling._v then
+			TouchFling._t.CFrame = TouchFling._v.CFrame
 		end
 	end
 end)
-------------------------------------------------
--- Rejoin
-------------------------------------------------
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-local function rejoin(plr, args)
-	if plr ~= LocalPlayer then
-		notify("❌ Rejoin only works on yourself", Color3.fromRGB(255, 100, 100))
-		return
-	end
-
-	notify("🔄 Rejoining...", Color3.fromRGB(100, 200, 255))
-
-	local placeId = game.PlaceId
-	local jobId = game.JobId
-
-	-- Try exact same server first
-	local ok, err = pcall(function()
-		TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
-	end)
-
-	if not ok then
-		notify("🔄 Server restricted, using bypass...", Color3.fromRGB(255, 200, 100))
-
-		-- Same bypass as serverhop: reserve a fresh server
-		local ok2, err2 = pcall(function()
-			local accessCode = TeleportService:ReserveServer(placeId)
-			TeleportService:TeleportToPrivateServer(placeId, accessCode, {LocalPlayer})
-		end)
-
-		if not ok2 then
-			notify("❌ Rejoin failed: " .. tostring(err2), Color3.fromRGB(255, 100, 100))
-		end
-	end
-end
-------------------------------------------------
--- Ping
-------------------------------------------------
-local function ping()
-	local ping = math.round(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-	local color = ping < 100 and Color3.fromRGB(100, 255, 100) or (ping < 200 and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 100, 100))
-	notify("📶 Ping: " .. ping .. "ms", color)
-end
-------------------------------------------------
--- ClickTP
-------------------------------------------------
-local clickTPconn
-local function clickTP()
-	if clickTPconn then
-		clickTPconn:Disconnect()
-		clickTPconn = nil
-		notify("⚠️Click TP disabled", Color3.fromRGB(255, 120, 100))
-	else
-		clickTPconn = Mouse.Button1Down:Connect(function()
-			if Mouse.Target then
-				local hrp = getHRP(client)
-				if hrp then
-					hrp.CFrame = Mouse.Hit + Vector3.new(0, 3, 0)
-				end
-			end
-		end)
-		notify("Click TP enabled - click anywhere to teleport", Color3.fromRGB(100, 255, 120))
-	end
-end
 ------------------------------------------------
 -- FOV
 ------------------------------------------------
@@ -9710,20 +9782,11 @@ function processCmd(msg)
 	elseif cmd == "autoexec" then
 		autoexecCommand()
 		
-		elseif cmd == "bring" then
+	elseif cmd == "bring" then
 		bring(target)
 		
 	elseif cmd == "boombox" then
-		if args[2] and args[2] ~= "" then
-			local id = tostring(args[2]):gsub("%D", "")
-			if id ~= "" then
-				_G.Boombox:open()
-				task.wait(0.1)
-				_G.Boombox:play(id)
-			end
-		else
-			_G.Boombox:open()
-		end
+	_G.Boombox:run(msg)
 		
 	elseif cmd == "clicktp" then
 		
