@@ -1755,7 +1755,7 @@ local boomboxCode = [[
 		title.Size = UDim2.new(0.6, 0, 1, 0)
 		title.Position = UDim2.new(0, 15 * scale, 0, 0)
 		title.BackgroundTransparency = 1
-		title.Text = "BOOMBOX"
+		title.Text = "lun4rs boomboxys"
 		title.TextColor3 = C.WHITE
 		title.TextSize = 18 * scale
 		title.Font = Enum.Font.GothamBold
@@ -6642,7 +6642,7 @@ local function unload()
 				gui.Name == "logsPanel" or 
 				gui.Name == "stopwatchPanel" or
 				gui.Name == "SpeedPanel" or 
-				gui.Name == "JoinLogsPanel" or 
+				gui.Name == "JoinLogsPanel" or
 				gui.Name == "ViewGui" or
 				gui.Name == "CmdBarGui" or 
 				gui.Name:find("^Lunar") or 
